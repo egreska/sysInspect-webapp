@@ -27,8 +27,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install serve to serve frontend
-RUN npm install -g serve pm2
+# Install nginx and pm2
+RUN apk add --no-cache nginx && \
+    npm install -g pm2
 
 # Copy backend
 COPY --from=backend-builder /app/backend ./backend
@@ -36,12 +37,19 @@ COPY --from=backend-builder /app/backend ./backend
 # Copy frontend build
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Expose ports
-EXPOSE 3001 5173
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# Health check
+# Create nginx directories
+RUN mkdir -p /var/log/nginx /var/lib/nginx/tmp /run/nginx && \
+    chown -R node:node /var/log/nginx /var/lib/nginx /run/nginx /app
+
+# Expose single port for nginx
+EXPOSE 80
+
+# Health check through nginx
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
 
 # Start script
 COPY docker-entrypoint.sh /usr/local/bin/

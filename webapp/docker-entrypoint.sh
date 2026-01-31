@@ -1,16 +1,26 @@
 #!/bin/sh
 set -e
 
-# Start backend with PM2
+echo "Starting Systems Inspector Webapp..."
+
+# Start backend with PM2 in daemon mode
+echo "Starting backend API on port 3001..."
 cd /app/backend
-pm2 start src/index.js --name api --no-daemon &
+pm2 start src/index.js --name api
 
-# Start frontend with serve
-cd /app/frontend
-serve -s dist -l 5173 --no-clipboard &
+# Wait for backend to be ready
+echo "Waiting for backend to be ready..."
+sleep 3
 
-# Wait for any process to exit
-wait -n
+# Test backend health
+if ! wget --spider --quiet --tries=5 --timeout=2 http://localhost:3001/health; then
+    echo "ERROR: Backend failed to start!"
+    pm2 logs
+    exit 1
+fi
 
-# Exit with status of process that exited first
-exit $?
+echo "Backend is ready!"
+
+# Start nginx in foreground
+echo "Starting nginx on port 80..."
+exec nginx -g 'daemon off;'

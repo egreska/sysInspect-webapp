@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { Customer, Inspection, LoginRequest, LoginResponse } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// Use relative URL - nginx will proxy /api to backend
+const API_URL = '/api';
 
 const api = axios.create({
   baseURL: API_URL,
