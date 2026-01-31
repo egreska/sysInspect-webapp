@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Customer, Inspection, LoginRequest, LoginResponse } from '../types';
 
-// Use relative URL - nginx will proxy /api to backend
+// API URL - Traefik will route /api to backend port 3001
 const API_URL = '/api';
 
 const api = axios.create({

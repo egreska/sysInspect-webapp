@@ -21,6 +21,7 @@ fi
 
 echo "Backend is ready!"
 
-# Start nginx in foreground
-echo "Starting nginx on port 80..."
-exec nginx -g 'daemon off;'
+# Start frontend with serve on port 5173 (foreground)
+echo "Starting frontend on port 5173..."
+cd /app/frontend/dist
+exec serve -s . -l 5173 --no-clipboard
