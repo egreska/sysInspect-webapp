@@ -19,10 +19,12 @@ git push origin main
 Build Settings:
   • Repository: Your Git repo
   • Branch: main
-  • Build Pack: Dockerfile
+  • Build Pack: Dockerfile (NOT Docker Compose!)
   • Dockerfile Path: webapp/Dockerfile
   • Build Context: webapp/
   • Ports: 3001, 5173
+  • GPU Support: DISABLED
+  • Runtime: Default (runc)
 
 Environment Variables (Required):
   NODE_ENV=production
@@ -69,9 +71,10 @@ Expected build time: 5-10 minutes
 ✅ Issue 1: Missing package-lock.json files
 ✅ Issue 2: TypeScript not found (npm ci)
 ✅ Issue 3: TypeScript compilation errors
+✅ Issue 4: Docker runtime (GPU socket error)
 
 All issues documented in:
-  • webapp/ISSUES_FIXED.txt
+  • webapp/COOLIFY_RUNTIME_FIX.md
   • webapp/DEPLOYMENT_READY.md
 
 ───────────────────────────────────────────────────────────────
