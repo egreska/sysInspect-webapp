@@ -1,0 +1,89 @@
+═══════════════════════════════════════════════════════════════
+  🚀 SYSTEMS INSPECTOR WEBAPP - DEPLOYMENT INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+Status: ✅ ALL BUILD ISSUES FIXED - READY TO DEPLOY
+Commit: 0a36603
+Date: January 31, 2026
+
+───────────────────────────────────────────────────────────────
+  STEP 1: PUSH TO GIT
+───────────────────────────────────────────────────────────────
+
+git push origin main
+
+───────────────────────────────────────────────────────────────
+  STEP 2: COOLIFY CONFIGURATION
+───────────────────────────────────────────────────────────────
+
+Build Settings:
+  • Repository: Your Git repo
+  • Branch: main
+  • Build Pack: Dockerfile
+  • Dockerfile Path: webapp/Dockerfile
+  • Build Context: webapp/
+  • Ports: 3001, 5173
+
+Environment Variables (Required):
+  NODE_ENV=production
+  PORT=3001
+  FRONTEND_URL=https://sysinspect.skynet97.org
+  JWT_SECRET=<generate-random-32-chars>
+  
+  CLOUDKIT_CONTAINER_ID=<from-xcode-capabilities>
+  CLOUDKIT_ENVIRONMENT=production
+  CLOUDKIT_API_TOKEN=<from-cloudkit-dashboard>
+  CLOUDKIT_SERVER_KEY_ID=<from-cloudkit-dashboard>
+  CLOUDKIT_PRIVATE_KEY=<from-cloudkit-dashboard>
+
+Domain:
+  • Domain: sysinspect.skynet97.org
+  • Cloudflare Tunnel: Enabled
+  • Routing: /api/* → 3001, /* → 5173
+
+───────────────────────────────────────────────────────────────
+  STEP 3: DEPLOY
+───────────────────────────────────────────────────────────────
+
+Click "Deploy" button in Coolify
+
+Expected build time: 5-10 minutes
+
+───────────────────────────────────────────────────────────────
+  STEP 4: TEST
+───────────────────────────────────────────────────────────────
+
+1. Health Check:
+   curl https://sysinspect.skynet97.org/api/health
+
+2. Frontend:
+   open https://sysinspect.skynet97.org
+
+3. Login:
+   Use your iOS app credentials
+
+───────────────────────────────────────────────────────────────
+  BUILD ISSUES FIXED
+───────────────────────────────────────────────────────────────
+
+✅ Issue 1: Missing package-lock.json files
+✅ Issue 2: TypeScript not found (npm ci)
+✅ Issue 3: TypeScript compilation errors
+
+All issues documented in:
+  • webapp/ISSUES_FIXED.txt
+  • webapp/DEPLOYMENT_READY.md
+
+───────────────────────────────────────────────────────────────
+  DOCUMENTATION
+───────────────────────────────────────────────────────────────
+
+Complete guides available:
+  • webapp/docs/DEPLOYMENT.md - Coolify deployment
+  • webapp/docs/CLOUDKIT_SETUP.md - CloudKit config
+  • webapp/docs/API.md - API reference
+  • WEBAPP_IMPLEMENTATION_COMPLETE.md - Full summary
+
+───────────────────────────────────────────────────────────────
+  ✅ READY TO DEPLOY!
+───────────────────────────────────────────────────────────────
