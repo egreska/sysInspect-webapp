@@ -25,6 +25,7 @@ Date: January 31, 2026
 2. In Coolify, verify:
    • Build Pack = "Dockerfile" (NOT Docker Compose!)
    • GPU Support = DISABLED
+   • Port = 80 (Nginx handles routing!)
    • All environment variables set
 
 3. Click Deploy
@@ -39,6 +40,7 @@ Date: January 31, 2026
 
 🚨 Build Pack:      Dockerfile (NOT Docker Compose!)
 🚨 GPU Support:     DISABLED
+🚨 Port:            80 (single port with Nginx!)
    Runtime:         Default (runc)
    Context:         webapp/
    Dockerfile:      webapp/Dockerfile
