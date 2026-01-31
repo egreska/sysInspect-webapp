@@ -1,0 +1,80 @@
+═══════════════════════════════════════════════════════════════
+  🚀 FINAL DEPLOYMENT - ALL ISSUES RESOLVED 🚀
+═══════════════════════════════════════════════════════════════
+
+Commit: efb5924
+Date: January 31, 2026
+Status: ✅ ALL 6 ISSUES FIXED + PORT CONFLICT RESOLVED
+
+───────────────────────────────────────────────────────────────
+  ALL ISSUES FIXED
+───────────────────────────────────────────────────────────────
+
+✅ 1. Missing package-lock.json files
+✅ 2. TypeScript not found (npm ci)
+✅ 3. TypeScript compilation errors
+✅ 4. Docker runtime GPU error
+✅ 5. Missing date-fns dependency
+✅ 6. Port conflict with Supabase (3001 → 3002)
+
+───────────────────────────────────────────────────────────────
+  DEPLOY STEPS
+───────────────────────────────────────────────────────────────
+
+1. git push origin main
+
+2. Coolify → Network/Routing:
+   Primary Port: 5173 (Frontend)
+   Additional Port: 3002 with /api path ← 3002 NOT 3001!
+
+3. Coolify → Environment Variables:
+   PORT=3002 ← Critical! Changed from 3001!
+   (Set all other CloudKit vars)
+
+4. Click Deploy
+
+5. Test: curl https://sysinspect.skynet97.org/api/health
+
+───────────────────────────────────────────────────────────────
+  CRITICAL SETTINGS
+───────────────────────────────────────────────────────────────
+
+Build Pack: Dockerfile
+GPU: DISABLED
+Context: webapp/
+
+Ports (TWO REQUIRED):
+  🚨 Port 5173 - Frontend (path: /)
+  🚨 Port 3002 - Backend (path: /api) ← NOT 3001!
+
+Environment:
+  🚨 PORT=3002 ← Must be 3002!
+  
+───────────────────────────────────────────────────────────────
+  WHY PORT 3002?
+───────────────────────────────────────────────────────────────
+
+Port 3001 = Supabase (already running)
+Port 3002 = Systems Inspector API (available!)
+
+───────────────────────────────────────────────────────────────
+  ARCHITECTURE
+───────────────────────────────────────────────────────────────
+
+Browser → Cloudflare → Coolify → Traefik
+                                    ├─ / → Port 5173
+                                    └─ /api → Port 3002
+
+No Nginx needed! Traefik handles routing.
+
+───────────────────────────────────────────────────────────────
+  DOCUMENTATION
+───────────────────────────────────────────────────────────────
+
+Quick:   TRAEFIK_DEPLOY_GUIDE.txt
+Details: webapp/COOLIFY_TRAEFIK_CONFIG.md
+Port:    webapp/PORT_CONFLICT_RESOLVED.md
+
+═══════════════════════════════════════════════════════════════
+  🎉 ALL ISSUES RESOLVED - DEPLOY NOW! 🎉
+═══════════════════════════════════════════════════════════════
