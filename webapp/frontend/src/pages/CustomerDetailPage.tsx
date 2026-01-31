@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { customersAPI } from '../services/api';
-import { ArrowLeft, MapPin, Phone, Mail, FileText } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function CustomerDetailPage() {
