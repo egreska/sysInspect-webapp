@@ -1,0 +1,118 @@
+═══════════════════════════════════════════════════════════════
+  🚀 TRAEFIK DEPLOYMENT GUIDE (NO NGINX)
+═══════════════════════════════════════════════════════════════
+
+Architecture: Traefik (built into Coolify) routes to two ports
+Commit: a87b4ca
+Status: ✅ READY TO DEPLOY
+
+───────────────────────────────────────────────────────────────
+  STEP 1: PUSH TO GIT
+───────────────────────────────────────────────────────────────
+
+git push origin main
+
+───────────────────────────────────────────────────────────────
+  STEP 2: COOLIFY ROUTING CONFIGURATION
+───────────────────────────────────────────────────────────────
+
+🚨 CRITICAL: You MUST configure TWO ports in Coolify!
+
+Option A - Coolify UI (If Available):
+  Navigate to: Application → Network → Routing
+  
+  Primary Port:
+    Port: 5173 (Frontend)
+    Path: /
+  
+  Additional Port:
+    Port: 3001 (Backend)
+    Path: /api
+    Strip Prefix: NO
+
+Option B - Docker Labels (If UI routing not available):
+  Navigate to: Application → Advanced → Docker Labels
+  
+  Add these labels:
+  
+  traefik.http.routers.app-api.rule=Host(`sysinspect.skynet97.org`) && PathPrefix(`/api`)
+  traefik.http.routers.app-api.service=app-api
+  traefik.http.services.app-api.loadbalancer.server.port=3001
+  traefik.http.routers.app-api.priority=10
+  
+  traefik.http.routers.app-web.rule=Host(`sysinspect.skynet97.org`)
+  traefik.http.routers.app-web.service=app-web
+  traefik.http.services.app-web.loadbalancer.server.port=5173
+  traefik.http.routers.app-web.priority=1
+
+───────────────────────────────────────────────────────────────
+  STEP 3: OTHER SETTINGS
+───────────────────────────────────────────────────────────────
+
+Build Pack: Dockerfile
+Context: webapp/
+GPU: DISABLED
+Runtime: Default (runc)
+
+Environment Variables: (all required)
+  NODE_ENV=production
+  PORT=3001
+  FRONTEND_URL=https://sysinspect.skynet97.org
+  JWT_SECRET=<your-secret>
+  CLOUDKIT_CONTAINER_ID=<from-xcode>
+  CLOUDKIT_ENVIRONMENT=production
+  CLOUDKIT_API_TOKEN=<from-cloudkit>
+  CLOUDKIT_SERVER_KEY_ID=<from-cloudkit>
+  CLOUDKIT_PRIVATE_KEY=<from-cloudkit>
+
+Domain:
+  sysinspect.skynet97.org
+  Cloudflare Tunnel: Enabled
+
+───────────────────────────────────────────────────────────────
+  STEP 4: DEPLOY
+───────────────────────────────────────────────────────────────
+
+Click "Deploy" button
+
+Build time: 5-10 minutes
+
+───────────────────────────────────────────────────────────────
+  STEP 5: TEST
+───────────────────────────────────────────────────────────────
+
+1. Frontend:
+   curl https://sysinspect.skynet97.org/
+   
+2. Backend:
+   curl https://sysinspect.skynet97.org/api/health
+
+Both should work!
+
+───────────────────────────────────────────────────────────────
+  HOW IT WORKS
+───────────────────────────────────────────────────────────────
+
+Request Flow:
+  Browser → Cloudflare → Coolify → Traefik
+                                      ├─ / → Port 5173
+                                      └─ /api → Port 3001
+
+Container:
+  ├─ Frontend (serve -s dist -l 5173)
+  └─ Backend (node src/index.js on port 3001)
+
+───────────────────────────────────────────────────────────────
+  ARCHITECTURE BENEFITS
+───────────────────────────────────────────────────────────────
+
+✅ No redundant Nginx layer
+✅ Uses Coolify's built-in Traefik
+✅ Works perfectly with Cloudflared
+✅ Simple and maintainable
+✅ Standard Coolify pattern
+✅ Multiple layers of security
+
+───────────────────────────────────────────────────────────────
+  🎉 READY TO DEPLOY WITH TRAEFIK! 🎉
+───────────────────────────────────────────────────────────────

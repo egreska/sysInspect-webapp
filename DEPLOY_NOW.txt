@@ -11,7 +11,9 @@ Status: ✅ ALL ISSUES FIXED + NGINX ARCHITECTURE ADDED
 
 1. git push origin main
 
-2. Coolify → Set Port to 80
+2. Coolify → Configure TWO ports:
+   - Port 5173 (Frontend, path: /)
+   - Port 3001 (Backend, path: /api)
 
 3. Click Deploy
 
@@ -30,8 +32,9 @@ Status: ✅ ALL ISSUES FIXED + NGINX ARCHITECTURE ADDED
 
 Build Pack: Dockerfile
 GPU: DISABLED
-PORT: 80 ← SET THIS!
+Ports: 5173 (Primary), 3001 (/api path)
 Context: webapp/
+Traefik: Routes /api to 3001, / to 5173
 
 ───────────────────────────────────────────────────────────────
   TEST AFTER DEPLOY
