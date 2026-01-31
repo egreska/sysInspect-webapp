@@ -1,0 +1,50 @@
+# Development files
+docker-compose.local.yml
+*.local.yml
+
+# Node modules (installed during build)
+node_modules
+*/node_modules
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in image)
+docs/
+*.md
+!backend/README.md
+!frontend/README.md
+
+# Development only
+backend/Dockerfile.dev
+frontend/Dockerfile.dev
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+*.test.js
+*.spec.js
