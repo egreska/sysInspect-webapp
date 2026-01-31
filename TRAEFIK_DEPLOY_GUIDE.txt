@@ -26,7 +26,7 @@ Option A - Coolify UI (If Available):
     Path: /
   
   Additional Port:
-    Port: 3001 (Backend)
+    Port: 3002 (Backend)
     Path: /api
     Strip Prefix: NO
 
@@ -37,7 +37,7 @@ Option B - Docker Labels (If UI routing not available):
   
   traefik.http.routers.app-api.rule=Host(`sysinspect.skynet97.org`) && PathPrefix(`/api`)
   traefik.http.routers.app-api.service=app-api
-  traefik.http.services.app-api.loadbalancer.server.port=3001
+  traefik.http.services.app-api.loadbalancer.server.port=3002
   traefik.http.routers.app-api.priority=10
   
   traefik.http.routers.app-web.rule=Host(`sysinspect.skynet97.org`)
@@ -56,7 +56,7 @@ Runtime: Default (runc)
 
 Environment Variables: (all required)
   NODE_ENV=production
-  PORT=3001
+  PORT=3002
   FRONTEND_URL=https://sysinspect.skynet97.org
   JWT_SECRET=<your-secret>
   CLOUDKIT_CONTAINER_ID=<from-xcode>
@@ -100,7 +100,7 @@ Request Flow:
 
 Container:
   ├─ Frontend (serve -s dist -l 5173)
-  └─ Backend (node src/index.js on port 3001)
+  └─ Backend (node src/index.js on port 3002)
 
 ───────────────────────────────────────────────────────────────
   ARCHITECTURE BENEFITS

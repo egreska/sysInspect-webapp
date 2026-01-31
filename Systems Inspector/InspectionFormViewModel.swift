@@ -15,28 +15,44 @@ class InspectionFormViewModel: NSObject {
 
     // UPDATED: Support both new and existing inspections
     private var _inspection: Inspection?
+    private var nextSequenceNumber: Int32 = 1
     private let isResumingInspection: Bool
     
     var inspection: Inspection {
         if let existingInspection = _inspection {
-            // FIXED: Update inspector name with current setting even for existing inspections
+            // Ensure critical fields are set
+            if existingInspection.id == nil {
+                existingInspection.id = UUID()
+            }
+            if existingInspection.date == nil {
+                existingInspection.date = Date()
+            }
+            if existingInspection.userId == nil, let currentUserID = coreDataManager.currentUserID {
+                existingInspection.userId = currentUserID
+            }
+            
             let currentInspectorName = UserDefaults.standard.string(forKey: "inspectorName") ?? "Inspector Name"
             existingInspection.inspectorName = currentInspectorName
+            
             return existingInspection
         }
         
-        // Create the inspection only when first accessed (lazy creation)
+        // Create new inspection with all required fields
         let newInspection = Inspection(context: coreDataManager.context)
         newInspection.id = UUID()
         newInspection.date = Date()
         
-        // FIXED: Always get current inspector name from settings
         let currentInspectorName = UserDefaults.standard.string(forKey: "inspectorName") ?? "Inspector Name"
         newInspection.inspectorName = currentInspectorName
         
         newInspection.customer = customer
         
-        // Link inspection to customer if provided
+        if let currentUserID = coreDataManager.currentUserID {
+            newInspection.userId = currentUserID
+        } else {
+            print("WARNING: Creating new inspection without a currentUserID. Ensure user is logged in before creating inspections.")
+        }
+        
         if let customer = customer {
             customer.addToInspections(newInspection)
         }
@@ -44,6 +60,67 @@ class InspectionFormViewModel: NSObject {
         _inspection = newInspection
         return newInspection
     }
+
+    func saveInspectionItem(item: InspectionItem, photo: UIImage?) {
+            let currentInspection = inspection
+            
+            // ENSURE critical fields are set since they're now optional in the model
+            if item.id == nil {
+                item.id = UUID()
+            }
+            
+            // NEW: Set sequence number for entry order tracking
+            if item.sequenceNumber == 0 {
+                item.sequenceNumber = nextSequenceNumber
+                nextSequenceNumber += 1
+            }
+            
+            if let currentUserID = coreDataManager.currentUserID {
+                item.userId = currentUserID
+                print("💾 Setting inspection item userId: \(currentUserID)")
+            }
+
+        
+        // UPDATED: Handle photo for both local storage AND CloudKit sync
+            if let photo = photo {
+            // Save locally for immediate access
+            let localPhotoURL = saveImageToDocuments(image: photo)
+            item.photoURL = localPhotoURL?.path
+            
+            // CRITICAL: Save to Core Data for CloudKit sync
+            if let photoData = photo.jpegData(compressionQuality: 0.8) {
+                item.photoData = photoData
+                print("💾 Saved photo data to Core Data for CloudKit sync (\(photoData.count) bytes)")
+            }
+        }
+        
+            currentInspection.addToItems(item)
+            inspectionItems.append(item)
+            
+            print("💾 Saving inspection item locally with CloudKit sync - Sequence: \(item.sequenceNumber)")
+            coreDataManager.saveContext()
+        }
+        
+        // NEW: Initialize sequence number when resuming inspection
+        init(existingInspection: Inspection) {
+            self._inspection = existingInspection
+            self.customer = existingInspection.customer
+            self.isResumingInspection = true
+            super.init()
+            
+            // Load existing inspection items
+            self.inspectionItems = (existingInspection.items?.allObjects as? [InspectionItem]) ?? []
+            
+            // Set next sequence number based on existing items
+            let maxSequence = inspectionItems.map { $0.sequenceNumber }.max() ?? 0
+            self.nextSequenceNumber = maxSequence + 1
+            
+            // Ensure the existing inspection has a userId
+            if existingInspection.userId == nil, let currentUserID = coreDataManager.currentUserID {
+                existingInspection.userId = currentUserID
+            }
+        }
+
     
     // Keep track of the inspection items
     private var inspectionItems: [InspectionItem] = []
@@ -55,43 +132,24 @@ class InspectionFormViewModel: NSObject {
         super.init()
     }
     
-    // NEW: Initializer for resuming existing inspection
-    init(existingInspection: Inspection) {
-        self._inspection = existingInspection
-        self.customer = existingInspection.customer
-        self.isResumingInspection = true
-        super.init()
-        
-        // Load existing inspection items
-        self.inspectionItems = (existingInspection.items?.allObjects as? [InspectionItem]) ?? []
-    }
+    func saveCurrentInspection() {
+        let currentInspection = inspection
 
-    func saveInspectionItem(item: InspectionItem) {
-        let currentInspection = inspection // This triggers lazy creation if needed
+        if let customer = customer, currentInspection.customer == nil {
+            currentInspection.customer = customer
+            customer.addToInspections(currentInspection)
+        }
         
-        // Add the item to the current inspection
-        currentInspection.addToItems(item)
+        // Ensure inspection has userId
+        if currentInspection.userId == nil, let currentUserID = coreDataManager.currentUserID {
+            currentInspection.userId = currentUserID
+        }
         
-        // Also track it in our local array
-        inspectionItems.append(item)
-        
-        // Save the context to persist changes
+        // Save context (CloudKit will handle sync automatically)
+        print("💾 Saving current inspection locally with CloudKit sync")
         coreDataManager.saveContext()
     }
-    
-    func saveCurrentInspection() {
-        // For resumed inspections, always save since we're adding to existing
-        // For new inspections, only create if there are items to save
-        if isResumingInspection || !inspectionItems.isEmpty {
-            let currentInspection = inspection // This triggers lazy creation if needed
-            if let customer = customer, currentInspection.customer == nil {
-                currentInspection.customer = customer
-                customer.addToInspections(currentInspection)
-            }
-            
-            coreDataManager.saveContext()
-        }
-    }
+
 
     func capturePhoto(completion: @escaping (UIImage?) -> Void) {
         self.photoCompletionHandler = completion
@@ -111,8 +169,7 @@ class InspectionFormViewModel: NSObject {
     func deleteInspectionItem(_ item: InspectionItem) {
         guard let existingInspection = _inspection else { return }
         existingInspection.removeFromItems(item)
-        coreDataManager.context.delete(item)
-        coreDataManager.saveContext()
+        coreDataManager.deleteObject(item)
     }
     
     // Function to update customer information if needed
@@ -125,6 +182,10 @@ class InspectionFormViewModel: NSObject {
         if let existingInspection = _inspection {
             existingInspection.customer = newCustomer
             newCustomer.addToInspections(existingInspection)
+            // Ensure inspection has userId if customer is updated
+            if existingInspection.userId == nil, let currentUserID = coreDataManager.currentUserID {
+                existingInspection.userId = currentUserID
+            }
             coreDataManager.saveContext()
         }
     }
@@ -141,8 +202,24 @@ class InspectionFormViewModel: NSObject {
             if let customer = customer {
                 customer.removeFromInspections(existingInspection)
             }
-            coreDataManager.context.delete(existingInspection)
-            coreDataManager.saveContext()
+            coreDataManager.deleteObject(existingInspection)
+            print("InspectionFormViewModel: Deleted empty new inspection locally and remotely (if synced).")
+        }
+    }
+    
+    // NEW: Helper to save image to local documents
+    private func saveImageToDocuments(image: UIImage) -> URL? {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return nil }
+        let fileName = "\(UUID().uuidString).jpg" // Use UUID for unique filenames
+        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(fileName)
+        
+        do {
+            try data.write(to: fileURL)
+            print("Saved image locally to: \(fileURL.lastPathComponent)")
+            return fileURL
+        } catch {
+            print("Error saving image locally: \(error)")
+            return nil
         }
     }
     
@@ -157,7 +234,10 @@ class InspectionFormViewModel: NSObject {
     }
 }
 
-// MARK: - UIImagePickerControllerDelegate
+// MARK: - UIImagePickerControllerDelegate (Moved to UIViewController)
+// This extension is not used by the ViewModel directly, but rather by the VC that presents the picker.
+// It's kept here just as a placeholder/reminder of its original location.
+/*
 extension InspectionFormViewModel: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         if let image = info[.originalImage] as? UIImage {
@@ -175,6 +255,7 @@ extension InspectionFormViewModel: UIImagePickerControllerDelegate, UINavigation
         // The actual dismissal of the picker is handled by the view controller
     }
 }
+*/
 
 // MARK: - UserDefaults Extension (Moved outside the extension)
 enum UserDefaultsKeys: String {

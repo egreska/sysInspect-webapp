@@ -4,6 +4,7 @@
 //
 //  Created by Eric Greska on 5/22/25.
 //
+
 import UIKit
 import CoreData
 
@@ -224,9 +225,19 @@ class AddCustomerViewController: UIViewController {
     // MARK: - Actions
     @objc private func saveCustomer() {
         guard validateForm() else { return }
+
+        guard let currentUserID = CoreDataManager.shared.currentUserID else {
+            showAlert(message: "User not logged in. Cannot save customer.")
+            return
+        }
         
         let customer = Customer(context: CoreDataManager.shared.context)
+        
+        // ENSURE these are always set since they're now optional in the model
         customer.id = UUID()
+        customer.createdDate = Date()
+        customer.userId = currentUserID
+        
         customer.name = companyNameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         customer.site = siteTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
         customer.contactName = contactNameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -235,20 +246,20 @@ class AddCustomerViewController: UIViewController {
         customer.city = cityTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
         customer.state = stateTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
         customer.zipCode = zipCodeTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
-        customer.createdDate = Date()
-        
+
+        print("💾 Saving customer locally with CloudKit sync")
         CoreDataManager.shared.saveContext()
-        
-        // Notify delegate of new customer
+
         delegate?.didAddCustomer(customer)
         
-        // Dismiss the view controller
         if let navigationController = navigationController {
             navigationController.dismiss(animated: true)
         } else {
             dismiss(animated: true)
         }
     }
+
+
     
     @objc private func cancelTapped() {
         if let navigationController = navigationController {
@@ -366,3 +377,4 @@ extension AddCustomerViewController: UITextFieldDelegate {
         return true
     }
 }
+

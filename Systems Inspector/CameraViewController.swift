@@ -33,19 +33,29 @@ class CameraViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // Start session only if we have permission
-        if captureSession?.isRunning == false {
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                self?.captureSession?.startRunning()
-            }
+        // Start session only if we have permission and it's not already running
+        guard let session = captureSession, !session.isRunning else { return }
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self, let session = self.captureSession, !session.isRunning else { return }
+            session.startRunning()
         }
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         // Stop session when the view disappears
-        if captureSession?.isRunning == true {
-            captureSession.stopRunning()
+        guard let session = captureSession, session.isRunning else { return }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            session.stopRunning()
+        }
+    }
+    
+    deinit {
+        // Ensure session is stopped when controller is deallocated
+        if let session = captureSession, session.isRunning {
+            session.stopRunning()
         }
     }
     
@@ -273,8 +283,9 @@ class CameraViewController: UIViewController {
         )
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
-            self?.delegate?.cameraViewControllerDidCancel(self!)
-            self?.dismiss(animated: true)
+            guard let self = self else { return }
+            self.delegate?.cameraViewControllerDidCancel(self)
+            self.dismiss(animated: true)
         })
         
         alert.addAction(UIAlertAction(title: "Settings", style: .default) { _ in
@@ -289,8 +300,9 @@ class CameraViewController: UIViewController {
     private func showAlert(message: String) {
         let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.delegate?.cameraViewControllerDidCancel(self!)
-            self?.dismiss(animated: true)
+            guard let self = self else { return }
+            self.delegate?.cameraViewControllerDidCancel(self)
+            self.dismiss(animated: true)
         })
         present(alert, animated: true)
     }
@@ -313,8 +325,8 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
         
         // Handle image orientation for front camera
         var finalImage = image
-        if currentPosition == .front {
-            finalImage = UIImage(cgImage: image.cgImage!, scale: image.scale, orientation: .leftMirrored)
+        if currentPosition == .front, let cgImage = image.cgImage {
+            finalImage = UIImage(cgImage: cgImage, scale: image.scale, orientation: .leftMirrored)
         }
         
         // Notify delegate

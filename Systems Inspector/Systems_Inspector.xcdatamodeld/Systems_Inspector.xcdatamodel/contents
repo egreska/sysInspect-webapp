@@ -1,34 +1,42 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788" systemVersion="24F74" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788.4" systemVersion="24F74" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="Customer" representedClassName=".Customer" syncable="YES" codeGenerationType="class">
-        <attribute name="address" attributeType="String"/>
+        <attribute name="address" optional="YES" attributeType="String"/>
         <attribute name="city" optional="YES" attributeType="String"/>
         <attribute name="contactName" optional="YES" attributeType="String"/>
-        <attribute name="createdDate" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="name" attributeType="String"/>
+        <attribute name="createdDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
         <attribute name="phone" optional="YES" attributeType="String"/>
         <attribute name="site" optional="YES" attributeType="String"/>
         <attribute name="state" optional="YES" attributeType="String"/>
+        <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="zipCode" optional="YES" attributeType="String"/>
-        <relationship name="inspections" toMany="YES" deletionRule="Cascade" destinationEntity="Inspection" inverseName="customer" inverseEntity="Inspection"/>
-        <uniquenessConstraints>
-            <uniquenessConstraint>
-                <constraint value="id"/>
-            </uniquenessConstraint>
-        </uniquenessConstraints>
+        <relationship name="inspections" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Inspection" inverseName="customer" inverseEntity="Inspection"/>
+        <fetchIndex name="byUserIdIndex">
+            <fetchIndexElement property="userId" type="Binary" order="ascending"/>
+        </fetchIndex>
+        <fetchIndex name="byNameIndex">
+            <fetchIndexElement property="name" type="Binary" order="ascending"/>
+        </fetchIndex>
+        <fetchIndex name="compoundIndex">
+            <fetchIndexElement property="userId" type="Binary" order="ascending"/>
+            <fetchIndexElement property="name" type="Binary" order="ascending"/>
+        </fetchIndex>
     </entity>
     <entity name="Inspection" representedClassName=".Inspection" syncable="YES" codeGenerationType="class">
-        <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="inspectorName" attributeType="String"/>
-        <relationship name="customer" optional="YES" maxCount="1" deletionRule="Deny" destinationEntity="Customer" inverseName="inspections" inverseEntity="Customer"/>
-        <relationship name="items" toMany="YES" deletionRule="Cascade" destinationEntity="InspectionItem" inverseName="inspection" inverseEntity="InspectionItem"/>
-        <uniquenessConstraints>
-            <uniquenessConstraint>
-                <constraint value="id"/>
-            </uniquenessConstraint>
-        </uniquenessConstraints>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="inspectorName" optional="YES" attributeType="String"/>
+        <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="customer" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Customer" inverseName="inspections" inverseEntity="Customer"/>
+        <relationship name="items" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="InspectionItem" inverseName="inspection" inverseEntity="InspectionItem"/>
+        <fetchIndex name="byDateIndex">
+            <fetchIndexElement property="date" type="Binary" order="descending"/>
+        </fetchIndex>
+        <fetchIndex name="byUserIdIndex">
+            <fetchIndexElement property="userId" type="Binary" order="ascending"/>
+        </fetchIndex>
         <userInfo>
             <entry key="key" value="primary"/>
         </userInfo>
@@ -56,14 +64,16 @@
         <attribute name="bracingDiagonal" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="bracingHorizontal" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="comments" optional="YES" attributeType="String"/>
-        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="importance" optional="YES" attributeType="String" defaultValueString="Monitor"/>
-        <attribute name="location" attributeType="String"/>
+        <attribute name="location" optional="YES" attributeType="String"/>
+        <attribute name="photoData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="photoURL" optional="YES" attributeType="String" valueTransformerName="NSSecureUnarchiveFromDataTransformer" customClassName="URL"/>
         <attribute name="postProtector" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="postProtectorDamaged" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="postProtectorMissing" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="postProtectorRepairRequired" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="sequenceNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="upright" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="uprightAlignmentOutOfAlignment" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="uprightAlignmentOutOfVerticalPlumb" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
@@ -71,23 +81,24 @@
         <attribute name="uprightFrontTwisted" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="uprightRearDamage" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="uprightRearTwisted" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="wireDeck" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="wireDeckDamaged" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="wireDeckMissing" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="wireDeckOutOfPosition" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
-        <relationship name="inspection" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="Inspection" inverseName="items" inverseEntity="Inspection"/>
-        <uniquenessConstraints>
-            <uniquenessConstraint>
-                <constraint value="id"/>
-            </uniquenessConstraint>
-        </uniquenessConstraints>
+        <relationship name="inspection" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Inspection" inverseName="items" inverseEntity="Inspection"/>
     </entity>
     <entity name="User" representedClassName="User" syncable="YES" codeGenerationType="class">
         <attribute name="createdDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="email" attributeType="String"/>
-        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="email" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isActive" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
         <attribute name="lastLoginDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="passwordHash" attributeType="String"/>
+        <attribute name="passwordHash" optional="YES" attributeType="String"/>
+        <attribute name="passwordSalt" optional="YES" attributeType="Binary"/>
+        <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <fetchIndex name="byEmailIndex">
+            <fetchIndexElement property="email" type="Binary" order="ascending"/>
+        </fetchIndex>
     </entity>
 </model>

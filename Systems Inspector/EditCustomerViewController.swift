@@ -231,6 +231,13 @@ class EditCustomerViewController: UIViewController {
     @objc private func saveCustomer() {
         guard validateForm() else { return }
         
+        // Basic check for userId. It should already be set for existing customers.
+        // This is primarily for safety, as this VC edits existing data.
+        guard customer.userId != nil else {
+            showAlert(message: "Customer record is missing user ID. Cannot save changes to cloud.")
+            return
+        }
+
         // Update customer with new values
         customer.name = companyNameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         customer.site = siteTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -241,8 +248,7 @@ class EditCustomerViewController: UIViewController {
         customer.state = stateTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
         customer.zipCode = zipCodeTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Save to Core Data
-        CoreDataManager.shared.saveContext()
+        CoreDataManager.shared.saveContext() // CloudKit will handle sync automatically
         
         // Notify delegate of updated customer
         delegate?.didUpdateCustomer(customer)
@@ -363,3 +369,4 @@ extension EditCustomerViewController: UITextFieldDelegate {
         return true
     }
 }
+

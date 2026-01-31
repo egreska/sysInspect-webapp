@@ -1,0 +1,6 @@
+framework module Pods_Systems_Inspector {
+  umbrella header "Pods-Systems Inspector-umbrella.h"
+
+  export *
+  module * { export * }
+}

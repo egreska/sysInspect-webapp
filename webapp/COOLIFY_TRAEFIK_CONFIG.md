@@ -20,7 +20,7 @@ Traefik (Built-in Reverse Proxy)
      ↓
 Docker Container
      ├─ Frontend (serve on port 5173)
-     └─ Backend (Express on port 3001)
+     └─ Backend (Express on port 3002)
 ```
 
 ---
@@ -49,14 +49,14 @@ Primary Port: 5173
 
 #### **3. Add Additional Port (Backend):**
 ```
-Port: 3001
+Port: 3002
 Path Prefix: /api
 Strip Prefix: false
 ```
 
 This tells Traefik:
 - Route `https://sysinspect.skynet97.org/` → Port 5173 (frontend)
-- Route `https://sysinspect.skynet97.org/api` → Port 3001 (backend)
+- Route `https://sysinspect.skynet97.org/api` → Port 3002 (backend)
 
 ---
 
@@ -74,7 +74,7 @@ traefik.http.routers.frontend.priority=1
 # Backend routing (higher priority)
 traefik.http.routers.backend.rule=Host(`sysinspect.skynet97.org`) && PathPrefix(`/api`)
 traefik.http.routers.backend.service=backend
-traefik.http.services.backend.loadbalancer.server.port=3001
+traefik.http.services.backend.loadbalancer.server.port=3002
 traefik.http.routers.backend.priority=10
 ```
 
@@ -97,7 +97,7 @@ Branch: main
 Primary Port: 5173 (Frontend)
 
 Additional Ports:
-  Port: 3001
+  Port: 3002
   Path: /api
 ```
 
@@ -110,7 +110,7 @@ Runtime: Default (runc)
 ### **Environment Variables:**
 ```bash
 NODE_ENV=production
-PORT=3001
+PORT=3002
 FRONTEND_URL=https://sysinspect.skynet97.org
 JWT_SECRET=<your-32-char-secret>
 
@@ -172,7 +172,7 @@ curl -X POST https://sysinspect.skynet97.org/api/auth/login \
 1. User: https://sysinspect.skynet97.org/api/health
 2. Cloudflare Tunnel → Coolify
 3. Traefik: Match Host + /api prefix
-4. Route to: Container Port 3001
+4. Route to: Container Port 3002
 5. Backend: Express handles /api/health
 ```
 
@@ -188,7 +188,7 @@ Port 5173: Frontend (serve)
   - Static files only
   - No server-side logic
 
-Port 3001: Backend (Node.js/Express)
+Port 3002: Backend (Node.js/Express)
   - RESTful API
   - CloudKit integration
   - JWT authentication

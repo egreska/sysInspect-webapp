@@ -37,11 +37,11 @@ COPY --from=backend-builder /app/backend ./backend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Expose both ports (Traefik will handle routing)
-EXPOSE 3001 5173
+EXPOSE 3002 5173
 
 # Health check for backend API
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3002/health || exit 1
 
 # Start script
 COPY docker-entrypoint.sh /usr/local/bin/

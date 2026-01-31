@@ -35,8 +35,10 @@ class CustomerDirectoryViewController: UIViewController {
         // Setup TableView
         tableView = UITableView(frame: view.bounds, style: .plain)
         tableView.register(CustomerCell.self, forCellReuseIdentifier: "CustomerCell")
+        tableView.register(LoadingCell.self, forCellReuseIdentifier: "LoadingCell")
         tableView.dataSource = self
         tableView.delegate = self
+        tableView.prefetchDataSource = self
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.tableFooterView = UIView() // Remove empty cell separators
         
@@ -79,6 +81,13 @@ class CustomerDirectoryViewController: UIViewController {
                 self?.refreshControl.endRefreshing()
             }
             .store(in: &cancellables)
+        
+        viewModel.$hasMoreCustomers
+            .receive(on: DispatchQueue.main)
+            .sink { hasMore in
+                print("📊 Has more customers: \(hasMore)")
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Actions
@@ -111,10 +120,20 @@ extension CustomerDirectoryViewController: UITableViewDataSource {
             tableView.backgroundView = nil
         }
         
-        return count
+        // Add 1 for loading cell if has more
+        return viewModel.hasMoreCustomers ? count + 1 : count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        // Check if this is the loading cell
+        if indexPath.row == viewModel.customers.count && viewModel.hasMoreCustomers {
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "LoadingCell", for: indexPath) as? LoadingCell else {
+                return UITableViewCell()
+            }
+            cell.startAnimating()
+            return cell
+        }
+        
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "CustomerCell", for: indexPath) as? CustomerCell else {
             return UITableViewCell()
         }
@@ -153,6 +172,12 @@ extension CustomerDirectoryViewController: UITableViewDataSource {
 // MARK: - UITableViewDelegate
 extension CustomerDirectoryViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        // Don't allow selection of loading cell
+        guard indexPath.row < viewModel.customers.count else {
+            tableView.deselectRow(at: indexPath, animated: true)
+            return
+        }
+        
         let customer = viewModel.customers[indexPath.row]
         let customerDetailsVC = CustomerDetailsViewController(customer: customer)
         navigationController?.pushViewController(customerDetailsVC, animated: true)
@@ -161,7 +186,50 @@ extension CustomerDirectoryViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        // Loading cell height
+        if indexPath.row == viewModel.customers.count && viewModel.hasMoreCustomers {
+            return 60
+        }
+        
+        // Use cached height for better performance
+        let customer = viewModel.customers[indexPath.row]
+        guard let customerId = customer.id?.uuidString else {
+            return 80
+        }
+        
+        return PerformanceOptimizer.shared.getCellHeight(for: customerId) {
+            return 80 // Standard customer cell height
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
+        // Provide estimated height for better scrolling performance
+        if indexPath.row == viewModel.customers.count && viewModel.hasMoreCustomers {
+            return 60
+        }
         return 80
+    }
+    
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        // Check if should load more
+        if viewModel.shouldLoadMore(currentIndex: indexPath.row) {
+            print("📄 Loading more customers...")
+            viewModel.fetchNextPage()
+        }
+    }
+}
+
+// MARK: - UITableViewDataSourcePrefetching
+extension CustomerDirectoryViewController: UITableViewDataSourcePrefetching {
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        // Prefetch next page when approaching the end
+        for indexPath in indexPaths {
+            if viewModel.shouldLoadMore(currentIndex: indexPath.row) {
+                print("🔄 Prefetching more customers...")
+                viewModel.fetchNextPage()
+                break
+            }
+        }
     }
 }
 
@@ -181,6 +249,58 @@ extension CustomerDirectoryViewController: AddCustomerViewControllerDelegate {
         // Optionally navigate to the new customer details
         let customerDetailsVC = CustomerDetailsViewController(customer: customer)
         navigationController?.pushViewController(customerDetailsVC, animated: true)
+    }
+}
+
+// MARK: - Loading Cell for Pagination
+class LoadingCell: UITableViewCell {
+    private let activityIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        indicator.hidesWhenStopped = false
+        return indicator
+    }()
+    
+    private let loadingLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Loading more customers..."
+        label.font = UIFont.systemFont(ofSize: 14)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        setupUI()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupUI() {
+        selectionStyle = .none
+        contentView.addSubview(activityIndicator)
+        contentView.addSubview(loadingLabel)
+        
+        NSLayoutConstraint.activate([
+            activityIndicator.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            activityIndicator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            
+            loadingLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            loadingLabel.leadingAnchor.constraint(equalTo: activityIndicator.trailingAnchor, constant: 12),
+            loadingLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+        ])
+    }
+    
+    func startAnimating() {
+        activityIndicator.startAnimating()
+    }
+    
+    func stopAnimating() {
+        activityIndicator.stopAnimating()
     }
 }
 

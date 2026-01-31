@@ -106,24 +106,39 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func openCustomerDetails(with customerId: String) {
         // Find the customer with the given ID and open their details
         let context = CoreDataManager.shared.context
+        
+        // Validate UUID format
+        guard let uuid = UUID(uuidString: customerId) else {
+            print("Invalid customer ID format: \(customerId)")
+            return
+        }
+        
         let fetchRequest: NSFetchRequest<Customer> = Customer.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "id == %@", customerId)
+        fetchRequest.predicate = NSPredicate(format: "id == %@", uuid as CVarArg)
         
         do {
             let customers = try context.fetch(fetchRequest)
-            if let customer = customers.first {
-                // Find the customer tab
-                if let tabBarController = window?.rootViewController as? UITabBarController,
-                   let navigationController = tabBarController.viewControllers?[0] as? UINavigationController {
-                    
-                    // Set the tab to customers
-                    tabBarController.selectedIndex = 0
-                    
-                    // Push the customer details view controller
-                    let customerDetailsVC = CustomerDetailsViewController(customer: customer)
-                    navigationController.pushViewController(customerDetailsVC, animated: true)
-                }
+            guard let customer = customers.first else {
+                print("Customer not found with ID: \(customerId)")
+                return
             }
+            
+            // Safely navigate to customer details
+            guard let tabBarController = window?.rootViewController as? UITabBarController,
+                  let viewControllers = tabBarController.viewControllers,
+                  viewControllers.count > 0,
+                  let navigationController = viewControllers[0] as? UINavigationController else {
+                print("Unable to access navigation structure")
+                return
+            }
+            
+            // Set the tab to customers
+            tabBarController.selectedIndex = 0
+            
+            // Push the customer details view controller
+            let customerDetailsVC = CustomerDetailsViewController(customer: customer)
+            navigationController.pushViewController(customerDetailsVC, animated: true)
+            
         } catch {
             print("Error finding customer: \(error)")
         }

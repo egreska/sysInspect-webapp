@@ -299,11 +299,25 @@ class CustomerDetailsViewController: UIViewController {
     }
     
     private func fetchInspections() {
+        // Ensure a user is logged in
+        guard let currentUserID = CoreDataManager.shared.currentUserID else {
+            print("CustomerDetailsViewController: No current user ID. Not fetching inspections.")
+            inspections = []
+            DispatchQueue.main.async {
+                self.tableView.reloadData()
+                self.updateInspectionCountInHeader()
+            }
+            return
+        }
+
         // Create a fetch request for the Inspection entity
         let fetchRequest: NSFetchRequest<Inspection> = Inspection.fetchRequest()
         
-        // Add a predicate to filter inspections by the current customer
-        fetchRequest.predicate = NSPredicate(format: "customer == %@", customer)
+        // Add a predicate to filter inspections by the current customer AND current user
+        let customerPredicate = NSPredicate(format: "customer == %@", customer)
+        let userPredicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
+        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [customerPredicate, userPredicate])
+
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
         
         do {
@@ -383,8 +397,8 @@ extension CustomerDetailsViewController: UITableViewDelegate {
             alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
                 guard let self = self else { return }
                 
-                CoreDataManager.shared.context.delete(inspectionToDelete)
-                CoreDataManager.shared.saveContext()
+                // Use CoreDataManager.deleteObject for CloudKit sync
+                CoreDataManager.shared.deleteObject(inspectionToDelete)
                 
                 self.inspections.remove(at: indexPath.row)
                 tableView.deleteRows(at: [indexPath], with: .fade)
@@ -498,20 +512,40 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
     }
 
     private func loadInspectionItems() {
-        inspectionItems = Array(inspection.items as? Set<InspectionItem> ?? [])
-        
-        // Sort items by creation order (you might want to add a creation timestamp to InspectionItem)
-        inspectionItems.sort { item1, item2 in
-            let location1 = item1.location ?? ""
-            let location2 = item2.location ?? ""
-            if location1 == location2 {
-                return (item1.bayNumber ?? "") < (item2.bayNumber ?? "")
-            }
-            return location1 < location2
+        // NEW: Ensure current user ID exists
+        guard let currentUserID = CoreDataManager.shared.currentUserID else {
+            print("InspectionDetailsViewController: No current user ID. Not loading inspection items.")
+            inspectionItems = []
+            DispatchQueue.main.async { self.tableView.reloadData() }
+            return
         }
+
+        // Create a fetch request for the InspectionItem entity
+        let fetchRequest: NSFetchRequest<InspectionItem> = InspectionItem.fetchRequest()
         
-        DispatchQueue.main.async {
-            self.tableView.reloadData()
+        // Add a predicate to filter items by the current inspection AND current user
+        let inspectionPredicate = NSPredicate(format: "inspection == %@", inspection)
+        let userPredicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
+        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [inspectionPredicate, userPredicate])
+
+        do {
+            inspectionItems = try CoreDataManager.shared.context.fetch(fetchRequest)
+            
+            // Sort items by creation order
+            inspectionItems.sort { item1, item2 in
+                let location1 = item1.location ?? ""
+                let location2 = item2.location ?? ""
+                if location1 == location2 {
+                    return (item1.bayNumber ?? "") < (item2.bayNumber ?? "")
+                }
+                return location1 < location2
+            }
+            
+            DispatchQueue.main.async {
+                self.tableView.reloadData()
+            }
+        } catch {
+            print("Error loading inspection items: \(error)")
         }
     }
     
@@ -519,11 +553,19 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
         isEditingMode.toggle()
         
         if isEditingMode {
-            navigationItem.rightBarButtonItem?.title = "Done"
-            navigationItem.rightBarButtonItem?.style = .done
+            // Updated to use the ellipsis button's image for "Done Editing"
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                barButtonSystemItem: .done,
+                target: self,
+                action: #selector(showActionSheet) // Still open action sheet
+            )
         } else {
-            navigationItem.rightBarButtonItem?.title = "Edit"
-            navigationItem.rightBarButtonItem?.style = .plain
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                image: UIImage(systemName: "ellipsis.circle"),
+                style: .plain,
+                target: self,
+                action: #selector(showActionSheet)
+            )
         }
         
         tableView.setEditing(isEditingMode, animated: true)
@@ -597,9 +639,7 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
             alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
                 guard let self = self else { return }
                 
-                // Remove from Core Data
-                CoreDataManager.shared.context.delete(itemToDelete)
-                CoreDataManager.shared.saveContext()
+                CoreDataManager.shared.deleteObject(itemToDelete)
                 
                 // Remove from array and update table
                 self.inspectionItems.remove(at: indexPath.row)
@@ -721,11 +761,15 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
 }
 
 // MARK: - InspectionItemEditDelegate
-extension InspectionDetailsViewController: InspectionItemEditDelegate {
+extension CustomerDetailsViewController: InspectionItemEditDelegate {
     func didSaveInspectionItem() {
-        loadInspectionItems() // Refresh the list
+            // Refresh the display with updated data
+            DispatchQueue.main.async {
+                // FIXED: Call setupUI instead of loadInspectionItems
+                self.setupUI() // This will update the title and content
+            }
+        }
     }
-}
 
 // MARK: - InspectionItemDetailViewController
 class InspectionItemDetailViewController: UIViewController {
@@ -837,8 +881,7 @@ class InspectionItemDetailViewController: UIViewController {
         }
         
         // Add photo if available
-        if let photoPath = inspectionItem.photoURL {
-            let photoURL = URL(fileURLWithPath: photoPath)
+        if inspectionItem.hasPhoto {
             addSectionHeader(to: stackView, title: "Photo")
             
             let imageView = UIImageView()
@@ -846,11 +889,18 @@ class InspectionItemDetailViewController: UIViewController {
             imageView.translatesAutoresizingMaskIntoConstraints = false
             imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
             
-            if let image = UIImage(contentsOfFile: photoURL.path) {
-                imageView.image = image
-            } else {
-                imageView.image = UIImage(systemName: "photo")
-                imageView.tintColor = .lightGray
+            // Show placeholder initially
+            imageView.image = UIImage(systemName: "photo")
+            imageView.tintColor = .lightGray
+            
+            // Load photo asynchronously with caching
+            inspectionItem.getPhoto { image in
+                if let image = image {
+                    imageView.image = image
+                    print("📸 Displaying photo from cache/CloudKit/local storage")
+                } else {
+                    print("📸 No photo found, showing placeholder")
+                }
             }
             
             stackView.addArrangedSubview(imageView)
@@ -1069,9 +1119,39 @@ class InspectionItemEditViewController: UIViewController {
     private let selectedIssueLabel = UILabel()
     private let commentsTextView = UITextView()
     
+    // NEW: Add a photo property to potentially store a new photo taken during edit
+    private var newPhoto: UIImage?
+    private var photoURL: URL? // This will store the local URL if a new photo is taken
+    private let cameraButton: UIButton = { // Add camera button similar to InspectionFormVC
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.systemBlue
+        button.tintColor = .white
+        button.layer.cornerRadius = 30
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        let configuration = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        let cameraImage = UIImage(systemName: "camera.fill", withConfiguration: configuration)
+        button.setImage(cameraImage, for: .normal)
+        
+        return button
+    }()
+    private let cameraButtonLabel: UILabel = { // Label for camera button
+        let label = UILabel()
+        label.text = "Take Photo"
+        label.font = UIFont.systemFont(ofSize: 14)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+
     init(inspectionItem: InspectionItem) {
         self.inspectionItem = inspectionItem
         super.init(nibName: nil, bundle: nil)
+        // Store existing photo URL if present for display or re-upload
+        if let existingPhotoPath = inspectionItem.photoURL {
+            self.photoURL = URL(fileURLWithPath: existingPhotoPath)
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -1083,6 +1163,8 @@ class InspectionItemEditViewController: UIViewController {
         setupUI()
         setupDamageComponents()
         populateFormWithExistingData()
+        setupActions() // NEW: Setup actions for new camera button
+        setupTextViewDelegate() // NEW: Ensure text view delegate is set
     }
     
     private func setupUI() {
@@ -1130,9 +1212,20 @@ class InspectionItemEditViewController: UIViewController {
         issueDropdownButton.layer.borderWidth = 1
         issueDropdownButton.layer.borderColor = UIColor.systemGray4.cgColor
         issueDropdownButton.contentHorizontalAlignment = .left
-        issueDropdownButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+        
+        // Use modern configuration for iOS 15+, fallback for older versions
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.title = "Select Issue"
+            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
+            config.baseForegroundColor = .systemBlue
+            issueDropdownButton.configuration = config
+        } else {
+            issueDropdownButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+        }
+        
         issueDropdownButton.translatesAutoresizingMaskIntoConstraints = false
-        issueDropdownButton.addTarget(self, action: #selector(issueDropdownTapped), for: .touchUpInside)
+        // Target for issueDropdownButton already set
         
         // Setup selected issue label
         selectedIssueLabel.text = "No issue selected"
@@ -1146,7 +1239,7 @@ class InspectionItemEditViewController: UIViewController {
         commentsTextView.layer.borderColor = UIColor.lightGray.cgColor
         commentsTextView.layer.cornerRadius = 5
         commentsTextView.translatesAutoresizingMaskIntoConstraints = false
-        commentsTextView.delegate = self
+        // Delegate for commentsTextView already set
         
         // Add to stack view
         let primaryLocationContainer = createLabeledField(labelText: "Primary Location:", field: primaryLocationTextField)
@@ -1155,11 +1248,30 @@ class InspectionItemEditViewController: UIViewController {
         let importanceContainer = createImportanceContainer()
         let commentsContainer = createLabeledField(labelText: "Comments:", field: commentsTextView)
         
+        // NEW: Camera button container
+        let cameraButtonContainer = UIView()
+        cameraButtonContainer.translatesAutoresizingMaskIntoConstraints = false
+        cameraButtonContainer.addSubview(cameraButton)
+        cameraButtonContainer.addSubview(cameraButtonLabel)
+        NSLayoutConstraint.activate([
+            cameraButton.centerXAnchor.constraint(equalTo: cameraButtonContainer.centerXAnchor),
+            cameraButton.topAnchor.constraint(equalTo: cameraButtonContainer.topAnchor),
+            cameraButton.widthAnchor.constraint(equalToConstant: 60),
+            cameraButton.heightAnchor.constraint(equalToConstant: 60),
+            cameraButtonLabel.topAnchor.constraint(equalTo: cameraButton.bottomAnchor, constant: 8),
+            cameraButtonLabel.centerXAnchor.constraint(equalTo: cameraButtonContainer.centerXAnchor),
+            cameraButtonLabel.bottomAnchor.constraint(equalTo: cameraButtonContainer.bottomAnchor),
+            cameraButtonContainer.heightAnchor.constraint(equalToConstant: 90) // Ensure enough height for button and label
+        ])
+
+
         [primaryLocationContainer,
          secondaryLocationContainer,
          issueContainer,
          importanceContainer,
-         commentsContainer].forEach { stackView.addArrangedSubview($0) }
+         commentsContainer,
+         cameraButtonContainer // NEW: Add camera button to stack
+        ].forEach { stackView.addArrangedSubview($0) }
         
         // Setup constraints
         NSLayoutConstraint.activate([
@@ -1182,7 +1294,19 @@ class InspectionItemEditViewController: UIViewController {
             commentsTextView.heightAnchor.constraint(equalToConstant: 100)
         ])
     }
-    
+
+    // NEW: Setup actions for camera button
+    private func setupActions() {
+        issueDropdownButton.addTarget(self, action: #selector(issueDropdownTapped), for: .touchUpInside)
+        importanceToggleButton.addTarget(self, action: #selector(importanceToggleTapped), for: .touchUpInside)
+        cameraButton.addTarget(self, action: #selector(cameraTapped), for: .touchUpInside)
+    }
+
+    // NEW: Setup text view delegate
+    private func setupTextViewDelegate() {
+        commentsTextView.delegate = self
+    }
+
     private func setupDamageComponents() {
         damageHierarchy = createDamageHierarchy()
     }
@@ -1238,8 +1362,17 @@ class InspectionItemEditViewController: UIViewController {
             }
             
             importanceToggleButton.contentHorizontalAlignment = .left
-            importanceToggleButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
-            importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+            
+            // Use modern configuration for iOS 15+, fallback for older versions
+            if #available(iOS 15.0, *) {
+                var config = importanceToggleButton.configuration ?? UIButton.Configuration.plain()
+                config.imagePadding = 8
+                config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
+                importanceToggleButton.configuration = config
+            } else {
+                importanceToggleButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+                importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+            }
         }
         
         @objc private func importanceToggleTapped() {
@@ -1269,6 +1402,17 @@ class InspectionItemEditViewController: UIViewController {
             // Populate importance
             currentImportance = inspectionItem.importance ?? "Monitor"
             updateImportanceToggleDisplay()
+
+            // Update camera button to show existing photo if available
+            if let photoPath = inspectionItem.photoURL, FileManager.default.fileExists(atPath: photoPath) {
+                let configuration = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+                let checkmarkImage = UIImage(systemName: "checkmark.circle.fill", withConfiguration: configuration)
+                cameraButton.setImage(checkmarkImage, for: .normal)
+            } else {
+                let configuration = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+                let cameraImage = UIImage(systemName: "camera.fill", withConfiguration: configuration)
+                cameraButton.setImage(cameraImage, for: .normal)
+            }
         }
     
     private func getSelectedDamageComponents(from item: InspectionItem) -> [DamageComponent] {
@@ -1484,14 +1628,16 @@ class InspectionItemEditViewController: UIViewController {
     @objc private func saveTapped() {
         guard validateForm() else { return }
         
+        guard inspectionItem.userId != nil else {
+            showAlert(message: "Inspection item is missing user ID. Cannot save changes.")
+            return
+        }
+
         // Update the inspection item with new values
-        inspectionItem.location = primaryLocationTextField.text ?? ""
-        inspectionItem.bayNumber = secondaryLocationTextField.text ?? ""
-        
-        // Update importance
+        inspectionItem.location = primaryLocationTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        inspectionItem.bayNumber = secondaryLocationTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
         inspectionItem.importance = currentImportance
         
-        // Update comments
         if commentsTextView.textColor != UIColor.lightGray {
             inspectionItem.comments = commentsTextView.text
         } else {
@@ -1504,7 +1650,20 @@ class InspectionItemEditViewController: UIViewController {
         // Set new damage component flags
         updateInspectionItemWithSelectedComponents(inspectionItem)
         
-        // Save to Core Data
+        // UPDATED: Handle new photo for CloudKit sync
+        if let newPhoto = newPhoto {
+            // Save locally for immediate access
+            let localPhotoURL = saveImageToDocuments(image: newPhoto)
+            inspectionItem.photoURL = localPhotoURL?.path
+            
+            // CRITICAL: Save to Core Data for CloudKit sync
+            if let photoData = newPhoto.jpegData(compressionQuality: 0.8) {
+                inspectionItem.photoData = photoData
+                print("💾 Updated photo data in Core Data for CloudKit sync (\(photoData.count) bytes)")
+            }
+        }
+        
+        // Save to Core Data. CloudKit will handle sync automatically.
         CoreDataManager.shared.saveContext()
         
         // Notify delegate and dismiss
@@ -1512,6 +1671,35 @@ class InspectionItemEditViewController: UIViewController {
         dismiss(animated: true)
     }
     
+    // NEW: Function to save image to local documents (moved from InspectionFormViewModel for consistency)
+    private func saveImageToDocuments(image: UIImage) -> URL? {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return nil }
+        let fileName = "\(UUID().uuidString).jpg" // Use UUID for unique filenames
+        let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(fileName)
+        
+        do {
+            try data.write(to: fileURL)
+            print("Saved image locally to: \(fileURL.lastPathComponent) for item edit.")
+            return fileURL
+        } catch {
+            print("Error saving image locally during item edit: \(error)")
+            return nil
+        }
+    }
+
+    // NEW: Action for camera button
+    @objc private func cameraTapped() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            showAlert(message: "Camera is not available")
+            return
+        }
+        
+        let imagePicker = UIImagePickerController()
+        imagePicker.sourceType = .camera
+        imagePicker.delegate = self // Set self as delegate
+        present(imagePicker, animated: true)
+    }
+
     private func resetInspectionItemDamageFlags(_ item: InspectionItem) {
         item.upright = false
         item.uprightFrontDamage = false
@@ -1555,6 +1743,24 @@ class InspectionItemEditViewController: UIViewController {
             switch component.name {
             case "Upright":
                 item.upright = true
+            case "Front" where component.parent?.name == "Upright": // Handle intermediate nodes
+                break
+            case "Rear" where component.parent?.name == "Upright": // Handle intermediate nodes
+                break
+            case "Alignment" where component.parent?.name == "Upright": // Handle intermediate nodes
+                break
+            case "Damage" where component.parent?.name == "Front" && component.parent?.parent?.name == "Upright":
+                item.uprightFrontDamage = true
+            case "Twisted" where component.parent?.name == "Front" && component.parent?.parent?.name == "Upright":
+                item.uprightFrontTwisted = true
+            case "Damage" where component.parent?.name == "Rear" && component.parent?.parent?.name == "Upright":
+                item.uprightRearDamage = true
+            case "Twisted" where component.parent?.name == "Rear" && component.parent?.parent?.name == "Upright":
+                item.uprightRearTwisted = true
+            case "Out of alignment":
+                item.uprightAlignmentOutOfAlignment = true
+            case "Out of vertical plumb":
+                item.uprightAlignmentOutOfVerticalPlumb = true
             case "Front damage":
                 item.beamFrontDamage = true
             case "Rear damage":
@@ -1656,3 +1862,27 @@ class InspectionItemEditViewController: UIViewController {
             updateSelectedIssueDisplay()
         }
     }
+
+// MARK: - UIImagePickerControllerDelegate, UINavigationControllerDelegate (for InspectionItemEditViewController)
+extension InspectionItemEditViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        if let image = info[.originalImage] as? UIImage {
+            self.newPhoto = image
+            let configuration = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+            let checkmarkImage = UIImage(systemName: "checkmark.circle.fill", withConfiguration: configuration)
+            cameraButton.setImage(checkmarkImage, for: .normal)
+        }
+        picker.dismiss(animated: true)
+    }
+    
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+    }
+}
+
+extension InspectionDetailsViewController: InspectionItemEditDelegate {
+    func didSaveInspectionItem() {
+        // Refresh the inspection items list
+        loadInspectionItems()
+    }
+}

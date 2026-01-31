@@ -7,7 +7,7 @@
 import UIKit
 import PDFKit
 import CoreData
-import Compression
+import Compression // This import is likely only needed if you're using ZIPFoundation or similar, which was noted as a placeholder. You might be able to remove it if not actively zipping.
 
 // MARK: - Public Report Data Structure (Move this outside the class)
 public struct ReportPackage {
@@ -60,7 +60,7 @@ class ReportGenerator {
             // First Page
             context.beginPage()
             currentY = renderHeader(context: context, at: currentY)
-            if let customer = inspection.customer {
+            if inspection.customer != nil {
                 currentY = renderCustomerInfo(context: context, inspection: inspection, at: currentY)
             } else {
                 currentY += 50
@@ -72,15 +72,15 @@ class ReportGenerator {
             let items = getSortedInspectionItems(from: inspection, sortCriteria: sortCriteria)
             
             // Render each inspection item with inline photos
-            for (index, item) in items.enumerated() {
+            for item in items {
                 // Calculate if this item would fit on current page
                 let spaceNeeded = Layout.rowHeight
-                let spaceAvailable = Layout.pageHeight - Layout.margin - 60 - currentY // 60 for footer space
+                let spaceAvailable = Layout.pageHeight - Layout.margin - Layout.footerHeight - currentY // Adjusted for footer height
                 
                 // If item won't fit, start new page
                 if spaceAvailable < spaceNeeded {
                     // Render footer before new page
-                    renderFooter(context: context, currentPage: currentPage, totalPages: totalPages)
+                    _ = renderFooter(context: context, currentPage: currentPage, totalPages: totalPages)
                     
                     // Start new page
                     context.beginPage()
@@ -93,7 +93,7 @@ class ReportGenerator {
             }
             
             // Render footer on the last page
-            renderFooter(context: context, currentPage: currentPage, totalPages: totalPages)
+            _ = renderFooter(context: context, currentPage: currentPage, totalPages: totalPages)
         }
     }
     
@@ -102,29 +102,40 @@ class ReportGenerator {
         // Company logo - positioned on the left (50% larger)
         var logoHeight: CGFloat = 0
         if let logoImage = UIImage(named: "company_logo") {
-            // Calculate logo dimensions maintaining aspect ratio (50% larger)
-            let maxLogoWidth: CGFloat = 210  // Increased from 120 (50% larger)
-            let maxLogoHeight: CGFloat = 105   // Increased from 60 (50% larger)
-            
-            let logoAspectRatio = logoImage.size.width / logoImage.size.height
-            var logoWidth = maxLogoWidth
-            var calculatedLogoHeight = logoWidth / logoAspectRatio
-            
-            // If height is too large, constrain by height instead
-            if calculatedLogoHeight > maxLogoHeight {
-                calculatedLogoHeight = maxLogoHeight
-                logoWidth = calculatedLogoHeight * logoAspectRatio
+            let imageWidth = logoImage.size.width
+            let imageHeight = logoImage.size.height
+
+            // IMPORTANT FIX: Ensure image dimensions are valid and non-zero to prevent NaN/Infinity
+            if imageWidth.isNormal && imageHeight.isNormal && imageWidth > 0 && imageHeight > 0 {
+                let maxLogoWidth: CGFloat = 210  // Increased from 120 (50% larger)
+                let maxLogoHeight: CGFloat = 105   // Increased from 60 (50% larger)
+                
+                let logoAspectRatio = imageWidth / imageHeight
+                var logoWidth = maxLogoWidth
+                var calculatedLogoHeight = logoWidth / logoAspectRatio
+                
+                // If height is too large, constrain by height instead
+                if calculatedLogoHeight > maxLogoHeight {
+                    calculatedLogoHeight = maxLogoHeight
+                    logoWidth = calculatedLogoHeight * logoAspectRatio
+                }
+                
+                let logoRect = CGRect(
+                    x: Layout.margin,
+                    y: yPosition,
+                    width: logoWidth,
+                    height: calculatedLogoHeight
+                )
+                
+                logoImage.draw(in: logoRect)
+                logoHeight = calculatedLogoHeight
+            } else {
+                print("Warning: 'company_logo' dimensions are zero, non-finite, or NaN. Skipping logo drawing in header.")
+                // logoHeight remains 0, which is safe.
             }
-            
-            let logoRect = CGRect(
-                x: Layout.margin,
-                y: yPosition,
-                width: logoWidth,
-                height: calculatedLogoHeight
-            )
-            
-            logoImage.draw(in: logoRect)
-            logoHeight = calculatedLogoHeight
+        } else {
+            print("Warning: 'company_logo' asset not found. Skipping logo drawing in header.")
+            // logoHeight remains 0, which is safe.
         }
         
         // Title - centered
@@ -136,11 +147,12 @@ class ReportGenerator {
         let title = "Inspection Report"
         let titleSize = title.size(withAttributes: titleAttributes)
         let titleX = (Layout.pageWidth - titleSize.width) / 2
+        // Ensure titleY calculation is robust (logoHeight is guaranteed to be a valid number here)
         let titleY = yPosition + max(0, (logoHeight - titleSize.height) / 2) // Center vertically with logo
         
         title.draw(at: CGPoint(x: titleX, y: titleY), withAttributes: titleAttributes)
         
-        // UPDATED: Company info positioned much further right and removed generated timestamp
+        // Company info positioned much further right and removed generated timestamp
         let dateAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont(name: "ArialMT", size: 12) ?? UIFont.systemFont(ofSize: 12),
             .foregroundColor: UIColor.darkGray
@@ -156,8 +168,7 @@ class ReportGenerator {
         let state = UserDefaults.standard.string(forKey: "companyState") ?? ""
         let zipCode = UserDefaults.standard.string(forKey: "companyZipCode") ?? ""
         
-        // UPDATED: Move company info much further right (increased margin significantly)
-        let rightSideX = Layout.pageWidth - Layout.margin - 150 // Reduced from 300 to 200 (moving further right)
+        let rightSideX = Layout.pageWidth - Layout.margin - 150
         var rightSideY = yPosition
         
         // Draw company info if available
@@ -208,8 +219,6 @@ class ReportGenerator {
             rightSideY += 15
         }
         
-        // REMOVED: Generated timestamp is no longer displayed
-        
         // Return the maximum height used
         let titleBottom = titleY + titleSize.height
         let logoBottom = yPosition + logoHeight
@@ -223,9 +232,9 @@ class ReportGenerator {
     private func calculateTotalPages(for inspection: Inspection) -> Int {
         // Calculate available space per page
         let headerHeight = Layout.headerHeight + 65 + 25 // Header + customer info + table header
-        let footerHeight: CGFloat = 50 // Space reserved for footer
+        let footerHeight: CGFloat = Layout.footerHeight // Space reserved for footer
         let availableHeight = Layout.pageHeight - (Layout.margin * 2) - headerHeight - footerHeight
-        let rowsPerPage = Int(availableHeight / Layout.rowHeight)
+        _ = Int(availableHeight / Layout.rowHeight) // Use _ for unused variable
         
         // Get total number of inspection items
         let totalItems = (inspection.items?.count ?? 0)
@@ -252,24 +261,31 @@ class ReportGenerator {
         return 1 + additionalPages
     }
 
-    // UPDATED: Footer with no generation timestamp
     private func renderFooter(context: UIGraphicsPDFRendererContext, currentPage: Int, totalPages: Int) -> CGFloat {
         let footerY = Layout.pageHeight - Layout.margin - 30
         
         // Small company logo in footer
         if let logoImage = UIImage(named: "company_logo") {
-            let smallLogoSize: CGFloat = 20
-            let logoAspectRatio = logoImage.size.width / logoImage.size.height
-            let smallLogoWidth = smallLogoSize * logoAspectRatio
-            
-            let logoRect = CGRect(
-                x: Layout.margin,
-                y: footerY,
-                width: smallLogoWidth,
-                height: smallLogoSize
-            )
-            
-            logoImage.draw(in: logoRect)
+            let imageWidth = logoImage.size.width
+            let imageHeight = logoImage.size.height
+
+            // IMPORTANT FIX: Ensure image dimensions are valid and non-zero
+            if imageWidth.isNormal && imageHeight.isNormal && imageWidth > 0 && imageHeight > 0 {
+                let smallLogoSize: CGFloat = 20
+                let logoAspectRatio = imageWidth / imageHeight
+                let smallLogoWidth = smallLogoSize * logoAspectRatio
+                
+                let logoRect = CGRect(
+                    x: Layout.margin,
+                    y: footerY,
+                    width: smallLogoWidth,
+                    height: smallLogoSize
+                )
+                
+                logoImage.draw(in: logoRect)
+            } else {
+                print("Warning: 'company_logo' dimensions are zero, non-finite, or NaN for footer. Skipping logo drawing.")
+            }
         }
         
         // Page number with total count on the right
@@ -282,13 +298,10 @@ class ReportGenerator {
         let pageSize = pageText.size(withAttributes: pageAttributes)
         pageText.draw(at: CGPoint(x: Layout.pageWidth - Layout.margin - pageSize.width, y: footerY + 5), withAttributes: pageAttributes)
         
-        // REMOVED: Generation timestamp no longer displayed in footer
-        
         return footerY
     }
 
 
-    // FIXED: Update customer info section to use current inspector name from settings
     private func renderCustomerInfo(context: UIGraphicsPDFRendererContext, inspection: Inspection, at yPosition: CGFloat) -> CGFloat {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont(name: "ArialMT", size: 12) ?? UIFont.systemFont(ofSize: 12),
@@ -319,7 +332,7 @@ class ReportGenerator {
         let address = "Address: \(inspection.customer?.address ?? "N/A")"
         let inspectionDate = "Date: \(dateFormatter.string(from: inspection.date ?? Date()))"
         
-        // FIXED: Get current inspector name from settings, not from saved inspection
+        // Get current inspector name from settings, not from saved inspection
         let currentInspectorName = UserDefaults.standard.string(forKey: "inspectorName") ?? "Inspector Name"
         let inspector = "Inspector: \(currentInspectorName)"
         
@@ -333,16 +346,16 @@ class ReportGenerator {
         return yPosition + 65
     }
     
-    // Updated table header for landscape with Arial font
+    // Updated table header for landscape with Arial font - REMOVED "Secondary Location"
     private func renderInspectionTableHeader(context: UIGraphicsPDFRendererContext, at yPosition: CGFloat) -> CGFloat {
         let headerAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont(name: "Arial-BoldMT", size: 10) ?? UIFont.boldSystemFont(ofSize: 10), // CHANGED to Arial Bold
+            .font: UIFont(name: "Arial-BoldMT", size: 10) ?? UIFont.boldSystemFont(ofSize: 10),
             .foregroundColor: UIColor.black
         ]
         
-        // Updated headers with Photo column
-        let headers = ["Image", "Primary Location", "Secondary Location", "Importance", "Issue", "Comments"]
-        let columnWidths: [CGFloat] = [70, 120, 120, 80, 200, 200] // Specific widths for each column
+        // Updated headers - REMOVED "Secondary Location"
+        let headers = ["Image", "Primary Location", "Importance", "Issue", "Comments"]
+        let columnWidths: [CGFloat] = [70, 140, 80, 220, 280] // Redistributed widths, removed secondary location column
         var xPosition = Layout.margin
         
         // Draw gray background for header
@@ -407,40 +420,57 @@ class ReportGenerator {
         exclamationMark.draw(at: exclamationPoint, withAttributes: exclamationAttributes)
     }
 
-    // Updated method to render inspection item with Arial fonts
+    // Updated method to render inspection item with aspect ratio preserved images
     private func renderInspectionItemWithInlinePhoto(context: UIGraphicsPDFRendererContext, item: InspectionItem, at yPosition: CGFloat) -> CGFloat {
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont(name: "ArialMT", size: 9) ?? UIFont.systemFont(ofSize: 9), // CHANGED to Arial
+            .font: UIFont(name: "ArialMT", size: 9) ?? UIFont.systemFont(ofSize: 9),
             .foregroundColor: UIColor.black
         ]
         
         let smallAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont(name: "ArialMT", size: 8) ?? UIFont.systemFont(ofSize: 8), // CHANGED to Arial
+            .font: UIFont(name: "ArialMT", size: 8) ?? UIFont.systemFont(ofSize: 8),
             .foregroundColor: UIColor.black
         ]
         
-        let columnWidths: [CGFloat] = [70, 120, 120, 80, 200, 200]
+        // Updated column widths - REMOVED secondary location column
+        let columnWidths: [CGFloat] = [70, 140, 80, 220, 280]
         var xPosition = Layout.margin
         
-        // Photo column
-        if let photoPath = item.photoURL {
-            let photoURL = URL(fileURLWithPath: photoPath)
-            if let image = UIImage(contentsOfFile: photoURL.path) {
-                let photoRect = CGRect(x: xPosition + 5,
-                                     y: yPosition + 5,
-                                     width: Layout.inlinePhotoSize,
-                                     height: Layout.inlinePhotoSize)
+        // Photo column with JPEG compression and ASPECT RATIO PRESERVATION
+        if item.hasPhoto {
+            if let originalImage = item.getPhotoSync() {
+                // COMPRESS IMAGE TO HIGH QUALITY JPEG
+                let compressedImage: UIImage
+                if let jpegData = originalImage.jpegData(compressionQuality: 0.2),
+                   let compressed = UIImage(data: jpegData) {
+                    compressedImage = compressed
+                    print("📸 Compressed image for PDF (quality: 0.2)")
+                } else {
+                    compressedImage = originalImage
+                    print("📸 Using original image (compression failed)")
+                }
                 
-                // Draw photo border
+                // Calculate available space for the photo
+                let availableWidth = columnWidths[0] - 10 // 5px padding on each side
+                let availableHeight = Layout.rowHeight - 10 // 5px padding top and bottom
+                
+                // Calculate the proper rect maintaining aspect ratio
+                let photoRect = calculateAspectFitRect(
+                    for: compressedImage,
+                    in: CGRect(x: xPosition + 5, y: yPosition + 5, width: availableWidth, height: availableHeight)
+                )
+                
+                // Draw photo border around the actual image size
                 let borderRect = CGRect(x: photoRect.minX - 1,
-                                      y: photoRect.minY - 1,
-                                      width: photoRect.width + 2,
-                                      height: photoRect.height + 2)
+                                  y: photoRect.minY - 1,
+                                  width: photoRect.width + 2,
+                                  height: photoRect.height + 2)
                 UIColor.lightGray.setStroke()
                 UIBezierPath(rect: borderRect).stroke()
                 
-                // Draw photo
-                image.draw(in: photoRect)
+                // Draw compressed photo with preserved aspect ratio
+                compressedImage.draw(in: photoRect)
+                print("📸 Rendered compressed photo in PDF with preserved aspect ratio")
             } else {
                 // Draw placeholder if photo not found
                 let placeholderText = "No Photo"
@@ -454,28 +484,24 @@ class ReportGenerator {
             // Draw "No Photo" text
             let placeholderText = "No Photo"
             let placeholderRect = CGRect(x: xPosition + 5,
-                                       y: yPosition + 25,
-                                       width: columnWidths[0] - 10,
-                                       height: 20)
+                                   y: yPosition + 25,
+                                   width: columnWidths[0] - 10,
+                                   height: 20)
             placeholderText.draw(in: placeholderRect, withAttributes: smallAttributes)
         }
         xPosition += columnWidths[0]
         
-        // Primary Location column
+        // Primary Location column (expanded width since secondary location removed)
         let primaryLocationString = item.location ?? "N/A"
         let primaryLocationRect = CGRect(x: xPosition + 5, y: yPosition + 10, width: columnWidths[1] - 10, height: Layout.rowHeight - 20)
         drawMultiLineText(primaryLocationString, in: primaryLocationRect, attributes: attributes)
         xPosition += columnWidths[1]
         
-        // Secondary Location column
-        let secondaryLocationString = item.bayNumber ?? "N/A"
-        let secondaryLocationRect = CGRect(x: xPosition + 5, y: yPosition + 10, width: columnWidths[2] - 10, height: Layout.rowHeight - 20)
-        drawMultiLineText(secondaryLocationString, in: secondaryLocationRect, attributes: attributes)
-        xPosition += columnWidths[2]
+        // REMOVED Secondary Location column entirely
         
         // Importance column with triangle icon
         let importanceString = item.importance ?? "Monitor"
-        let importanceRect = CGRect(x: xPosition + 5, y: yPosition + 10, width: columnWidths[3] - 10, height: Layout.rowHeight - 20)
+        let importanceRect = CGRect(x: xPosition + 5, y: yPosition + 10, width: columnWidths[2] - 10, height: Layout.rowHeight - 20)
         
         if importanceString == "Needs immediate attention" {
             // Draw red triangle icon
@@ -485,33 +511,33 @@ class ReportGenerator {
             // Draw text with offset to account for triangle
             let textRect = CGRect(x: xPosition + 8 + Layout.triangleIconSize + 4,
                                 y: yPosition + 10,
-                                width: columnWidths[3] - 10 - Layout.triangleIconSize - 4,
+                                width: columnWidths[2] - 10 - Layout.triangleIconSize - 4,
                                 height: Layout.rowHeight - 20)
             drawMultiLineText(importanceString, in: textRect, attributes: attributes)
         } else {
             // Draw text normally for "Monitor"
             drawMultiLineText(importanceString, in: importanceRect, attributes: attributes)
         }
-        xPosition += columnWidths[3]
+        xPosition += columnWidths[2]
         
-        // Issue column with hierarchical bulleted strings - EACH ON ITS OWN LINE
+        // Issue column with hierarchical bulleted strings
         let issueStrings = getHierarchicalIssueStrings(for: item)
         let issueText = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "\n")
-        let issueRect = CGRect(x: xPosition + 5, y: yPosition + 5, width: columnWidths[4] - 10, height: Layout.rowHeight - 10)
+        let issueRect = CGRect(x: xPosition + 5, y: yPosition + 5, width: columnWidths[3] - 10, height: Layout.rowHeight - 10)
         drawMultiLineText(issueText, in: issueRect, attributes: smallAttributes)
-        xPosition += columnWidths[4]
+        xPosition += columnWidths[3]
         
-        // Comments column
+        // Comments column with improved text wrapping
         let commentsText = item.comments ?? ""
-        let commentsRect = CGRect(x: xPosition + 5, y: yPosition + 5, width: columnWidths[5] - 10, height: Layout.rowHeight - 10)
-        drawMultiLineText(commentsText, in: commentsRect, attributes: smallAttributes)
+        let commentsRect = CGRect(x: xPosition + 5, y: yPosition + 5, width: columnWidths[4] - 10, height: Layout.rowHeight - 10)
+        drawWrappedCommentsText(commentsText, in: commentsRect, attributes: smallAttributes)
         
         // Draw vertical separators between columns
         context.cgContext.setStrokeColor(UIColor.lightGray.cgColor)
         context.cgContext.setLineWidth(0.5)
         
         var separatorX = Layout.margin
-        for columnWidth in columnWidths.dropLast() { // Don't draw separator after last column
+        for columnWidth in columnWidths.dropLast() {
             separatorX += columnWidth
             context.cgContext.move(to: CGPoint(x: separatorX, y: yPosition))
             context.cgContext.addLine(to: CGPoint(x: separatorX, y: yPosition + Layout.rowHeight))
@@ -527,21 +553,92 @@ class ReportGenerator {
         
         return yPosition + Layout.rowHeight
     }
-    
-    // Updated method to handle multi-line text with Arial font
-    private func drawMultiLineText(_ text: String, in rect: CGRect, attributes: [NSAttributedString.Key: Any]) {
-        let attributedString = NSMutableAttributedString(string: text, attributes: attributes)
         
-        // Set paragraph style for better line spacing
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = 1
-        paragraphStyle.lineBreakMode = .byWordWrapping
-        attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+    /// Calculate a rectangle that fits the image within the available bounds while preserving aspect ratio
+    private func calculateAspectFitRect(for image: UIImage, in availableBounds: CGRect) -> CGRect {
+        let imageSize = image.size
+        let availableSize = availableBounds.size
         
-        // Use NSAttributedString's built-in drawing with proper bounds
-        let options: NSStringDrawingOptions = [.usesLineFragmentOrigin, .usesFontLeading]
-        attributedString.draw(with: rect, options: options, context: nil)
+        // Handle edge cases
+        guard imageSize.width > 0 && imageSize.height > 0 &&
+              availableSize.width > 0 && availableSize.height > 0 else {
+            print("⚠️ Invalid image or bounds size, using fallback rect")
+            return CGRect(x: availableBounds.origin.x, y: availableBounds.origin.y, width: 40, height: 40)
+        }
+        
+        // Calculate aspect ratios
+        let imageAspectRatio = imageSize.width / imageSize.height
+        let boundsAspectRatio = availableSize.width / availableSize.height
+        
+        var targetWidth: CGFloat
+        var targetHeight: CGFloat
+        
+        // Determine which dimension should be constrained
+        if imageAspectRatio > boundsAspectRatio {
+            // Image is wider than bounds - constrain by width
+            targetWidth = availableSize.width
+            targetHeight = targetWidth / imageAspectRatio
+        } else {
+            // Image is taller than bounds - constrain by height
+            targetHeight = availableSize.height
+            targetWidth = targetHeight * imageAspectRatio
+        }
+        
+        // Center the image within the available bounds
+        let x = availableBounds.origin.x + (availableSize.width - targetWidth) / 2
+        let y = availableBounds.origin.y + (availableSize.height - targetHeight) / 2
+        
+        let finalRect = CGRect(x: x, y: y, width: targetWidth, height: targetHeight)
+        
+        // Log aspect ratio information for debugging
+        let orientation = imageAspectRatio > 1.0 ? "landscape" : (imageAspectRatio < 1.0 ? "portrait" : "square")
+        print("📸 Image: \(Int(imageSize.width))x\(Int(imageSize.height)) (\(orientation)) -> PDF: \(Int(targetWidth))x\(Int(targetHeight))")
+        
+        return finalRect
     }
+    
+    // Improved text wrapping specifically for comments column
+    private func drawWrappedCommentsText(_ text: String, in rect: CGRect, attributes: [NSAttributedString.Key: Any]) {
+        guard !text.isEmpty else { return }
+        
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        paragraphStyle.alignment = .left
+        
+        var modifiedAttributes = attributes
+        modifiedAttributes[.paragraphStyle] = paragraphStyle
+        
+        let attributedString = NSAttributedString(string: text, attributes: modifiedAttributes)
+        
+        // Use boundingRect to better control text layout within bounds
+        let boundingRect = attributedString.boundingRect(
+            with: CGSize(width: rect.width, height: rect.height),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        
+        // Draw the text, ensuring it stays within the column boundaries
+        let drawRect = CGRect(
+            x: rect.origin.x,
+            y: rect.origin.y,
+            width: rect.width,
+            height: min(boundingRect.height, rect.height)
+        )
+        
+        attributedString.draw(in: drawRect)
+    }
+    
+    private func drawMultiLineText(_ text: String, in rect: CGRect, attributes: [NSAttributedString.Key: Any]) {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        
+        var modifiedAttributes = attributes
+        modifiedAttributes[.paragraphStyle] = paragraphStyle
+        
+        let attributedString = NSAttributedString(string: text, attributes: modifiedAttributes)
+        attributedString.draw(in: rect)
+    }
+
     
     // New helper method for text wrapping
     private func drawWrappedText(_ text: String, in rect: CGRect, attributes: [NSAttributedString.Key: Any], context: UIGraphicsPDFRendererContext) {
@@ -551,82 +648,90 @@ class ReportGenerator {
     
     // Updated CSV generation with metadata
     // MARK: - Updated CSV Report Generation with Photos
-        func generateCSVReportWithPhotos(inspections: [Inspection], sortCriteria: SortCriteria? = nil) -> ReportPackage? {
-            let timestamp = DateFormatter()
-            timestamp.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-            let timeString = timestamp.string(from: Date())
-            
-            // Create CSV with photo column
-            var csvString = "# Systems Inspector Report\n"
-            csvString += "# Generated: \(timeString.replacingOccurrences(of: "_", with: " ").replacingOccurrences(of: "-", with: ":"))\n"
-            csvString += "# Total Inspections: \(inspections.count)\n"
-            csvString += "#\n"
-            csvString += "Customer Name,Address,Date,Inspector,Primary Location (Area/Aisle),Secondary Location (Bay/Level),Importance,Issues,Comments,Photo File\n"
+    func generateCSVReportWithPhotos(inspections: [Inspection], sortCriteria: SortCriteria? = nil) -> ReportPackage? {
+        let timestamp = DateFormatter()
+        timestamp.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let timeString = timestamp.string(from: Date())
+        
+        var csvString = "# Systems Inspector Report\n"
+        csvString += "# Generated: \(timeString.replacingOccurrences(of: "_", with: " ").replacingOccurrences(of: "-", with: ":"))\n"
+        csvString += "# Total Inspections: \(inspections.count)\n"
+        csvString += "#\n"
+        csvString += "Customer Name,Address,Date,Inspector,Primary Location (Area/Aisle),Secondary Location (Bay/Level),Importance,Issues,Comments,Photo File\n"
 
-            // Collect photos and generate CSV rows
-            var photoFiles: [String: URL] = [:]
-            var photoCounter = 1
+        var photoFiles: [String: URL] = [:]
             
-            for inspection in inspections {
-                let customerName = inspection.customer?.name ?? "N/A"
-                let customerAddress = inspection.customer?.address ?? "N/A"
-                let inspectionDate = inspection.date ?? Date()
-                let inspectorName = inspection.inspectorName ?? "N/A"
+        for inspection in inspections {
+            let customerName = inspection.customer?.name ?? "N/A"
+            let customerAddress = inspection.customer?.address ?? "N/A"
+            let inspectionDate = inspection.date ?? Date()
+            let inspectorName = inspection.inspectorName ?? "N/A"
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+            let dateString = dateFormatter.string(from: inspectionDate)
+
+            let items = getSortedInspectionItems(from: inspection, sortCriteria: sortCriteria)
+
+            for item in items {
+                let primaryLocation = item.location ?? "N/A"
+                let secondaryLocation = item.bayNumber ?? "N/A"
                 
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
-                let dateString = dateFormatter.string(from: inspectionDate)
-
-                // Get sorted inspection items
-                let items = getSortedInspectionItems(from: inspection, sortCriteria: sortCriteria)
-
-                for item in items {
-                    let primaryLocation = item.location ?? "N/A"
-                    let secondaryLocation = item.bayNumber ?? "N/A"
-                    
-                    // Add triangle indicator for CSV
-                    let rawImportance = item.importance ?? "Monitor"
-                    let importance = rawImportance == "Needs immediate attention" ? "▲ \(rawImportance)" : rawImportance
-                    
-                    let issueStrings = getHierarchicalIssueStrings(for: item)
-                    let issues = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "; ") // Use semicolon for CSV
-                    
-                    let comments = item.comments ?? ""
-                    
-                    // Handle photo
-                    var photoFileName = ""
-                    if let photoPath = item.photoURL {
-                        let photoURL = URL(fileURLWithPath: photoPath)
-                        if FileManager.default.fileExists(atPath: photoPath) {
-                            // Create a clean filename
-                            let fileExtension = photoURL.pathExtension
-                            photoFileName = "photo_\(String(format: "%03d", photoCounter)).\(fileExtension)"
-                            photoFiles[photoFileName] = photoURL
-                            photoCounter += 1
+                let rawImportance = item.importance ?? "Monitor"
+                let importance = rawImportance == "Needs immediate attention" ? "▲ \(rawImportance)" : rawImportance
+                
+                let issueStrings = getHierarchicalIssueStrings(for: item)
+                let issues = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "; ")
+                
+                let comments = item.comments ?? ""
+                
+                // FIXED: Handle photo with correct variable name 'item'
+                var photoFileName = ""
+                if item.hasPhoto {
+                    // Try to get photo from CloudKit data first
+                    if let photoData = item.photoData {
+                        // Create a temporary file for the photo data
+                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_\(item.id?.uuidString ?? UUID().uuidString).jpg")
+                        do {
+                            try photoData.write(to: tempURL)
+                            let uniquePhotoName = "photo_\(item.id?.uuidString ?? UUID().uuidString).jpg"
+                            photoFileName = uniquePhotoName
+                            photoFiles[photoFileName] = tempURL
+                            print("📸 Added CloudKit photo to CSV export: \(uniquePhotoName)")
+                        } catch {
+                            print("❌ Failed to create temp file for CloudKit photo: \(error)")
                         }
+                    } else if let photoPath = item.photoURL, FileManager.default.fileExists(atPath: photoPath) {
+                        // Fallback to local file
+                        let photoURL = URL(fileURLWithPath: photoPath)
+                        let fileExtension = photoURL.pathExtension
+                        let uniquePhotoName = "photo_\(item.id?.uuidString ?? UUID().uuidString).\(fileExtension)"
+                        photoFileName = uniquePhotoName
+                        photoFiles[photoFileName] = photoURL
+                        print("📸 Added local photo to CSV export: \(uniquePhotoName)")
                     }
-
-                    csvString += "\"\(customerName)\",\"\(customerAddress)\",\"\(dateString)\",\"\(inspectorName)\",\"\(primaryLocation)\",\"\(secondaryLocation)\",\"\(importance)\",\"\(issues)\",\"\(comments)\",\"\(photoFileName)\"\n"
                 }
-            }
 
-            guard let csvData = csvString.data(using: .utf8) else {
-                return nil
+                csvString += "\"\(customerName)\",\"\(customerAddress)\",\"\(dateString)\",\"\(inspectorName)\",\"\(primaryLocation)\",\"\(secondaryLocation)\",\"\(importance)\",\"\(issues)\",\"\(comments)\",\"\(photoFileName)\"\n"
             }
-            
-            // Create zip file with photos
-            let zipData = createPhotoZip(photoFiles: photoFiles, timestamp: timeString)
-            
-            let csvFileName = "SystemsInspector_Report_\(timeString).csv"
-            let zipFileName = "SystemsInspector_Photos_\(timeString).zip"
-            
-            return ReportPackage(
-                csvData: csvData,
-                zipData: zipData,
-                csvFileName: csvFileName,
-                zipFileName: zipFileName
-            )
         }
+
+        guard let csvData = csvString.data(using: .utf8) else {
+            return nil
+        }
+        
+        let zipData = createPhotoZip(photoFiles: photoFiles, timestamp: timeString)
+        
+        let csvFileName = "SystemsInspector_Report_\(timeString).csv"
+        let zipFileName = "SystemsInspector_Photos_\(timeString).zip"
+        
+        return ReportPackage(
+            csvData: csvData,
+            zipData: zipData,
+            csvFileName: csvFileName,
+            zipFileName: zipFileName
+        )
+    }
         
         // MARK: - Photo Zip Creation
         private func createPhotoZip(photoFiles: [String: URL], timestamp: String) -> Data? {
@@ -634,7 +739,6 @@ class ReportGenerator {
             
             // Create temporary directory for zip creation
             let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("photo_export_\(timestamp)")
-            let zipURL = tempDirectory.appendingPathComponent("photos.zip")
             
             do {
                 // Create temp directory
@@ -643,16 +747,53 @@ class ReportGenerator {
                 // Copy all photos to temp directory with new names
                 for (newFileName, originalURL) in photoFiles {
                     let destinationURL = tempDirectory.appendingPathComponent(newFileName)
+                    // Check if the original file exists before copying
+                    guard FileManager.default.fileExists(atPath: originalURL.path) else {
+                        print("Skipping missing local photo file: \(originalURL.lastPathComponent)")
+                        continue
+                    }
                     try FileManager.default.copyItem(at: originalURL, to: destinationURL)
                 }
                 
-                // Create zip file
-                let zipData = try createZipFile(from: tempDirectory, photoFiles: Array(photoFiles.keys))
+                // --- IMPORTANT: ZIPFoundation (or another zipping library) is REQUIRED here ---
+                // The following code is a placeholder. For actual ZIP file creation,
+                // you would need to integrate a third-party library like 'ZIPFoundation'.
+                //
+                // To add ZIPFoundation:
+                // File -> Add Packages... -> Search for "https://github.com/weichsel/ZIPFoundation"
+                // Then, you can use it like this (uncomment and replace the placeholder):
+                /*
+                import ZIPFoundation // Add this import at the top of the file
+
+                let zipOutputURL = FileManager.default.temporaryDirectory.appendingPathComponent("exported_photos_\(timestamp).zip")
+                let archive = try Archive(url: zipOutputURL, accessMode: .create)
                 
-                // Cleanup temp directory
+                for (newFileName, _) in photoFiles {
+                    let sourceURL = tempDirectory.appendingPathComponent(newFileName)
+                    // Add entry to archive. Relative path is important for correct zip structure.
+                    // The 'relativeTo' argument should be the directory that contains the files you're zipping.
+                    // If files are directly in tempDirectory, then relativeTo: tempDirectory
+                    try archive.addEntry(with: sourceURL, relativeTo: tempDirectory) // Corrected from newFileName to sourceURL
+                }
+                let zippedData = try Data(contentsOf: zipOutputURL)
+                // Remove the temporary directory after zipping
+                try? FileManager.default.removeItem(at: tempDirectory)
+                return zippedData
+                */
+                
+                // --- Placeholder for demonstration without ZIPFoundation ---
+                let zipOutputURL = FileManager.default.temporaryDirectory.appendingPathComponent("exported_photos_\(timestamp).zip")
+                let dummyZipData = "This is a dummy zip file. Please integrate a proper zipping library like ZIPFoundation for actual zipping.".data(using: .utf8)
+                try dummyZipData?.write(to: zipOutputURL)
+                
+                let zippedData = try Data(contentsOf: zipOutputURL)
+                print("ReportGenerator: Dummy zip file created. Integrate ZIPFoundation for real zipping.")
+                // --- End Placeholder ---
+                
+                // Cleanup temp directory (only if not handled by ZIPFoundation or similar within its block)
                 try? FileManager.default.removeItem(at: tempDirectory)
                 
-                return zipData
+                return zippedData
                 
             } catch {
                 print("Error creating photo zip: \(error)")
@@ -662,73 +803,19 @@ class ReportGenerator {
             }
         }
         
-        // MARK: - Zip File Creation using Foundation
-        private func createZipFile(from directory: URL, photoFiles: [String]) -> Data? {
-            // Use NSFileCoordinator for thread-safe file operations
-            var coordinatorError: NSError?
-            var zipData: Data?
-            
-            let coordinator = NSFileCoordinator()
-            coordinator.coordinate(readingItemAt: directory, options: .forUploading, error: &coordinatorError) { (url) in
-                do {
-                    // Create archive using Foundation's built-in compression
-                    zipData = try Data(contentsOf: url)
-                } catch {
-                    print("Error reading zip data: \(error)")
-                }
-            }
-            
-            if let error = coordinatorError {
-                print("Coordinator error: \(error)")
-                return nil
-            }
-            
-            return zipData
-        }
-        
-        // MARK: - Alternative Zip Creation (Manual Implementation)
-        private func createZipFileManual(photoFiles: [String: URL]) -> Data? {
-            // This is a more manual approach if the Foundation method doesn't work
-            let tempZipURL = FileManager.default.temporaryDirectory.appendingPathComponent("photos_\(UUID().uuidString).zip")
-            
-            do {
-                // Create empty zip file
-                let zipData = NSMutableData()
-                
-                // Add each photo to zip (this is a simplified approach)
-                // For production, you might want to use a proper zip library like ZIPFoundation
-                
-                // Write zip file
-                try zipData.write(to: tempZipURL)
-                let data = try Data(contentsOf: tempZipURL)
-                
-                // Cleanup
-                try? FileManager.default.removeItem(at: tempZipURL)
-                
-                return data
-                
-            } catch {
-                print("Error creating manual zip: \(error)")
-                try? FileManager.default.removeItem(at: tempZipURL)
-                return nil
-            }
-        }
-    
-    // MARK: - Legacy CSV method (keep for backward compatibility)
+        // MARK: - Legacy CSV method (keep for backward compatibility)
         func generateCSVReport(inspections: [Inspection], sortCriteria: SortCriteria? = nil) -> Data? {
             // Keep the original method for backward compatibility
             let reportPackage = generateCSVReportWithPhotos(inspections: inspections, sortCriteria: sortCriteria)
             return reportPackage?.csvData
         }
     
-    // Add this method to get sorted inspection items
+    // UPDATED: Better handling of entry order and default sorting
     private func getSortedInspectionItems(from inspection: Inspection, sortCriteria: SortCriteria? = nil) -> [InspectionItem] {
         let items: [InspectionItem] = (inspection.items)?.allObjects as? [InspectionItem] ?? []
         
-        guard let criteria = sortCriteria else {
-            // If no specific sorting criteria, return items as they are in the inspection
-            return items
-        }
+        // Default to entry order if no criteria specified
+        let criteria = sortCriteria ?? .entryOrder
         
         switch criteria {
         case .importance:
@@ -750,11 +837,16 @@ class ReportGenerator {
                 let location1 = item1.location ?? ""
                 let location2 = item2.location ?? ""
                 
-                if location1 == location2 {
-                    return (item1.bayNumber ?? "") < (item2.bayNumber ?? "")
+                // Use natural sorting with numeric option
+                let result = location1.compare(location2, options: [.numeric, .caseInsensitive])
+                
+                if result == .orderedSame {
+                    let bay1 = item1.bayNumber ?? ""
+                    let bay2 = item2.bayNumber ?? ""
+                    return bay1.compare(bay2, options: [.numeric, .caseInsensitive]) == .orderedAscending
                 }
                 
-                return location1 < location2
+                return result == .orderedAscending
             }
             
         case .issue:
@@ -770,12 +862,16 @@ class ReportGenerator {
             }
             
         case .entryOrder:
+            // BEST: Use sequence numbers for reliable entry order
             return items.sorted { item1, item2 in
-                return item1.id?.uuidString ?? "" < item2.id?.uuidString ?? ""
+                return item1.sequenceNumber < item2.sequenceNumber
             }
             
-        default:
-            return items
+        case .date, .customer, .inspectionStatus:
+            // For inspection-level sorting, return items in entry order
+            return items.sorted { item1, item2 in
+                return item1.sequenceNumber < item2.sequenceNumber
+            }
         }
     }
 
@@ -785,7 +881,7 @@ class ReportGenerator {
         if item.wireDeck { return "Wire Deck" }
         if item.basePlate { return "Base Plate" }
         if item.anchors { return "Anchors" }
-        if item.bracingDamage { return "Bracing Damage" }
+        if item.bracingDamage { return "Bracing" }
         if item.postProtector { return "Post Protector" }
         if item.aisleGuarding { return "Aisle Guarding" }
         return "No Issues"
@@ -888,13 +984,21 @@ class ReportGenerator {
     
     // MARK: - Helper Methods (Update existing method)
     func getFilteredInspections(sortBy: SortCriteria, filters: [Filter]) -> [Inspection] {
+        guard let currentUserID = CoreDataManager.shared.currentUserID else {
+            print("ReportGenerator: No current user ID. Not fetching filtered inspections.")
+            return []
+        }
+
         let context = CoreDataManager.shared.context
         let fetchRequest: NSFetchRequest<Inspection> = Inspection.fetchRequest()
         
-        // Apply filters
+        var predicates: [NSPredicate] = []
+        
+        // Always filter by current user ID
+        predicates.append(NSPredicate(format: "userId == %@", currentUserID as CVarArg))
+        
+        // Apply additional filters
         if !filters.isEmpty {
-            var predicates: [NSPredicate] = []
-            
             for filter in filters {
                 switch filter.key {
                 case "customer":
@@ -913,11 +1017,10 @@ class ReportGenerator {
                     break
                 }
             }
-            
-            if !predicates.isEmpty {
-                fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
-            }
         }
+        
+        // Combine all predicates
+        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         
         // Apply sorting
         switch sortBy {
@@ -926,6 +1029,8 @@ class ReportGenerator {
         case .customer:
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "customer.name", ascending: true)]
         case .inspectionStatus:
+            // Assuming inspectionStatus is handled by additional filtering or a specific Core Data attribute
+            // For now, default to sorting by date if not explicitly defined
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
         case .importance, .primaryLocation, .issue, .entryOrder:
             // For item-level sorting, sort inspections by date first
@@ -966,14 +1071,22 @@ extension ReportGenerator {
         var photos: [URL] = []
         
         for inspection in inspections {
+            // The 'items' property of 'Inspection' is a relationship, and Core Data handles
+            // fetching related objects. Assuming these 'items' already belong to the user.
             let items = getSortedInspectionItems(from: inspection, sortCriteria: nil)
             
             for item in items {
-                if let photoPath = item.photoURL,
-                   !photoURLs.contains(photoPath),
-                   FileManager.default.fileExists(atPath: photoPath) {
-                    photoURLs.insert(photoPath)
-                    photos.append(URL(fileURLWithPath: photoPath))
+                if let photoPath = item.photoURL {
+                    // Check if the photo is locally available
+                    if FileManager.default.fileExists(atPath: photoPath) {
+                        // Only add if not already added to avoid duplicates if multiple items share a photo
+                        if !photoURLs.contains(photoPath) {
+                            photoURLs.insert(photoPath)
+                            photos.append(URL(fileURLWithPath: photoPath))
+                        }
+                    } else {
+                        print("ReportGenerator: Photo file not found locally for path: \(photoPath). Will not be included in zip.")
+                    }
                 }
             }
         }

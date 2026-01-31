@@ -13,8 +13,8 @@ class HelpAndSupportTableViewController: UITableViewController {
     private let helpItems = [
         "User Guide",
         "Frequently Asked Questions",
-        "Contact Support",
-        "Report a Bug"
+        "Troubleshooting",
+        "About & Contact"
     ]
 
     // Delegate to communicate back to SettingsViewController for actions
@@ -24,6 +24,12 @@ class HelpAndSupportTableViewController: UITableViewController {
         super.viewDidLoad()
         title = "Help & Support"
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "HelpCell")
+        
+        // Log screen view
+        AnalyticsManager.shared.logScreenView(
+            screenName: "Help & Support",
+            screenClass: String(describing: type(of: self))
+        )
     }
 
     // MARK: - UITableViewDataSource
@@ -43,21 +49,27 @@ class HelpAndSupportTableViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-
+        
+        let contentVC: HelpContentViewController
+        
         switch indexPath.row {
         case 0: // User Guide
-            // Show user guide (e.g., present a web view or another VC)
-            settingsDelegate?.showUserGuide()
+            contentVC = HelpContentViewController(contentType: .userGuide)
+            AnalyticsManager.shared.logEvent("help_user_guide_opened")
         case 1: // FAQs
-            // Show FAQs
-            settingsDelegate?.showFAQs()
-        case 2: // Contact Support
-            settingsDelegate?.showContactSupport()
-        case 3: // Report a Bug
-            settingsDelegate?.showReportBug()
+            contentVC = HelpContentViewController(contentType: .faq)
+            AnalyticsManager.shared.logEvent("help_faq_opened")
+        case 2: // Troubleshooting
+            contentVC = HelpContentViewController(contentType: .troubleshooting)
+            AnalyticsManager.shared.logEvent("help_troubleshooting_opened")
+        case 3: // About & Contact
+            contentVC = HelpContentViewController(contentType: .about)
+            AnalyticsManager.shared.logEvent("help_about_opened")
         default:
-            break
+            return
         }
+        
+        navigationController?.pushViewController(contentVC, animated: true)
     }
 }
 

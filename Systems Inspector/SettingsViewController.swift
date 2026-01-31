@@ -7,17 +7,19 @@
 
 import UIKit
 import MessageUI // Keep this import for mail composer actions
+import UniformTypeIdentifiers // For modern document picker
 
 class SettingsViewController: UIViewController {
 
     // MARK: - Properties
     private let tableView = UITableView(frame: .zero, style: .grouped)
 
-    private let sections = ["Inspector Settings", "Application", "Data Management"]
+    private let sections = ["Inspector Settings", "Application", "Data Management", "Performance"]
     private let sectionItems: [[String]] = [
         ["Inspector Name", "Company Information"],
         ["About", "Privacy Policy", "Help & Support"],
-        ["Backup Data", "Restore Data", "Clear All Data", "Logout"]
+        ["Backup Data", "Restore Data", "Clear All Data", "Logout"],
+        ["Clear Image Cache", "Performance Stats", "Release Memory"]
     ]
 
     // MARK: - Lifecycle
@@ -159,7 +161,7 @@ class SettingsViewController: UIViewController {
 
     private func showAboutScreen() {
         let aboutVC = UIViewController()
-        aboutVC.title = "About Systems Inspector"
+        aboutVC.title = "About Rack Inspector"
         aboutVC.view.backgroundColor = .systemBackground
 
         let scrollView = UIScrollView()
@@ -206,7 +208,7 @@ class SettingsViewController: UIViewController {
         • PDF and CSV report generation
         • Data backup and restore
 
-        © 2025 Eric Greska. All rights reserved.
+        © 2025 EKG Apps. All rights reserved.
         """
         descriptionLabel.numberOfLines = 0
         descriptionLabel.textAlignment = .left
@@ -258,13 +260,13 @@ class SettingsViewController: UIViewController {
         let privacyTextView = UITextView()
         privacyTextView.isEditable = false
         privacyTextView.text = """
-        Privacy Policy for Systems Inspector
+        Privacy Policy for Rack Inspector
 
         Last Updated: May 22, 2025
 
         1. Introduction
 
-        This Privacy Policy describes how Systems Inspector collects, uses, and discloses your information when you use our mobile application.
+        This Privacy Policy describes how Rack Inspector collects, uses, and discloses your information when you use our mobile application.
 
         2. Information We Collect
 
@@ -294,7 +296,7 @@ class SettingsViewController: UIViewController {
 
         If you have any questions about this Privacy Policy, please contact us at:
 
-        Email: support@systemsinspector.com
+        Email: support@rackinspector.com
         """
         privacyTextView.font = UIFont.systemFont(ofSize: 16)
         privacyTextView.translatesAutoresizingMaskIntoConstraints = false
@@ -328,15 +330,15 @@ class SettingsViewController: UIViewController {
         if MFMailComposeViewController.canSendMail() {
             let mail = MFMailComposeViewController()
             mail.mailComposeDelegate = self
-            mail.setToRecipients(["support@systemsinspector.com"])
-            mail.setSubject("Systems Inspector Support Request")
+            mail.setToRecipients(["support@rackinspector.com"])
+            mail.setSubject("Rack Inspector Support Request")
             mail.setMessageBody("Please describe your issue or question:", isHTML: false)
             present(mail, animated: true)
         } else {
             // Show fallback if mail is not available
             let alert = UIAlertController(
                 title: "Email Not Available",
-                message: "Please email your support request to support@systemsinspector.com",
+                message: "Please email your support request to support@rackinspector.com",
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -348,8 +350,8 @@ class SettingsViewController: UIViewController {
         if MFMailComposeViewController.canSendMail() {
             let mail = MFMailComposeViewController()
             mail.mailComposeDelegate = self
-            mail.setToRecipients(["bugs@systemsinspector.com"])
-            mail.setSubject("Systems Inspector Bug Report")
+            mail.setToRecipients(["bugs@rackinspector.com"])
+            mail.setSubject("Rack Inspector Bug Report")
 
             // Include device info and app version
             let deviceInfo = """
@@ -367,7 +369,7 @@ class SettingsViewController: UIViewController {
             // Show fallback if mail is not available
             let alert = UIAlertController(
                 title: "Email Not Available",
-                message: "Please email your bug report to bugs@systemsinspector.com",
+                message: "Please email your bug report to bugs@rackinspector.com",
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -401,12 +403,103 @@ class SettingsViewController: UIViewController {
     }
 
     private func showDocumentPicker() {
-        let documentPicker = UIDocumentPickerViewController(documentTypes: ["com.systemsinspector.backup", "public.data"], in: .import)
+        let documentPicker: UIDocumentPickerViewController
+        
+        if #available(iOS 14.0, *) {
+            // Use modern API for iOS 14+
+            documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [.data, .item])
+        } else {
+            // Fallback for older iOS versions
+            documentPicker = UIDocumentPickerViewController(documentTypes: ["com.systemsinspector.backup", "public.data"], in: .import)
+        }
+        
         documentPicker.delegate = self
         documentPicker.allowsMultipleSelection = false
         present(documentPicker, animated: true)
     }
 
+    private func clearImageCache() {
+        // First, get the cache size
+        ImageCacheManager.shared.getCacheSize { [weak self] size in
+            let formattedSize = ImageCacheManager.shared.formatCacheSize(size)
+            
+            let alert = UIAlertController(
+                title: "Clear Image Cache",
+                message: "This will clear \(formattedSize) of cached images. Images will be reloaded from Core Data when needed.",
+                preferredStyle: .alert
+            )
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            
+            alert.addAction(UIAlertAction(title: "Clear Cache", style: .destructive) { _ in
+                ImageCacheManager.shared.clearMemoryCache()
+                ImageCacheManager.shared.clearDiskCache {
+                    let successAlert = UIAlertController(
+                        title: "Cache Cleared",
+                        message: "Image cache has been successfully cleared.",
+                        preferredStyle: .alert
+                    )
+                    successAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self?.present(successAlert, animated: true)
+                }
+            })
+            
+            self?.present(alert, animated: true)
+        }
+    }
+    
+    private func showPerformanceStats() {
+        let summary = PerformanceOptimizer.shared.getPerformanceSummary()
+        
+        let alert = UIAlertController(
+            title: "Performance Statistics",
+            message: summary,
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Reset Stats", style: .destructive) { _ in
+            PerformanceOptimizer.shared.resetMetrics()
+            let resetAlert = UIAlertController(
+                title: "Stats Reset",
+                message: "Performance statistics have been reset.",
+                preferredStyle: .alert
+            )
+            resetAlert.addAction(UIAlertAction(title: "OK", style: .default))
+            self.present(resetAlert, animated: true)
+        })
+        
+        alert.addAction(UIAlertAction(title: "Close", style: .cancel))
+        
+        present(alert, animated: true)
+    }
+    
+    private func releaseMemory() {
+        let beforeMemory = PerformanceOptimizer.shared.getMemoryUsage()
+        
+        PerformanceOptimizer.shared.releaseUnusedResources()
+        
+        // Force garbage collection
+        autoreleasepool {
+            // Empty
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            let afterMemory = PerformanceOptimizer.shared.getMemoryUsage()
+            let freed = beforeMemory.used - afterMemory.used
+            
+            let alert = UIAlertController(
+                title: "Memory Released",
+                message: "Freed \(String(format: "%.1f", max(0, freed)))MB\n\nBefore: \(String(format: "%.1f", beforeMemory.used))MB\nAfter: \(String(format: "%.1f", afterMemory.used))MB",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            self?.present(alert, animated: true)
+            
+            // Reload table to update memory display
+            self?.tableView.reloadData()
+        }
+    }
+    
     private func clearAllData() {
         let alert = UIAlertController(
             title: "Clear All Data",
@@ -417,32 +510,90 @@ class SettingsViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
 
         alert.addAction(UIAlertAction(title: "Clear All Data", style: .destructive) { [weak self] _ in
-            // Add a secondary confirmation
-            self?.confirmClearAllData()
+            // Require password verification before proceeding
+            self?.verifyPasswordForDataDeletion()
         })
 
         present(alert, animated: true)
     }
 
     private func showLogoutConfirmation() {
+            let alert = UIAlertController(
+                title: "Logout",
+                message: "Are you sure you want to logout?",
+                preferredStyle: .alert
+            )
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            
+            alert.addAction(UIAlertAction(title: "Logout", style: .destructive) { _ in
+                // Handle async logout call
+                Task {
+                    await UserManager.shared.logoutUser()
+                    
+                    // Ensure UI updates are on the main thread
+                    await MainActor.run {
+                        // Return to login screen
+                        if let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate,
+                           let window = sceneDelegate.window {
+                            let loginVC = LoginViewController()
+                            let navigationController = UINavigationController(rootViewController: loginVC)
+                            window.rootViewController = navigationController
+                            UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil, completion: nil)
+                        }
+                    }
+                }
+            })
+            
+            present(alert, animated: true)
+        }
+    
+    private func verifyPasswordForDataDeletion() {
         let alert = UIAlertController(
-            title: "Logout",
-            message: "Are you sure you want to logout?",
+            title: "Verify Identity",
+            message: "Enter your password to authorize this critical operation.",
             preferredStyle: .alert
         )
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addTextField { textField in
+            textField.placeholder = "Password"
+            textField.isSecureTextEntry = true
+            textField.autocapitalizationType = .none
+        }
         
-        alert.addAction(UIAlertAction(title: "Logout", style: .destructive) { [weak self] _ in
-            UserManager.shared.logoutUser()
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.showAlert(title: "Cancelled", message: "Data deletion was cancelled.")
+        })
+        
+        alert.addAction(UIAlertAction(title: "Verify", style: .default) { [weak self] _ in
+            guard let password = alert.textFields?.first?.text, !password.isEmpty else {
+                self?.showAlert(title: "Error", message: "Password is required to proceed.")
+                return
+            }
             
-            // Return to login screen
-            if let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate,
-               let window = sceneDelegate.window {
-                let loginVC = LoginViewController()
-                let navigationController = UINavigationController(rootViewController: loginVC)
-                window.rootViewController = navigationController
-                UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil, completion: nil)
+            // Get current user email
+            guard let email = UserDefaults.standard.string(forKey: "currentUserEmail") else {
+                self?.showAlert(title: "Error", message: "No user is currently logged in.")
+                return
+            }
+            
+            // Verify password
+            Task {
+                let isValid = await UserManager.shared.authenticateUser(email: email, password: password)
+                
+                await MainActor.run {
+                    if isValid {
+                        print("✅ Password verified for data deletion")
+                        // Password verified, proceed to final confirmation
+                        self?.confirmClearAllData()
+                    } else {
+                        print("❌ Invalid password for data deletion")
+                        self?.showAlert(
+                            title: "Authentication Failed",
+                            message: "Invalid password. Data deletion cancelled for security."
+                        )
+                    }
+                }
             }
         })
         
@@ -451,23 +602,28 @@ class SettingsViewController: UIViewController {
     
     private func confirmClearAllData() {
         let alert = UIAlertController(
-            title: "Confirm Data Deletion",
-            message: "Please type DELETE to confirm that you want to permanently erase all data.",
+            title: "Final Confirmation",
+            message: "Type DELETE in capital letters to permanently erase all data. This action cannot be undone.",
             preferredStyle: .alert
         )
 
         alert.addTextField { textField in
-            textField.placeholder = "Type DELETE to confirm"
+            textField.placeholder = "Type DELETE"
+            textField.autocapitalizationType = .allCharacters
         }
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.showAlert(title: "Cancelled", message: "Data deletion was cancelled.")
+        })
 
-        alert.addAction(UIAlertAction(title: "Confirm Deletion", style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "Delete All Data", style: .destructive) { [weak self] _ in
             guard let confirmText = alert.textFields?.first?.text, confirmText == "DELETE" else {
-                self?.showAlert(title: "Cancelled", message: "Data deletion was cancelled.")
+                self?.showAlert(title: "Cancelled", message: "Data deletion was cancelled. Confirmation text did not match.")
                 return
             }
 
+            print("🗑️ Performing data deletion...")
+            
             // Perform the actual data deletion
             #if DEBUG
             CoreDataManager.shared.resetAllData()
@@ -479,8 +635,17 @@ class SettingsViewController: UIViewController {
             dictionary.keys.forEach { key in
                 defaults.removeObject(forKey: key)
             }
+            
+            // Clear image cache
+            ImageCacheManager.shared.clearMemoryCache()
+            ImageCacheManager.shared.clearDiskCache {
+                print("✅ All data cleared including caches")
+            }
+            
+            // Clear performance cache
+            PerformanceOptimizer.shared.releaseUnusedResources()
 
-            self?.showAlert(title: "Data Cleared", message: "All data has been successfully deleted.")
+            self?.showAlert(title: "Data Cleared", message: "All data has been successfully deleted. Please restart the app.")
         })
 
         present(alert, animated: true)
@@ -525,6 +690,19 @@ extension SettingsViewController: UITableViewDataSource {
         } else {
             cell.textLabel?.textColor = .label // Reset color for other cells
         }
+        
+        // Show cache size for Clear Image Cache
+        if settingName == "Clear Image Cache" {
+            // Get cache size asynchronously
+            ImageCacheManager.shared.getCacheSize { size in
+                DispatchQueue.main.async {
+                    cell.detailTextLabel?.text = ImageCacheManager.shared.formatCacheSize(size)
+                }
+            }
+        } else if settingName == "Performance Stats" {
+            let memory = PerformanceOptimizer.shared.getMemoryUsage()
+            cell.detailTextLabel?.text = "\(String(format: "%.1f", memory.used))MB"
+        }
 
         return cell
     }
@@ -560,6 +738,12 @@ extension SettingsViewController: UITableViewDelegate {
             clearAllData()
         case "Logout":
             showLogoutConfirmation()
+        case "Clear Image Cache":
+            clearImageCache()
+        case "Performance Stats":
+            showPerformanceStats()
+        case "Release Memory":
+            releaseMemory()
         default:
             break
         }
@@ -569,7 +753,7 @@ extension SettingsViewController: UITableViewDelegate {
 // MARK: - UIDocumentPickerDelegate
 extension SettingsViewController: UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        guard let url = urls.first else { return }
+        guard urls.first != nil else { return }
 
         // Attempt to restore from the selected backup file
         let alert = UIAlertController(

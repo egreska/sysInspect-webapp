@@ -12,7 +12,7 @@ class ReportViewController: UIViewController {
     private let reportGenerator = ReportGenerator()
     private var inspections: [Inspection] = []
     private var selectedInspection: Inspection?
-    private var selectedSortCriteria: SortCriteria = .date
+    private var selectedSortCriteria: SortCriteria = .entryOrder
     private var activeFilters: [Filter] = []
     
     // MARK: - UI Components
@@ -22,6 +22,15 @@ class ReportViewController: UIViewController {
     private let generatePDFButton = UIButton(type: .system)
     private let generateCSVButton = UIButton(type: .system)
     private let noDataLabel = UILabel()
+    
+    // MARK: - Color and Style Constants
+        private struct SortStyles {
+            // Use emoji and text formatting for visual distinction
+            static let itemLevelPrefix = "🔵 " // Blue circle for item-level
+            static let inspectionLevelPrefix = "🟢 " // Green circle for inspection-level
+            static let selectedPrefix = "✅ " // Checkmark for selected
+            static let separatorPrefix = "━━━━ " // Visual separator
+        }
     
     // MARK: - View Lifecycle
     override func viewDidLoad() {
@@ -61,7 +70,7 @@ class ReportViewController: UIViewController {
         filterButton.translatesAutoresizingMaskIntoConstraints = false
         
         // Setup Sort Button
-        sortButton.setTitle("Sort By: Date", for: .normal)
+        sortButton.setTitle("Sort By: Entry Order", for: .normal) // CHANGED from "Sort By: Date"
         sortButton.addTarget(self, action: #selector(showSortOptions), for: .touchUpInside)
         sortButton.translatesAutoresizingMaskIntoConstraints = false
         
@@ -122,7 +131,7 @@ class ReportViewController: UIViewController {
         ])
     }
     
-    // MARK: - Data Fetching
+    // MARK: - Updated Data Fetching in ReportViewController.swift
     private func fetchInspections() {
         let fetchRequest: NSFetchRequest<Inspection> = Inspection.fetchRequest()
         
@@ -154,7 +163,7 @@ class ReportViewController: UIViewController {
             }
         }
         
-        // Apply inspection-level sorting
+        // UPDATED: Apply inspection-level sorting only for inspection-level criteria
         switch selectedSortCriteria {
         case .date:
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
@@ -163,21 +172,12 @@ class ReportViewController: UIViewController {
         case .inspectionStatus:
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
         case .importance, .primaryLocation, .issue, .entryOrder:
-            // For item-level sorting, just sort inspections by date first
+            // For item-level sorting, sort inspections by date to maintain some order
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
         }
         
         do {
             inspections = try CoreDataManager.shared.context.fetch(fetchRequest)
-            
-            // Apply item-level sorting if needed
-            if case .importance = selectedSortCriteria,
-               case .primaryLocation = selectedSortCriteria,
-               case .issue = selectedSortCriteria,
-               case .entryOrder = selectedSortCriteria {
-                inspections = sortInspectionItems(for: inspections)
-            }
-            
             tableView.reloadData()
             
             // Show/hide no data label
@@ -315,113 +315,135 @@ class ReportViewController: UIViewController {
         present(alertController, animated: true)
     }
     
-    // MARK: - Button Actions (Update the showSortOptions method)
-    @objc private func showSortOptions() {
-        let alertController = UIAlertController(title: "Sort Reports", message: "Select sort criteria", preferredStyle: .actionSheet)
-        
-        // Inspection-level sorting
-        alertController.addAction(UIAlertAction(title: "By Date", style: .default) { [weak self] _ in
-            self?.selectedSortCriteria = .date
-            self?.sortButton.setTitle("Sort By: Date", for: .normal)
-            self?.fetchInspections()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "By Customer", style: .default) { [weak self] _ in
-            self?.selectedSortCriteria = .customer
-            self?.sortButton.setTitle("Sort By: Customer", for: .normal)
-            self?.fetchInspections()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "By Status", style: .default) { [weak self] _ in
-            self?.selectedSortCriteria = .inspectionStatus
-            self?.sortButton.setTitle("Sort By: Status", for: .normal)
-            self?.fetchInspections()
-        })
-        
-        // Add separator
-        alertController.addAction(UIAlertAction(title: "———— Item Sorting ————", style: .default, handler: nil))
-        
-        // NEW: Item-level sorting
-        alertController.addAction(UIAlertAction(title: "By Importance", style: .default) { [weak self] _ in
-            self?.selectedSortCriteria = .importance
-            self?.sortButton.setTitle("Sort By: Importance", for: .normal)
-            self?.fetchInspections()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "By Primary Location", style: .default) { [weak self] _ in
-            self?.selectedSortCriteria = .primaryLocation
-            self?.sortButton.setTitle("Sort By: Primary Location", for: .normal)
-            self?.fetchInspections()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "By Issue Type", style: .default) { [weak self] _ in
-            self?.selectedSortCriteria = .issue
-            self?.sortButton.setTitle("Sort By: Issue Type", for: .normal)
-            self?.fetchInspections()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "As Entered (Original Order)", style: .default) { [weak self] _ in
-            self?.selectedSortCriteria = .entryOrder
-            self?.sortButton.setTitle("Sort By: Entry Order", for: .normal)
-            self?.fetchInspections()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        // For iPad support
-        if let popoverController = alertController.popoverPresentationController {
-            popoverController.sourceView = sortButton
-            popoverController.sourceRect = sortButton.bounds
-        }
-        
-        present(alertController, animated: true)
-    }
-    
-    @objc private func generatePDFReport() {
-        guard let inspection = selectedInspection ?? inspections.first else {
-            showAlert(message: "No inspection selected. Please select an inspection from the list.")
-            return
-        }
-        
-        // Pass the current sort criteria to the report generator
-        let sortCriteria: SortCriteria? = {
-            switch selectedSortCriteria {
-            case .importance, .primaryLocation, .issue, .entryOrder:
-                return selectedSortCriteria
-            default:
-                return nil // No item-level sorting for inspection-level criteria
+    // MARK: - Fixed Sort Options Method
+        @objc private func showSortOptions() {
+            let alertController = UIAlertController(title: "Sort Reports", message: "🔵 Item Sorting  🟢 Inspection Sorting", preferredStyle: .actionSheet)
+            
+            // ITEM-LEVEL SORTING (Blue indicators)
+            let entryOrderAction = UIAlertAction(
+                title: createSortTitle("As Entered (Original Order)", isItemLevel: true, isSelected: selectedSortCriteria == .entryOrder),
+                style: .default
+            ) { [weak self] _ in
+                self?.updateSortCriteria(.entryOrder, title: "Sort By: Entry Order")
             }
-        }()
+            alertController.addAction(entryOrderAction)
+            
+            let importanceAction = UIAlertAction(
+                title: createSortTitle("By Importance", isItemLevel: true, isSelected: selectedSortCriteria == .importance),
+                style: .default
+            ) { [weak self] _ in
+                self?.updateSortCriteria(.importance, title: "Sort By: Importance")
+            }
+            alertController.addAction(importanceAction)
+            
+            let primaryLocationAction = UIAlertAction(
+                title: createSortTitle("By Primary Location", isItemLevel: true, isSelected: selectedSortCriteria == .primaryLocation),
+                style: .default
+            ) { [weak self] _ in
+                self?.updateSortCriteria(.primaryLocation, title: "Sort By: Primary Location")
+            }
+            alertController.addAction(primaryLocationAction)
+            
+            let issueAction = UIAlertAction(
+                title: createSortTitle("By Issue Type", isItemLevel: true, isSelected: selectedSortCriteria == .issue),
+                style: .default
+            ) { [weak self] _ in
+                self?.updateSortCriteria(.issue, title: "Sort By: Issue Type")
+            }
+            alertController.addAction(issueAction)
+            
+            // SEPARATOR - FIXED: Added the missing parameter
+            let separatorAction = UIAlertAction(title: "━━━━ Inspection Sorting ━━━━", style: .default) { _ in
+                // Empty action - separator only
+            }
+            separatorAction.isEnabled = false
+            alertController.addAction(separatorAction)
+            
+            // INSPECTION-LEVEL SORTING (Green indicators)
+            let dateAction = UIAlertAction(
+                title: createSortTitle("By Date", isItemLevel: false, isSelected: selectedSortCriteria == .date),
+                style: .default
+            ) { [weak self] _ in
+                self?.updateSortCriteria(.date, title: "Sort By: Date")
+            }
+            alertController.addAction(dateAction)
+            
+            let customerAction = UIAlertAction(
+                title: createSortTitle("By Customer", isItemLevel: false, isSelected: selectedSortCriteria == .customer),
+                style: .default
+            ) { [weak self] _ in
+                self?.updateSortCriteria(.customer, title: "Sort By: Customer")
+            }
+            alertController.addAction(customerAction)
+            
+            let statusAction = UIAlertAction(
+                title: createSortTitle("By Status", isItemLevel: false, isSelected: selectedSortCriteria == .inspectionStatus),
+                style: .default
+            ) { [weak self] _ in
+                self?.updateSortCriteria(.inspectionStatus, title: "Sort By: Status")
+            }
+            alertController.addAction(statusAction)
+            
+            // CANCEL ACTION
+            alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            
+            // For iPad support
+            if let popoverController = alertController.popoverPresentationController {
+                popoverController.sourceView = sortButton
+                popoverController.sourceRect = sortButton.bounds
+            }
+            
+            present(alertController, animated: true)
+        }
         
-        let reportData = reportGenerator.generatePDFReport(inspection: inspection, sortCriteria: sortCriteria)
-        saveAndShareReport(data: reportData, fileName: "SystemsInspector_Report.pdf", mimeType: "application/pdf")
-    }
+        // MARK: - Helper Methods
+        
+        private func createSortTitle(_ baseTitle: String, isItemLevel: Bool, isSelected: Bool) -> String {
+            var title = ""
+            
+            if isSelected {
+                title = SortStyles.selectedPrefix + baseTitle
+            } else if isItemLevel {
+                title = SortStyles.itemLevelPrefix + baseTitle
+            } else {
+                title = SortStyles.inspectionLevelPrefix + baseTitle
+            }
+            
+            return title
+        }
+        
+        private func updateSortCriteria(_ criteria: SortCriteria, title: String) {
+            selectedSortCriteria = criteria
+            sortButton.setTitle(title, for: .normal)
+            fetchInspections()
+        }
+        
+        // MARK: - Updated Report Generation Methods
+        @objc private func generatePDFReport() {
+            guard let inspection = selectedInspection ?? inspections.first else {
+                showAlert(message: "No inspection selected. Please select an inspection from the list.")
+                return
+            }
+            
+            // UPDATED: Always pass the current sort criteria since entry order is now a valid item-level sort
+            let reportData = reportGenerator.generatePDFReport(inspection: inspection, sortCriteria: selectedSortCriteria)
+            saveAndShareReport(data: reportData, fileName: "RackInspector_Report.pdf", mimeType: "application/pdf")
+        }
 
-    @objc private func generateCSVReport() {
-        guard !inspections.isEmpty else {
-            showAlert(message: "No inspections available to generate a report.")
-            return
-        }
-        
-        // Pass the current sort criteria to the report generator
-        let sortCriteria: SortCriteria? = {
-            switch selectedSortCriteria {
-            case .importance, .primaryLocation, .issue, .entryOrder:
-                return selectedSortCriteria
-            default:
-                return nil // No item-level sorting for inspection-level criteria
+        @objc private func generateCSVReport() {
+            guard !inspections.isEmpty else {
+                showAlert(message: "No inspections available to generate a report.")
+                return
             }
-        }()
-        
-        // Generate CSV with photos
-        guard let reportPackage = reportGenerator.generateCSVReportWithPhotos(inspections: inspections, sortCriteria: sortCriteria) else {
-            showAlert(message: "Failed to generate CSV report.")
-            return
+            
+            // UPDATED: Always pass the current sort criteria
+            guard let reportPackage = reportGenerator.generateCSVReportWithPhotos(inspections: inspections, sortCriteria: selectedSortCriteria) else {
+                showAlert(message: "Failed to generate CSV report.")
+                return
+            }
+            
+            saveAndShareReportPackage(reportPackage)
         }
-        
-        // Save both files and share them
-        saveAndShareReportPackage(reportPackage)
-    }
     
     // New method to handle report package sharing
     private func saveAndShareReportPackage(_ reportPackage: ReportPackage) {
@@ -449,7 +471,7 @@ class ReportViewController: UIViewController {
             )
             
             // Customize the activity controller
-            activityViewController.setValue("Systems Inspector Report", forKey: "subject")
+            activityViewController.setValue("Rack Inspector Report", forKey: "subject")
             
             // For iPad support
             if let popoverController = activityViewController.popoverPresentationController {

@@ -7,6 +7,7 @@
 
 import UIKit
 import CoreData
+import Firebase
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -15,6 +16,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        // Configure Firebase
+        FirebaseApp.configure()
         
         // Configure the appearance of the navigation bar
         configureAppearance()
@@ -56,19 +60,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - Core Data
     
     private func setupCoreData() {
-           // This will ensure Core Data is loaded before we need it
-           _ = CoreDataManager.shared.context
-           
-           // For development/debugging: Uncomment the following line to reset all data on launch
-           // CoreDataManager.shared.resetAllData()
-           
-           // Optionally perform migrations if needed
-           CoreDataManager.shared.migrateStoreIfNeeded { success in
-               if !success {
-                   print("Core Data migration failed")
-               }
-           }
-       }
+        // This will ensure Core Data is loaded before we need it
+        _ = CoreDataManager.shared.context
+        
+        // Check CloudKit status
+        CoreDataManager.shared.checkCloudKitStatus()
+        
+        // NEW: Migrate existing local photos to CloudKit
+        DispatchQueue.global(qos: .background).async {
+            CoreDataManager.shared.migrateLocalPhotosToCloudKit()
+        }
+        
+        print("Core Data with CloudKit initialized successfully")
+    }
     
     // MARK: - UI Configuration
     

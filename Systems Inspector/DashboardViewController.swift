@@ -7,7 +7,6 @@
 
 import UIKit
 import CoreData
-//import Charts
 
 class DashboardViewController: UIViewController {
     
@@ -246,8 +245,22 @@ class DashboardViewController: UIViewController {
         
         // Position image to the left of text
         button.semanticContentAttribute = .forceLeftToRight
-        button.imageEdgeInsets = UIEdgeInsets(top: 0, left: -8, bottom: 0, right: 0)
-        button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 0)
+        
+        // Use modern configuration for iOS 15+, fallback for older versions
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.title = title
+            config.image = UIImage(systemName: iconName)
+            config.imagePlacement = .leading
+            config.imagePadding = 8
+            config.baseForegroundColor = .white
+            config.background.backgroundColor = UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
+            config.background.cornerRadius = 10
+            button.configuration = config
+        } else {
+            button.imageEdgeInsets = UIEdgeInsets(top: 0, left: -8, bottom: 0, right: 0)
+            button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 0)
+        }
         
         button.addTarget(self, action: selector, for: .touchUpInside)
         

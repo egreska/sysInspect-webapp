@@ -62,7 +62,17 @@ class InspectionFormViewController: UIViewController, UIImagePickerControllerDel
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.systemGray4.cgColor
         button.contentHorizontalAlignment = .left
-        button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+        
+        // FIXED: Use modern configuration instead of deprecated titleEdgeInsets
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.title = "Select Issue"
+            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
+            button.configuration = config
+        } else {
+            button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+        }
+        
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -174,6 +184,10 @@ class InspectionFormViewController: UIViewController, UIImagePickerControllerDel
         
         // Only cancel if this is a new inspection with no items
         if isMovingFromParent, let viewModel = viewModel, !viewModel.isResuming(), !viewModel.hasInspectionItems() {
+            // Clean up any unused photo before canceling
+            if let photoURL = self.photoURL {
+                cleanupUnusedPhoto(photoURL)
+            }
             viewModel.cancelInspection()
         }
     }
@@ -253,8 +267,17 @@ class InspectionFormViewController: UIViewController, UIImagePickerControllerDel
         }
         
         importanceToggleButton.contentHorizontalAlignment = .left
-        importanceToggleButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
-        importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+        
+        // FIXED: Use modern configuration instead of deprecated edge insets
+        if #available(iOS 15.0, *) {
+            var config = importanceToggleButton.configuration ?? UIButton.Configuration.plain()
+            config.imagePadding = 8
+            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
+            importanceToggleButton.configuration = config
+        } else {
+            importanceToggleButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+            importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+        }
     }
     
     private func createButtonContainer() -> UIView {
@@ -664,30 +687,38 @@ class InspectionFormViewController: UIViewController, UIImagePickerControllerDel
         }
         
         // MARK: - Helper Methods
-        private func saveCurrentItem() {
-            let context = CoreDataManager.shared.context
-            let inspectionItem = InspectionItem(context: context)
-            
-            inspectionItem.id = UUID()
-            inspectionItem.location = primaryLocationTextField.text ?? ""
-            inspectionItem.bayNumber = secondaryLocationTextField.text ?? ""
-            inspectionItem.importance = currentImportance // NEW: Save importance
-            
-            if commentsTextView.textColor != UIColor.lightGray {
-                inspectionItem.comments = commentsTextView.text
-            }
-            
-            if let photoURL = self.photoURL {
-                inspectionItem.photoURL = photoURL.path
-            }
-            
-            updateInspectionItemWithSelectedComponents(inspectionItem)
-            
-            if let viewModel = viewModel {
-                inspectionItem.inspection = viewModel.inspection
-                viewModel.saveInspectionItem(item: inspectionItem)
-            }
+    // In InspectionFormViewController.swift, fix the saveCurrentItem() method (around line 707):
+    private func saveCurrentItem() {
+        let context = CoreDataManager.shared.context
+        let inspectionItem = InspectionItem(context: context)
+        
+        inspectionItem.id = UUID()
+        inspectionItem.location = primaryLocationTextField.text ?? ""
+        inspectionItem.bayNumber = secondaryLocationTextField.text ?? ""
+        inspectionItem.importance = currentImportance
+        
+        if commentsTextView.textColor != UIColor.lightGray {
+            inspectionItem.comments = commentsTextView.text
         }
+        
+        if let photoURL = self.photoURL {
+            inspectionItem.photoURL = photoURL.path
+        }
+        
+        updateInspectionItemWithSelectedComponents(inspectionItem)
+        
+        if let viewModel = viewModel {
+            inspectionItem.inspection = viewModel.inspection
+            
+            var photoImage: UIImage? = nil
+            if let photoURL = self.photoURL {
+                photoImage = UIImage(contentsOfFile: photoURL.path)
+            }
+            
+            // Save the item (CloudKit will handle sync automatically)
+            viewModel.saveInspectionItem(item: inspectionItem, photo: photoImage)
+        }
+    }
     
     private func finishInspection() {
             if let viewModel = viewModel {
