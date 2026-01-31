@@ -27,7 +27,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install serve to serve frontend
+# Install serve and pm2 for running frontend/backend
 RUN npm install -g serve pm2
 
 # Copy backend
@@ -36,12 +36,12 @@ COPY --from=backend-builder /app/backend ./backend
 # Copy frontend build
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Expose ports
-EXPOSE 3001 5173
+# Expose both ports (Traefik will handle routing)
+EXPOSE 3002 5173
 
-# Health check
+# Health check for backend API
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3002/health || exit 1
 
 # Start script
 COPY docker-entrypoint.sh /usr/local/bin/
