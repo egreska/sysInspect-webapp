@@ -14,7 +14,20 @@ router.use(authenticateToken);
 router.get('/', async (req, res, next) => {
   try {
     const { userId } = req.user;
+    
+    // Validate CloudKit configuration
+    if (!process.env.CLOUDKIT_CONTAINER_ID || !process.env.CLOUDKIT_API_TOKEN) {
+      console.error('CloudKit not configured!');
+      return res.json([]); // Return empty array if CloudKit not configured
+    }
+
     const customers = await cloudkit.fetchCustomers(userId);
+
+    // Ensure we got an array
+    if (!Array.isArray(customers)) {
+      console.error('CloudKit returned non-array:', customers);
+      return res.json([]);
+    }
 
     // Transform CloudKit response to simpler format
     const transformedCustomers = customers.map(record => ({
@@ -32,7 +45,9 @@ router.get('/', async (req, res, next) => {
 
     res.json(transformedCustomers);
   } catch (error) {
-    next(error);
+    console.error('Error fetching customers:', error);
+    // Return empty array on error to prevent frontend crash
+    res.json([]);
   }
 });
 
@@ -81,6 +96,12 @@ router.get('/:id/inspections', async (req, res, next) => {
   try {
     const { id } = req.params;
     
+    // Validate CloudKit configuration
+    if (!process.env.CLOUDKIT_CONTAINER_ID || !process.env.CLOUDKIT_API_TOKEN) {
+      console.error('CloudKit not configured!');
+      return res.json([]);
+    }
+    
     // Verify customer ownership first
     const customer = await cloudkit.fetchRecord(id, 'Customer');
     if (!customer || customer.fields.userId?.value !== req.user.userId) {
@@ -88,6 +109,12 @@ router.get('/:id/inspections', async (req, res, next) => {
     }
 
     const inspections = await cloudkit.fetchInspections(id);
+
+    // Ensure we got an array
+    if (!Array.isArray(inspections)) {
+      console.error('CloudKit returned non-array for inspections:', inspections);
+      return res.json([]);
+    }
 
     const transformedInspections = inspections.map(record => ({
       id: record.recordName,
@@ -99,7 +126,9 @@ router.get('/:id/inspections', async (req, res, next) => {
 
     res.json(transformedInspections);
   } catch (error) {
-    next(error);
+    console.error('Error fetching inspections:', error);
+    // Return empty array on error
+    res.json([]);
   }
 });
 
