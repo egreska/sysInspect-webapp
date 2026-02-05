@@ -40,9 +40,42 @@ app.use(compression());
 // Logging
 app.use(morgan('combined'));
 
-// Health check
+// Health check - available at both /health and /api/health
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint for backend
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Systems Inspector API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health or /api/health',
+      auth: '/api/auth/login',
+      customers: '/api/customers',
+      inspections: '/api/inspections/:id',
+      reports: '/api/reports/inspection/:id'
+    }
+  });
+});
+
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: 'Systems Inspector API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth/login',
+      customers: '/api/customers',
+      inspections: '/api/inspections/:id',
+      reports: '/api/reports/inspection/:id'
+    }
+  });
 });
 
 // API routes
