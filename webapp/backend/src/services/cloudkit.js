@@ -92,6 +92,7 @@ class CloudKitService {
 
   /**
    * Query records from CloudKit
+   * Core Data + CloudKit stores data in 'com.apple.coredata.cloudkit.zone'
    */
   async queryRecords(recordType, filters = [], sortBy = null, resultsLimit = 100) {
     const query = {
@@ -99,6 +100,9 @@ class CloudKitService {
         recordType,
         filterBy: filters.length > 0 ? filters : undefined,
         sortBy: sortBy ? [sortBy] : undefined
+      },
+      zoneID: {
+        zoneName: 'com.apple.coredata.cloudkit.zone'
       },
       resultsLimit
     };
@@ -109,13 +113,17 @@ class CloudKitService {
 
   /**
    * Fetch a single record by ID
+   * Core Data + CloudKit stores data in 'com.apple.coredata.cloudkit.zone'
    */
   async fetchRecord(recordName, recordType) {
     const data = {
       records: [{
         recordName,
         recordType
-      }]
+      }],
+      zoneID: {
+        zoneName: 'com.apple.coredata.cloudkit.zone'
+      }
     };
 
     const response = await this.makeRequest('records/lookup', 'POST', data);
@@ -124,10 +132,11 @@ class CloudKitService {
 
   /**
    * Fetch customers for a user
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchCustomers(userId) {
     const filters = [{
-      fieldName: 'userId',
+      fieldName: 'CD_userId',
       comparator: 'EQUALS',
       fieldValue: {
         value: userId,
@@ -136,19 +145,20 @@ class CloudKitService {
     }];
 
     const sortBy = {
-      fieldName: 'name',
+      fieldName: 'CD_name',
       ascending: true
     };
 
-    return await this.queryRecords('Customer', filters, sortBy);
+    return await this.queryRecords('CD_Customer', filters, sortBy);
   }
 
   /**
    * Fetch inspections for a customer
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchInspections(customerId) {
     const filters = [{
-      fieldName: 'customer',
+      fieldName: 'CD_customer',
       comparator: 'EQUALS',
       fieldValue: {
         value: {
@@ -159,19 +169,20 @@ class CloudKitService {
     }];
 
     const sortBy = {
-      fieldName: 'date',
+      fieldName: 'CD_date',
       ascending: false
     };
 
-    return await this.queryRecords('Inspection', filters, sortBy);
+    return await this.queryRecords('CD_Inspection', filters, sortBy);
   }
 
   /**
    * Fetch inspection items for an inspection
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchInspectionItems(inspectionId) {
     const filters = [{
-      fieldName: 'inspection',
+      fieldName: 'CD_inspection',
       comparator: 'EQUALS',
       fieldValue: {
         value: {
@@ -182,19 +193,20 @@ class CloudKitService {
     }];
 
     const sortBy = {
-      fieldName: 'sequenceNumber',
+      fieldName: 'CD_sequenceNumber',
       ascending: true
     };
 
-    return await this.queryRecords('InspectionItem', filters, sortBy);
+    return await this.queryRecords('CD_InspectionItem', filters, sortBy);
   }
 
   /**
    * Fetch user by email
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchUserByEmail(email) {
     const filters = [{
-      fieldName: 'email',
+      fieldName: 'CD_email',
       comparator: 'EQUALS',
       fieldValue: {
         value: email,
@@ -202,7 +214,7 @@ class CloudKitService {
       }
     }];
 
-    const users = await this.queryRecords('User', filters, null, 1);
+    const users = await this.queryRecords('CD_User', filters, null, 1);
     return users[0] || null;
   }
 
