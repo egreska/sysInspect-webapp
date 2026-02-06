@@ -13,11 +13,13 @@ export default function CustomerDetailPage() {
     enabled: !!id,
   });
 
-  const { data: inspections = [], isLoading: loadingInspections } = useQuery({
+  const { data: inspectionsData, isLoading: loadingInspections } = useQuery({
     queryKey: ['customer-inspections', id],
     queryFn: () => customersAPI.getInspections(id!),
     enabled: !!id,
   });
+  // Ensure we always have an array (handles wrong routing / API returning HTML)
+  const inspections = Array.isArray(inspectionsData) ? inspectionsData : [];
 
   if (loadingCustomer) {
     return <div className="text-center py-12">Loading customer...</div>;
