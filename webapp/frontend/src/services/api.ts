@@ -47,6 +47,16 @@ export const authAPI = {
 export const customersAPI = {
   getAll: async (): Promise<Customer[]> => {
     const { data } = await api.get('/customers');
+    console.log('🔍 API Response for customers:', data);
+    console.log('🔍 Is Array?', Array.isArray(data));
+    console.log('🔍 Type:', typeof data);
+    
+    // Ensure we always return an array
+    if (!Array.isArray(data)) {
+      console.error('❌ API returned non-array:', data);
+      return [];
+    }
+    
     return data;
   },
 
@@ -57,6 +67,13 @@ export const customersAPI = {
 
   getInspections: async (id: string): Promise<Inspection[]> => {
     const { data } = await api.get(`/customers/${id}/inspections`);
+    
+    // Ensure we always return an array
+    if (!Array.isArray(data)) {
+      console.error('❌ API returned non-array for inspections:', data);
+      return [];
+    }
+    
     return data;
   },
 };
