@@ -205,11 +205,13 @@ class CloudKitService {
    * Core Data entities are prefixed with 'CD_'
    */
   async fetchUserByEmail(email) {
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    if (!normalizedEmail) return null;
     const filters = [{
       fieldName: 'CD_email',
       comparator: 'EQUALS',
       fieldValue: {
-        value: email,
+        value: normalizedEmail,
         type: 'STRING'
       }
     }];
