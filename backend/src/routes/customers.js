@@ -13,13 +13,16 @@ router.use(authenticateToken);
  */
 router.get('/', async (req, res, next) => {
   try {
-    const { userId } = req.user;
+    const rawUserId = req.user?.userId;
+    const userId = rawUserId != null ? String(rawUserId).trim() : null;
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID missing' });
+    }
     console.log('📋 GET /customers - userId:', userId);
-    
-    // Validate CloudKit configuration
+
     if (!process.env.CLOUDKIT_CONTAINER_ID || !process.env.CLOUDKIT_API_TOKEN) {
       console.error('CloudKit not configured!');
-      return res.json([]); // Return empty array if CloudKit not configured
+      return res.json([]);
     }
 
     const customers = await cloudkit.fetchCustomers(userId);
