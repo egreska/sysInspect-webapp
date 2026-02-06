@@ -15,6 +15,26 @@ class CloudKitService {
     this.serverToServerKeyID = process.env.CLOUDKIT_SERVER_KEY_ID;
     this.privateKey = process.env.CLOUDKIT_PRIVATE_KEY;
     this.baseURL = `https://api.apple-cloudkit.com/database/1/${this.containerIdentifier}/${this.environment}/private`;
+    
+    // Log configuration status (not the actual values!)
+    const configured = !!(
+      this.containerIdentifier &&
+      this.apiToken &&
+      this.serverToServerKeyID &&
+      this.privateKey
+    );
+    
+    if (configured) {
+      console.log('✅ CloudKit service initialized');
+      console.log(`   Container: ${this.containerIdentifier}`);
+      console.log(`   Environment: ${this.environment}`);
+    } else {
+      console.warn('⚠️  CloudKit NOT configured - missing environment variables!');
+      if (!this.containerIdentifier) console.warn('   Missing: CLOUDKIT_CONTAINER_ID');
+      if (!this.apiToken) console.warn('   Missing: CLOUDKIT_API_TOKEN');
+      if (!this.serverToServerKeyID) console.warn('   Missing: CLOUDKIT_SERVER_KEY_ID');
+      if (!this.privateKey) console.warn('   Missing: CLOUDKIT_PRIVATE_KEY');
+    }
   }
 
   /**
@@ -33,6 +53,11 @@ class CloudKitService {
    * Make authenticated request to CloudKit
    */
   async makeRequest(endpoint, method = 'POST', data = {}) {
+    // Check if CloudKit is configured
+    if (!this.containerIdentifier || !this.apiToken || !this.serverToServerKeyID || !this.privateKey) {
+      throw new Error('CloudKit not configured - missing environment variables');
+    }
+
     const date = new Date().toISOString();
     const path = `/database/1/${this.containerIdentifier}/${this.environment}/private/${endpoint}`;
     const requestBody = JSON.stringify(data);
@@ -45,21 +70,29 @@ class CloudKitService {
     };
 
     try {
+      console.log(`🌐 CloudKit request: ${method} ${endpoint}`);
       const response = await axios({
         method,
         url: `${this.baseURL}/${endpoint}`,
         data,
         headers
       });
+      console.log(`✅ CloudKit response: ${response.data?.records?.length || 0} records`);
       return response.data;
     } catch (error) {
-      console.error('CloudKit API Error:', error.response?.data || error.message);
+      console.error('❌ CloudKit API Error:', {
+        endpoint,
+        status: error.response?.status,
+        reason: error.response?.data?.reason,
+        message: error.message
+      });
       throw new Error(`CloudKit API Error: ${error.response?.data?.reason || error.message}`);
     }
   }
 
   /**
    * Query records from CloudKit
+   * Core Data + CloudKit stores data in 'com.apple.coredata.cloudkit.zone'
    */
   async queryRecords(recordType, filters = [], sortBy = null, resultsLimit = 100) {
     const query = {
@@ -67,6 +100,9 @@ class CloudKitService {
         recordType,
         filterBy: filters.length > 0 ? filters : undefined,
         sortBy: sortBy ? [sortBy] : undefined
+      },
+      zoneID: {
+        zoneName: 'com.apple.coredata.cloudkit.zone'
       },
       resultsLimit
     };
@@ -77,13 +113,17 @@ class CloudKitService {
 
   /**
    * Fetch a single record by ID
+   * Core Data + CloudKit stores data in 'com.apple.coredata.cloudkit.zone'
    */
   async fetchRecord(recordName, recordType) {
     const data = {
       records: [{
         recordName,
         recordType
-      }]
+      }],
+      zoneID: {
+        zoneName: 'com.apple.coredata.cloudkit.zone'
+      }
     };
 
     const response = await this.makeRequest('records/lookup', 'POST', data);
@@ -92,10 +132,11 @@ class CloudKitService {
 
   /**
    * Fetch customers for a user
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchCustomers(userId) {
     const filters = [{
-      fieldName: 'userId',
+      fieldName: 'CD_userId',
       comparator: 'EQUALS',
       fieldValue: {
         value: userId,
@@ -104,19 +145,20 @@ class CloudKitService {
     }];
 
     const sortBy = {
-      fieldName: 'name',
+      fieldName: 'CD_name',
       ascending: true
     };
 
-    return await this.queryRecords('Customer', filters, sortBy);
+    return await this.queryRecords('CD_Customer', filters, sortBy);
   }
 
   /**
    * Fetch inspections for a customer
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchInspections(customerId) {
     const filters = [{
-      fieldName: 'customer',
+      fieldName: 'CD_customer',
       comparator: 'EQUALS',
       fieldValue: {
         value: {
@@ -127,19 +169,20 @@ class CloudKitService {
     }];
 
     const sortBy = {
-      fieldName: 'date',
+      fieldName: 'CD_date',
       ascending: false
     };
 
-    return await this.queryRecords('Inspection', filters, sortBy);
+    return await this.queryRecords('CD_Inspection', filters, sortBy);
   }
 
   /**
    * Fetch inspection items for an inspection
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchInspectionItems(inspectionId) {
     const filters = [{
-      fieldName: 'inspection',
+      fieldName: 'CD_inspection',
       comparator: 'EQUALS',
       fieldValue: {
         value: {
@@ -150,19 +193,20 @@ class CloudKitService {
     }];
 
     const sortBy = {
-      fieldName: 'sequenceNumber',
+      fieldName: 'CD_sequenceNumber',
       ascending: true
     };
 
-    return await this.queryRecords('InspectionItem', filters, sortBy);
+    return await this.queryRecords('CD_InspectionItem', filters, sortBy);
   }
 
   /**
    * Fetch user by email
+   * Core Data entities are prefixed with 'CD_'
    */
   async fetchUserByEmail(email) {
     const filters = [{
-      fieldName: 'email',
+      fieldName: 'CD_email',
       comparator: 'EQUALS',
       fieldValue: {
         value: email,
@@ -170,7 +214,7 @@ class CloudKitService {
       }
     }];
 
-    const users = await this.queryRecords('User', filters, null, 1);
+    const users = await this.queryRecords('CD_User', filters, null, 1);
     return users[0] || null;
   }
 
