@@ -154,6 +154,8 @@ Result:
 
 If `/api/customers` is routed to 5173, the frontend server will return `index.html` (200 OK), the client will treat it as JSON, and you’ll see errors like `t.slice(...).map is not a function`.
 
+**Coolify “api:3002” link:** Coolify may show a URL like `https://sysinspect.skynet97.org/api:3002`. That is a UI label (path `/api` → port 3002), not a real URL. Use `https://sysinspect.skynet97.org/` for the app and `https://sysinspect.skynet97.org/api/health` for the API; do not put `:3002` in the address bar.
+
 #### 5.4 Configure Health Checks
 
 **Health Check Endpoint:** `/api/health` or `/health`  

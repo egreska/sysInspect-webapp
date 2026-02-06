@@ -1,13 +1,14 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import cloudkit from '../services/cloudkit.js';
 import { generateToken } from '../middleware/auth.js';
+import { verifyPasswordPBKDF2 } from '../utils/password.js';
 
 const router = express.Router();
 
 /**
  * POST /api/auth/login
- * Login with email and password
+ * Login with email and password. Uses PBKDF2 verification to match iOS app hashes.
  */
 router.post('/login', async (req, res, next) => {
   try {
@@ -24,7 +25,6 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Verify password (Core Data + CloudKit uses CD_ prefix for field names)
     const passwordHash = user.fields.CD_passwordHash?.value;
     const passwordSalt = user.fields.CD_passwordSalt?.value;
 
@@ -32,10 +32,9 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Note: The iOS app uses PBKDF2, but for the web we'll use bcrypt
-    // You may need to implement PBKDF2 verification if sharing the same hash
-    // For now, this assumes password verification logic
-    const isValid = await bcrypt.compare(password, passwordHash);
+    // iOS app uses PBKDF2-HMAC-SHA256 (100k iterations). Salt may be base64 or buffer.
+    const saltValue = typeof passwordSalt === 'string' ? passwordSalt : passwordSalt?.value ?? passwordSalt;
+    const isValid = verifyPasswordPBKDF2(password, passwordHash, saltValue);
 
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -46,18 +45,20 @@ router.post('/login', async (req, res, next) => {
       return res.status(403).json({ error: 'Account is inactive' });
     }
 
-    // Generate JWT token
-    const token = generateToken({
-      userId: user.fields.CD_userId?.value || user.fields.CD_id?.value,
-      email: user.fields.CD_email?.value
-    });
+    // Use consistent userId (string) for JWT and customer queries. iOS uses UUID.
+    const rawUserId = user.fields.CD_userId?.value ?? user.fields.CD_id?.value;
+    const userId = rawUserId != null ? String(rawUserId) : null;
+    const userEmail = user.fields.CD_email?.value;
+
+    if (!userId || !userEmail) {
+      return res.status(500).json({ error: 'User record incomplete' });
+    }
+
+    const token = generateToken({ userId, email: userEmail });
 
     res.json({
       token,
-      user: {
-        userId: user.fields.CD_userId?.value || user.fields.CD_id?.value,
-        email: user.fields.CD_email?.value
-      }
+      user: { userId, email: userEmail }
     });
   } catch (error) {
     next(error);
@@ -77,7 +78,8 @@ router.post('/verify', async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    const decoded = jwt.verify(token, JWT_SECRET);
     res.json({ valid: true, user: decoded });
   } catch (error) {
     res.status(401).json({ valid: false, error: 'Invalid token' });
