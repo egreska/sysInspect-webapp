@@ -23,12 +23,22 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
-const limiter = rateLimit({
+// General rate limiting
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
 });
-app.use('/api/', limiter);
+
+// Strict rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 auth attempts per windowMs
+  message: 'Too many authentication attempts, please try again later.',
+  skipSuccessfulRequests: true // Don't count successful logins against the limit
+});
+
+app.use('/api/', generalLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -78,8 +88,8 @@ app.get('/api', (req, res) => {
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
+// API routes (apply strict rate limiting to auth)
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/inspections', inspectionsRoutes);
 app.use('/api/reports', reportsRoutes);

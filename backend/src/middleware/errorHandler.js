@@ -1,7 +1,8 @@
 /**
  * Global error handling middleware
+ * Note: req and next parameters are required for Express error middleware signature
  */
-export const errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, _req, res, _next) => {
   console.error('Error:', err);
 
   // Default error
@@ -31,8 +32,8 @@ export const errorHandler = (err, req, res, next) => {
     message = 'CloudKit service error';
   }
 
+  // Never expose stack traces to clients - log them server-side instead
   res.status(status).json({
-    error: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    error: message
   });
 };

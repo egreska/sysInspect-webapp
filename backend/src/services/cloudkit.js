@@ -75,7 +75,8 @@ class CloudKitService {
         method,
         url: `${this.baseURL}/${endpoint}`,
         data,
-        headers
+        headers,
+        timeout: 30000 // 30 second timeout to prevent hanging
       });
       console.log(`✅ CloudKit response: ${response.data?.records?.length || 0} records`);
       return response.data;
@@ -226,7 +227,8 @@ class CloudKitService {
   async downloadAsset(downloadURL) {
     try {
       const response = await axios.get(downloadURL, {
-        responseType: 'arraybuffer'
+        responseType: 'arraybuffer',
+        timeout: 60000 // 60 second timeout for large images
       });
       return Buffer.from(response.data).toString('base64');
     } catch (error) {

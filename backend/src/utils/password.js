@@ -48,5 +48,10 @@ export function verifyPasswordPBKDF2(password, storedHashBase64, salt) {
     DIGEST
   );
   const derivedBase64 = derived.toString('base64');
-  return derivedBase64 === hash;
+
+  // Use constant-time comparison to prevent timing attacks
+  return crypto.timingSafeEqual(
+    Buffer.from(derivedBase64),
+    Buffer.from(hash)
+  );
 }

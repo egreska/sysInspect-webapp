@@ -76,7 +76,11 @@ router.get('/:id', async (req, res, next) => {
     }
 
     // Verify ownership (Core Data + CloudKit uses CD_ prefix)
-    if (customer.fields.CD_userId?.value !== req.user.userId) {
+    // Normalize both values to strings for comparison to avoid type coercion issues
+    const customerUserId = customer.fields.CD_userId?.value != null ? String(customer.fields.CD_userId.value) : null;
+    const requestUserId = req.user.userId != null ? String(req.user.userId) : null;
+
+    if (!customerUserId || !requestUserId || customerUserId !== requestUserId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -115,7 +119,12 @@ router.get('/:id/inspections', async (req, res, next) => {
     
     // Verify customer ownership first (Core Data + CloudKit uses CD_ prefix)
     const customer = await cloudkit.fetchRecord(id, 'CD_Customer');
-    if (!customer || customer.fields.CD_userId?.value !== req.user.userId) {
+
+    // Normalize both values to strings for comparison
+    const customerUserId = customer?.fields.CD_userId?.value != null ? String(customer.fields.CD_userId.value) : null;
+    const requestUserId = req.user.userId != null ? String(req.user.userId) : null;
+
+    if (!customer || !customerUserId || !requestUserId || customerUserId !== requestUserId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 

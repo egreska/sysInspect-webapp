@@ -14,10 +14,36 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
+// Safe localStorage access with error handling
+const getStoredToken = (): string | null => {
+  try {
+    return localStorage.getItem('token');
+  } catch (e) {
+    // localStorage not available (e.g., incognito mode, SSR)
+    return null;
+  }
+};
+
+const setStoredToken = (token: string): void => {
+  try {
+    localStorage.setItem('token', token);
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+};
+
+const removeStoredToken = (): void => {
+  try {
+    localStorage.removeItem('token');
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+  token: getStoredToken(),
+  isAuthenticated: !!getStoredToken(),
   isLoading: false,
   error: null,
 
@@ -30,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ error: 'Invalid response from server. Check that /api is routed to the backend.', isLoading: false });
         throw new Error('Invalid login response');
       }
-      localStorage.setItem('token', response.token);
+      setStoredToken(response.token);
       set({
         user: response.user ?? null,
         token: response.token,
@@ -40,24 +66,31 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Login failed';
-      set({ error: errorMessage, isLoading: false });
+      set({
+        error: errorMessage,
+        isLoading: false,
+        isAuthenticated: false,
+        user: null,
+        token: null
+      });
       throw error;
     }
   },
 
   logout: () => {
-    localStorage.removeItem('token');
+    removeStoredToken();
     set({
       user: null,
       token: null,
       isAuthenticated: false,
+      error: null,
     });
   },
 
   checkAuth: async () => {
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
     if (!token) {
-      set({ isAuthenticated: false });
+      set({ isAuthenticated: false, token: null, user: null });
       return;
     }
 
@@ -66,12 +99,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (valid) {
         set({ user, isAuthenticated: true });
       } else {
-        localStorage.removeItem('token');
-        set({ isAuthenticated: false, token: null });
+        removeStoredToken();
+        set({ isAuthenticated: false, token: null, user: null });
       }
     } catch (error) {
-      localStorage.removeItem('token');
-      set({ isAuthenticated: false, token: null });
+      removeStoredToken();
+      set({ isAuthenticated: false, token: null, user: null });
     }
   },
 }));
