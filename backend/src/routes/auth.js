@@ -25,16 +25,25 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // CloudKit: STRING value for hash; BYTES as base64 string for salt (field.value)
     const passwordHash = user.fields.CD_passwordHash?.value;
-    const passwordSalt = user.fields.CD_passwordSalt?.value;
+    const passwordSalt = user.fields.CD_passwordSalt?.value ?? user.fields.CD_passwordSalt;
 
-    if (!passwordHash || !passwordSalt) {
+    if (!passwordHash || passwordSalt === undefined || passwordSalt === null) {
+      if (process.env.DEBUG_AUTH) {
+        console.log('Auth: user found but missing hash or salt', {
+          hasHash: !!passwordHash,
+          hasSalt: passwordSalt !== undefined && passwordSalt !== null,
+          saltType: typeof passwordSalt
+        });
+      }
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // iOS app uses PBKDF2-HMAC-SHA256 (100k iterations). Salt may be base64 or buffer.
-    const saltValue = typeof passwordSalt === 'string' ? passwordSalt : passwordSalt?.value ?? passwordSalt;
-    const isValid = verifyPasswordPBKDF2(password, passwordHash, saltValue);
+    const isValid = verifyPasswordPBKDF2(password, passwordHash, passwordSalt);
+    if (process.env.DEBUG_AUTH) {
+      console.log('Auth: PBKDF2 verification', { isValid, hashLength: String(passwordHash).length, saltLength: typeof passwordSalt === 'string' ? passwordSalt.length : '(non-string)' });
+    }
 
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });

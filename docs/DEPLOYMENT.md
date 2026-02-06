@@ -133,6 +133,8 @@ CLOUDKIT_SERVER_KEY_ID=<your-key-id>
 CLOUDKIT_PRIVATE_KEY=<your-private-key>
 ```
 
+**Troubleshooting login:** If real iOS credentials are rejected, set `DEBUG_AUTH=1` in Coolify env vars and redeploy. Check Coolify logs when attempting login; you’ll see whether the user was found and whether hash/salt are present and whether PBKDF2 verification passed (no secrets are logged).
+
 #### 5.3 Critical: Two-Port Routing (Traefik)
 
 The app uses two processes in one container. **You must configure two ports in Coolify** so that `/api` hits the backend and `/` hits the frontend. If everything goes to one port, `/api/customers` will return HTML and the app will break.
