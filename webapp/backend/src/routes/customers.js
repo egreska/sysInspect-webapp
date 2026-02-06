@@ -14,6 +14,7 @@ router.use(authenticateToken);
 router.get('/', async (req, res, next) => {
   try {
     const { userId } = req.user;
+    console.log('📋 GET /customers - userId:', userId);
     
     // Validate CloudKit configuration
     if (!process.env.CLOUDKIT_CONTAINER_ID || !process.env.CLOUDKIT_API_TOKEN) {
@@ -22,12 +23,17 @@ router.get('/', async (req, res, next) => {
     }
 
     const customers = await cloudkit.fetchCustomers(userId);
+    console.log('📦 CloudKit response type:', typeof customers);
+    console.log('📦 Is array?', Array.isArray(customers));
+    if (customers) console.log('📦 First 200 chars:', JSON.stringify(customers).substring(0, 200));
 
     // Ensure we got an array
     if (!Array.isArray(customers)) {
-      console.error('CloudKit returned non-array:', customers);
+      console.error('❌ CloudKit returned non-array!');
       return res.json([]);
     }
+    
+    console.log('✅ Got', customers.length, 'records from CloudKit');
 
     // Transform CloudKit response to simpler format
     // Core Data + CloudKit prefixes fields with 'CD_'
@@ -44,9 +50,10 @@ router.get('/', async (req, res, next) => {
       createdDate: record.fields.CD_createdDate?.value || record.created?.timestamp
     }));
 
+    console.log('📤 Sending', transformedCustomers.length, 'customers to frontend');
     res.json(transformedCustomers);
   } catch (error) {
-    console.error('Error fetching customers:', error);
+    console.error('❌ ERROR in GET /customers:', error.message);
     // Return empty array on error to prevent frontend crash
     res.json([]);
   }
