@@ -6,11 +6,13 @@ import { useState } from 'react';
 
 export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: customers = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: customersAPI.getAll,
   });
 
+  // Ensure we always have an array (handles wrong routing / API returning HTML)
+  const customers = Array.isArray(data) ? data : [];
   const filteredCustomers = customers.filter((customer) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||

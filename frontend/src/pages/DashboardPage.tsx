@@ -4,10 +4,13 @@ import { BarChart, Users, FileText, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
-  const { data: customers = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: customersAPI.getAll,
   });
+
+  // Ensure we always have an array (handles wrong routing / API returning HTML)
+  const customers = Array.isArray(data) ? data : [];
 
   if (isLoading) {
     return <div className="text-center py-12">Loading...</div>;

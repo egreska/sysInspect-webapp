@@ -49,15 +49,18 @@ ls -la
 
 ### Step 2: Configure Environment Variables
 
-Create `.env` file in backend/:
+**Production (Coolify):** Set all variables in Coolify’s UI (Application → Environment Variables). Do not rely on `.env` files in production; Coolify injects env vars at runtime.
+
+**Local development:** Use `backend/.env` and optionally `frontend/.env` (see `backend/.env.example`).
+
+Variables to set in Coolify:
 
 ```bash
-# Backend .env
 NODE_ENV=production
-PORT=3001
+PORT=3002
 FRONTEND_URL=https://sysinspect.skynet97.org
 
-# JWT Secret - CHANGE THIS!
+# JWT Secret - CHANGE THIS! (32+ characters)
 JWT_SECRET=your-super-secure-random-string-min-32-chars
 
 # CloudKit Configuration
@@ -66,18 +69,11 @@ CLOUDKIT_ENVIRONMENT=production
 CLOUDKIT_API_TOKEN=your-api-token-here
 CLOUDKIT_SERVER_KEY_ID=your-key-id-here
 CLOUDKIT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
-Your private key content here (keep the quotes and line breaks)
+Your private key content here (keep line breaks)
 -----END PRIVATE KEY-----"
 
 # Optional
 INSPECTOR_COMPANY=Systems Inspector
-```
-
-Create `.env` file in frontend/:
-
-```bash
-# Frontend .env
-VITE_API_URL=https://sysinspect.skynet97.org/api
 ```
 
 ### Step 3: Test Locally with Docker
@@ -87,7 +83,7 @@ VITE_API_URL=https://sysinspect.skynet97.org/api
 docker-compose up --build
 
 # Test endpoints
-curl http://localhost:3001/health
+curl http://localhost:3002/health
 # Should return: {"status":"ok","timestamp":"..."}
 
 # Access frontend
@@ -119,15 +115,15 @@ git push origin main
 **Build Configuration:**
 - Dockerfile Path: `webapp/Dockerfile`
 - Build Context: `webapp/`
-- Ports: `3001,5173`
+- Exposed ports in container: `3002` (backend), `5173` (frontend)
 
-**Environment Variables:**
+**Environment Variables (in Coolify UI):**
 
-Add all variables from your `.env` files:
+Add every variable in Coolify → Application → Environment Variables (no `.env` file in production):
 
 ```
 NODE_ENV=production
-PORT=3001
+PORT=3002
 FRONTEND_URL=https://sysinspect.skynet97.org
 JWT_SECRET=<your-secret>
 CLOUDKIT_CONTAINER_ID=<your-container-id>
@@ -137,19 +133,31 @@ CLOUDKIT_SERVER_KEY_ID=<your-key-id>
 CLOUDKIT_PRIVATE_KEY=<your-private-key>
 ```
 
-#### 5.3 Configure Domain
+#### 5.3 Critical: Two-Port Routing (Traefik)
 
-1. Go to "Domains" tab
-2. Add domain: `sysinspect.skynet97.org`
-3. Enable SSL/TLS (Let's Encrypt)
-4. Configure redirects:
-   - `/api/*` → Port 3001
-   - `/*` → Port 5173
+The app uses two processes in one container. **You must configure two ports in Coolify** so that `/api` hits the backend and `/` hits the frontend. If everything goes to one port, `/api/customers` will return HTML and the app will break.
+
+In Coolify → **Network** / **Routing** (or equivalent):
+
+| Port  | Path   | Purpose                          |
+|-------|--------|-----------------------------------|
+| **5173** | `/`    | Frontend (React SPA)              |
+| **3002** | `/api` | Backend API (Express)             |
+
+- **Primary port:** `5173` (path `/` or empty).
+- **Additional port:** `3002` with path prefix **`/api`** (Strip Prefix: NO).
+
+Result:
+- `https://sysinspect.skynet97.org/` → container port **5173** (frontend).
+- `https://sysinspect.skynet97.org/api/health` → container port **3002** (backend).
+- `https://sysinspect.skynet97.org/api/customers` → container port **3002** (backend).
+
+If `/api/customers` is routed to 5173, the frontend server will return `index.html` (200 OK), the client will treat it as JSON, and you’ll see errors like `t.slice(...).map is not a function`.
 
 #### 5.4 Configure Health Checks
 
-**Health Check Endpoint:** `/health`  
-**Port:** 3001  
+**Health Check Endpoint:** `/api/health` or `/health`  
+**Port:** 3002  
 **Interval:** 30s  
 **Timeout:** 5s  
 **Retries:** 3

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { Customer, Inspection, LoginRequest, LoginResponse } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// API URL - Traefik must route /api to backend (port 3002 in Coolify)
+const API_URL = '/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -46,6 +47,8 @@ export const authAPI = {
 export const customersAPI = {
   getAll: async (): Promise<Customer[]> => {
     const { data } = await api.get('/customers');
+    // Ensure we always return an array (e.g. if /api is routed to frontend and returns HTML)
+    if (!Array.isArray(data)) return [];
     return data;
   },
 
@@ -56,6 +59,7 @@ export const customersAPI = {
 
   getInspections: async (id: string): Promise<Inspection[]> => {
     const { data } = await api.get(`/customers/${id}/inspections`);
+    if (!Array.isArray(data)) return [];
     return data;
   },
 };
