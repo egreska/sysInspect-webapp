@@ -4,7 +4,6 @@ import {
   setUpAuth,
   whenUserSignsIn,
   whenUserSignsOut,
-  getContainer,
   type CloudKitUserIdentity,
 } from '../services/cloudkit';
 
@@ -27,7 +26,7 @@ function userIdentityToUser(identity: CloudKitUserIdentity | null): User | null 
   return { userId, email };
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -66,13 +65,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    try {
-      const container = getContainer();
-      // CloudKit JS doesn't have explicit logout - user uses sign-out button
-      // We clear local state; the sign-out button triggers whenUserSignsOut
-      set({ user: null, isAuthenticated: false });
-    } catch {
-      set({ user: null, isAuthenticated: false });
-    }
+    // CloudKit JS doesn't have explicit logout - user uses sign-out button
+    // We clear local state; the sign-out button triggers whenUserSignsOut
+    set({ user: null, isAuthenticated: false });
   },
 }));

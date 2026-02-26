@@ -8,13 +8,13 @@
 
 declare global {
   interface Window {
-    CloudKit?: typeof CloudKitNamespace;
+    CloudKit?: CloudKitGlobal;
     cloudkitloaded?: () => void;
   }
 }
 
 // CloudKit JS types (simplified - the CDN script doesn't ship types)
-interface CloudKitNamespace {
+interface CloudKitGlobal {
   configure: (config: CloudKitConfig) => void;
   getDefaultContainer: () => CloudKitContainer;
   getContainer: (id: string) => CloudKitContainer;
@@ -44,11 +44,11 @@ interface CloudKitContainer {
 }
 
 interface CloudKitDatabase {
-  performQuery: (query: CloudKitQuery) => Promise<CloudKitQueryResponse>;
+  performQuery: (request: CloudKitQueryRequest) => Promise<CloudKitQueryResponse>;
   fetchRecords: (request: CloudKitFetchRequest) => Promise<CloudKitFetchResponse>;
 }
 
-interface CloudKitUserIdentity {
+export interface CloudKitUserIdentity {
   userRecordName?: string;
   nameComponents?: { givenName?: string; familyName?: string };
   lookupInfo?: { emailAddress?: string };
