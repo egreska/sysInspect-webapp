@@ -4,7 +4,7 @@ Professional web application for accessing CloudKit data and generating inspecti
 
 ## 🌐 Deployment Information
 
-**Domain:** sysinspect.skynet97.org  
+**Domain:** "your domain url"  
 **Platform:** Coolify  
 **Status:** Development
 
