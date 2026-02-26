@@ -1,22 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
-function CloudKitButtonVisibility() {
+function CloudKitButtonContainer() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const signIn = document.getElementById('apple-sign-in-button');
     const signOut = document.getElementById('apple-sign-out-button');
-    if (signIn) {
+    if (signIn && containerRef.current) {
+      // Move button into the login card so it's visible (it's in body by default, below the fold)
+      if (signIn.parentElement !== containerRef.current) {
+        containerRef.current.appendChild(signIn);
+      }
       signIn.style.display = 'flex';
       signIn.style.justifyContent = 'center';
       signIn.style.width = '100%';
     }
     if (signOut) signOut.style.display = 'none';
     return () => {
-      if (signIn) signIn.style.display = 'none';
+      if (signIn) {
+        signIn.style.display = 'none';
+        document.body.appendChild(signIn);
+      }
     };
   }, []);
-  return null;
+  return <div ref={containerRef} className="min-h-[44px] w-full" />;
 }
 
 export default function LoginPage() {
@@ -52,9 +61,9 @@ export default function LoginPage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-6 min-h-[44px] flex flex-col items-center justify-center">
-              {/* CloudKit Sign in button is in index.html - we show it via CloudKitButtonVisibility */}
-              <CloudKitButtonVisibility />
+            <div className="space-y-6 flex flex-col items-center justify-center">
+              {/* CloudKit appends Sign in with Apple button to apple-sign-in-button; we move it here */}
+              <CloudKitButtonContainer />
             </div>
           )}
 

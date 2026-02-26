@@ -18,10 +18,10 @@ export default function InspectionDetailPage() {
 
   const handleDownloadPDF = async () => {
     if (!id) return;
-    
+    const baseName = (inspection?.customer?.name || 'report').replace(/[/\\?%*:|"<>]/g, '-');
     setDownloading(true);
     try {
-      await reportsAPI.downloadPDF(id, `inspection-${inspection?.customer?.name || 'report'}.pdf`);
+      await reportsAPI.downloadPDF(id, `inspection-${baseName}.pdf`);
     } catch (error) {
       alert('Failed to download PDF');
     } finally {
