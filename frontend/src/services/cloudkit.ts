@@ -99,6 +99,7 @@ const ZONE = 'com.apple.coredata.cloudkit.zone';
 
 let container: CloudKitContainer | null = null;
 let configured = false;
+let currentEnvironment: 'development' | 'production' = 'development';
 
 /**
  * Wait for CloudKit JS to load, then configure
@@ -144,6 +145,7 @@ function doConfigure(resolve: () => void, reject: (err: Error) => void) {
   const containerId = import.meta.env.VITE_CLOUDKIT_CONTAINER_ID;
   const apiToken = import.meta.env.VITE_CLOUDKIT_API_TOKEN;
   const environment = (import.meta.env.VITE_CLOUDKIT_ENVIRONMENT || 'development') as 'development' | 'production';
+  currentEnvironment = environment;
 
   if (!containerId || !apiToken) {
     reject(new Error('CloudKit not configured: set VITE_CLOUDKIT_CONTAINER_ID and VITE_CLOUDKIT_API_TOKEN'));
@@ -197,6 +199,14 @@ export function whenUserSignsIn(): Promise<CloudKitUserIdentity> {
 export function whenUserSignsOut(): Promise<void> {
   if (!container) throw new Error('CloudKit not initialized');
   return container.whenUserSignsOut;
+}
+
+/**
+ * Get current CloudKit environment (for debugging / troubleshooting).
+ * Development and production have separate data - must match where your data lives.
+ */
+export function getCloudKitEnvironment(): 'development' | 'production' {
+  return currentEnvironment;
 }
 
 /**

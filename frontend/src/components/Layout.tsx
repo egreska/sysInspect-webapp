@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { getCloudKitEnvironment } from '../services/cloudkit';
 import { Home, Users, LogOut } from 'lucide-react';
 
 export default function Layout() {
@@ -50,7 +51,7 @@ export default function Layout() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">{user?.email || user?.userId || 'Signed in'}</span>
+              <span className="text-sm text-gray-600">{user?.email || 'Signed in'}</span>
               <button
                 onClick={handleLogout}
                 className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-md transition-colors"
@@ -67,6 +68,13 @@ export default function Layout() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
+
+      {/* Footer: CloudKit environment (helps troubleshoot no-data issues) */}
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 text-center">
+        <span className="text-xs text-gray-400" title="CloudKit environment must match where your data lives (CloudKit Dashboard → Data)">
+          CloudKit: {getCloudKitEnvironment()}
+        </span>
+      </footer>
     </div>
   );
 }

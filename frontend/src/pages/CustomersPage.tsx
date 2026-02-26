@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, isError } = useQuery({
     queryKey: ['customers'],
     queryFn: customersAPI.getAll,
   });
@@ -21,6 +21,19 @@ export default function CustomersPage() {
 
   if (isLoading) {
     return <div className="text-center py-12">Loading customers...</div>;
+  }
+
+  if (isError && error) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-3xl font-bold text-gray-900">Customers</h2>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-800">
+          <p className="font-medium">Unable to load customers</p>
+          <p className="mt-2 text-sm">{error instanceof Error ? error.message : String(error)}</p>
+          <p className="mt-4 text-sm">Check that CloudKit environment matches your data (see footer).</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -49,7 +62,12 @@ export default function CustomersPage() {
         <div className="divide-y">
           {filteredCustomers.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
-              No customers found
+              <p>No customers found</p>
+              {customers.length === 0 && (
+                <p className="mt-2 text-sm">
+                  If you see data in CloudKit Dashboard, ensure the environment matches (Development vs Production) and you&apos;re signed in with the same Apple ID as the iOS app.
+                </p>
+              )}
             </div>
           ) : (
             filteredCustomers.map((customer) => (
