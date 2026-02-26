@@ -16,6 +16,7 @@ interface AuthState {
 
   initAuth: () => Promise<void>;
   logout: () => Promise<void>;
+  checkAuthAfterPopup: () => Promise<void>;
 }
 
 function userIdentityToUser(identity: CloudKitUserIdentity | null): User | null {
@@ -26,7 +27,7 @@ function userIdentityToUser(identity: CloudKitUserIdentity | null): User | null 
   return { userId, email };
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -61,6 +62,20 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: false,
         user: null,
       });
+    }
+  },
+
+  /** Workaround: Apple popup may close without resolving whenUserSignsIn. Re-check auth when window regains focus. */
+  checkAuthAfterPopup: async () => {
+    if (get().isAuthenticated) return;
+    try {
+      const identity = await setUpAuth();
+      const user = userIdentityToUser(identity);
+      if (user) {
+        set({ user, isAuthenticated: true });
+      }
+    } catch {
+      // Ignore - user may not have completed sign-in
     }
   },
 

@@ -29,7 +29,7 @@ function CloudKitButtonContainer() {
 }
 
 export default function LoginPage() {
-  const { isAuthenticated, isLoading, error, cloudKitReady } = useAuthStore();
+  const { isAuthenticated, isLoading, error, cloudKitReady, checkAuthAfterPopup } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,6 +37,18 @@ export default function LoginPage() {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
+
+  // Workaround: Apple Sign-in popup may close without resolving whenUserSignsIn promise.
+  // Re-check auth when window regains focus (popup closed).
+  useEffect(() => {
+    const onFocus = () => {
+      if (cloudKitReady && !isAuthenticated && !isLoading) {
+        checkAuthAfterPopup();
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [cloudKitReady, isAuthenticated, isLoading, checkAuthAfterPopup]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
