@@ -2,8 +2,10 @@
  * CloudKit JS Browser SDK Service
  *
  * Wraps Apple's CloudKit JS for Systems Inspector.
- * Uses Sign in with Apple for private database access.
- * Core Data + CloudKit uses CD_ prefix and com.apple.coredata.cloudkit.zone.
+ * - Private Database: container.privateCloudDatabase (user-scoped data)
+ * - Zone: com.apple.coredata.cloudkit.zone (Core Data + CloudKit)
+ * - Record types: CD_ prefix (e.g. CD_Customer, CD_Inspection, CD_InspectionItem)
+ * - Environment: defaults to development
  */
 
 declare global {
@@ -92,6 +94,7 @@ export interface CloudKitRecord {
   fields: Record<string, { value?: unknown }>;
 }
 
+/** Core Data + CloudKit zone (required for CD_ record types) */
 const ZONE = 'com.apple.coredata.cloudkit.zone';
 
 let container: CloudKitContainer | null = null;
@@ -140,7 +143,7 @@ export function initCloudKit(): Promise<void> {
 function doConfigure(resolve: () => void, reject: (err: Error) => void) {
   const containerId = import.meta.env.VITE_CLOUDKIT_CONTAINER_ID;
   const apiToken = import.meta.env.VITE_CLOUDKIT_API_TOKEN;
-  const environment = (import.meta.env.VITE_CLOUDKIT_ENVIRONMENT || 'production') as 'development' | 'production';
+  const environment = (import.meta.env.VITE_CLOUDKIT_ENVIRONMENT || 'development') as 'development' | 'production';
 
   if (!containerId || !apiToken) {
     reject(new Error('CloudKit not configured: set VITE_CLOUDKIT_CONTAINER_ID and VITE_CLOUDKIT_API_TOKEN'));
@@ -205,7 +208,20 @@ export function getContainer(): CloudKitContainer {
 }
 
 /**
- * Query records from CloudKit (Core Data + CloudKit zone)
+ * Programmatically trigger the CloudKit sign-out button.
+ * CloudKit JS has no direct sign-out API; the button must be clicked.
+ */
+export function triggerSignOut(): void {
+  const el = document.getElementById('apple-sign-out-button');
+  const button = el?.querySelector('button, a, [role="button"]') ?? el?.firstElementChild ?? el;
+  if (button instanceof HTMLElement) {
+    button.click();
+  }
+}
+
+/**
+ * Query records from CloudKit Private Database (Core Data + CloudKit zone).
+ * Uses container.privateCloudDatabase and com.apple.coredata.cloudkit.zone.
  */
 export async function queryRecords(
   recordType: string,
@@ -229,7 +245,7 @@ export async function queryRecords(
 }
 
 /**
- * Fetch records by name
+ * Fetch records by name from Private Database (com.apple.coredata.cloudkit.zone).
  */
 export async function fetchRecords(recordNames: string[]): Promise<CloudKitRecord[]> {
   if (recordNames.length === 0) return [];

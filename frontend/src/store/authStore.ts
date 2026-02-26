@@ -4,6 +4,7 @@ import {
   setUpAuth,
   whenUserSignsIn,
   whenUserSignsOut,
+  triggerSignOut,
   type CloudKitUserIdentity,
 } from '../services/cloudkit';
 
@@ -80,8 +81,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    // CloudKit JS doesn't have explicit logout - user uses sign-out button
-    // We clear local state; the sign-out button triggers whenUserSignsOut
+    // Trigger CloudKit sign-out (clicks the hidden Apple button) so Sign in appears on login page
+    triggerSignOut();
     set({ user: null, isAuthenticated: false });
+    // Brief delay so CloudKit can process sign-out before we navigate
+    await new Promise((r) => setTimeout(r, 100));
   },
 }));
