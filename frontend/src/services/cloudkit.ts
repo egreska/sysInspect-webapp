@@ -102,22 +102,38 @@ let configured = false;
  */
 export function initCloudKit(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (window.CloudKit) {
-      doConfigure(resolve, reject);
-      return;
-    }
-    const handler = () => {
-      window.removeEventListener('cloudkitloaded', handler);
-      doConfigure(resolve, reject);
-    };
-    window.addEventListener('cloudkitloaded', handler);
-    // Timeout in case script fails to load
-    setTimeout(() => {
-      if (!configured) {
+    let settled = false;
+    const timeoutId = setTimeout(() => {
+      if (!settled && !configured) {
+        settled = true;
         window.removeEventListener('cloudkitloaded', handler);
         reject(new Error('CloudKit JS failed to load'));
       }
     }, 10000);
+
+    const onResolve = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      resolve();
+    };
+    const onReject = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      reject(err);
+    };
+
+    const handler = () => {
+      window.removeEventListener('cloudkitloaded', handler);
+      doConfigure(onResolve, onReject);
+    };
+
+    if (window.CloudKit) {
+      doConfigure(onResolve, onReject);
+      return;
+    }
+    window.addEventListener('cloudkitloaded', handler);
   });
 }
 

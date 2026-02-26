@@ -9,16 +9,14 @@ import {
   fetchInspectionItems,
   mapCustomerRecord,
   mapInspectionRecord,
+  queryRecords,
 } from './cloudkit';
 
 /**
  * Fetch all customers. Private database is scoped to the signed-in iCloud user,
- * so we get only their data. We try CD_userId filter if available from a CD_User
- * lookup; otherwise query all CD_Customer in the zone.
+ * so we get only their data. Query all CD_Customer in the zone.
  */
 export async function getCustomers(): Promise<Customer[]> {
-  const { queryRecords } = await import('./cloudkit');
-  // Private DB is already scoped to iCloud user - query all customers in zone
   const records = await queryRecords('CD_Customer', [], { fieldName: 'CD_name', ascending: true });
   return records.map(mapCustomerRecord);
 }
@@ -40,13 +38,15 @@ async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promis
   if (photoVal?.downloadURL) {
     try {
       const resp = await fetch(photoVal.downloadURL);
-      const blob = await resp.blob();
-      const reader = new FileReader();
-      photoData = await new Promise<string>((res, rej) => {
-        reader.onload = () => res((reader.result as string).split(',')[1] || '');
-        reader.onerror = rej;
-        reader.readAsDataURL(blob);
-      });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const reader = new FileReader();
+        photoData = await new Promise<string>((res, rej) => {
+          reader.onload = () => res((reader.result as string).split(',')[1] || '');
+          reader.onerror = rej;
+          reader.readAsDataURL(blob);
+        });
+      }
     } catch {
       // Ignore photo fetch errors
     }

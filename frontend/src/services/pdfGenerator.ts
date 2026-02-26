@@ -28,6 +28,7 @@ function getDamagesList(item: InspectionItem): string[] {
   if (item.basePlateFloorDamaged) damages.push('Floor Damaged');
   if (item.anchorsDamaged) damages.push('Anchors Damaged');
   if (item.anchorsMissing) damages.push('Anchors Missing');
+  if (item.anchors && !item.anchorsTorqued) damages.push('Anchors Not Torqued');
   if (item.wireDeckDamaged) damages.push('Wire Deck Damaged');
   if (item.wireDeckMissing) damages.push('Wire Deck Missing');
   if (item.wireDeckOutOfPosition) damages.push('Wire Deck Out of Position');

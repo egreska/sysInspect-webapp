@@ -45,13 +45,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         cloudKitReady: true,
         error: null,
       });
-      // Listen for sign in/out
+      // Listen for sign in/out (long-lived promises - catch to avoid unhandled rejections)
       whenUserSignsIn().then((id) => {
         set({ user: userIdentityToUser(id), isAuthenticated: true });
-      });
+      }).catch(() => {});
       whenUserSignsOut().then(() => {
         set({ user: null, isAuthenticated: false });
-      });
+      }).catch(() => {});
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'CloudKit auth failed';
       set({

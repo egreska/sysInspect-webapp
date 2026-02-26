@@ -20,12 +20,8 @@ function CloudKitButtonVisibility() {
 }
 
 export default function LoginPage() {
-  const { initAuth, isAuthenticated, isLoading, error, cloudKitReady } = useAuthStore();
+  const { isAuthenticated, isLoading, error, cloudKitReady } = useAuthStore();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    initAuth();
-  }, [initAuth]);
 
   useEffect(() => {
     if (isAuthenticated) {

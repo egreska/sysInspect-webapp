@@ -4,6 +4,7 @@ import { inspectionsAPI, reportsAPI } from '../services/api';
 import { ArrowLeft, Download, AlertCircle, Wrench, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import type { InspectionItem } from '../types';
 
 export default function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -194,7 +195,7 @@ export default function InspectionDetailPage() {
   );
 }
 
-function getDamagesList(item: any): string[] {
+function getDamagesList(item: InspectionItem): string[] {
   const damages: string[] = [];
   
   if (item.uprightFrontDamage) damages.push('Upright Front Damage');
@@ -213,7 +214,7 @@ function getDamagesList(item: any): string[] {
   if (item.basePlateFloorDamaged) damages.push('Floor Damaged');
   if (item.anchorsDamaged) damages.push('Anchors Damaged');
   if (item.anchorsMissing) damages.push('Anchors Missing');
-  if (!item.anchorsTorqued) damages.push('Anchors Not Torqued');
+  if (item.anchors && !item.anchorsTorqued) damages.push('Anchors Not Torqued');
   if (item.wireDeckDamaged) damages.push('Wire Deck Damaged');
   if (item.wireDeckMissing) damages.push('Wire Deck Missing');
   if (item.wireDeckOutOfPosition) damages.push('Wire Deck Out of Position');
