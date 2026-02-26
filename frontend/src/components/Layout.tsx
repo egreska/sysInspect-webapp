@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Home, Users, LogOut } from 'lucide-react';
@@ -6,8 +7,27 @@ export default function Layout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const headerRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const signIn = document.getElementById('apple-sign-in-button');
+    const signOut = document.getElementById('apple-sign-out-button');
+    if (signIn) signIn.style.display = 'none';
+    if (signOut) {
+      signOut.style.display = 'block';
+      if (headerRef.current && signOut.parentElement !== headerRef.current) {
+        headerRef.current.appendChild(signOut);
+      }
+    }
+    return () => {
+      if (signOut) {
+        signOut.style.display = 'none';
+        document.body.appendChild(signOut);
+      }
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -38,8 +58,8 @@ export default function Layout() {
               </nav>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">{user?.email}</span>
+            <div className="flex items-center space-x-4" ref={headerRef}>
+              <span className="text-sm text-gray-600">{user?.email || user?.userId || 'Signed in'}</span>
               <button
                 onClick={handleLogout}
                 className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-md transition-colors"

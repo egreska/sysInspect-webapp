@@ -9,6 +9,8 @@ import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  if (isLoading) return <div className="p-8 text-center">Loading...</div>;
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 }
 

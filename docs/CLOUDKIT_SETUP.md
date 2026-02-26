@@ -1,15 +1,19 @@
 # CloudKit Setup Guide - Systems Inspector
 
-Complete guide for configuring CloudKit Web Services API to access data from your iOS app.
+Complete guide for configuring CloudKit to access data from your iOS app.
 
 ## 🎯 Overview
 
-This guide covers:
-- CloudKit Web Services setup
-- Generating server-to-server keys
-- Configuring authentication
-- Testing the connection
-- Troubleshooting
+The web app uses **CloudKit JS** (browser SDK) with Sign in with Apple. The backend uses **CloudKit Web Services** (Server-to-Server) for optional server-side operations.
+
+### Web App (CloudKit JS)
+- **Auth:** Sign in with Apple (same Apple ID as iOS app)
+- **Data:** Fetched directly from CloudKit in the browser
+- **Config:** API Token from CloudKit Dashboard → API Access → API Tokens
+
+### Backend (optional)
+- **Auth:** Server-to-Server key
+- **Config:** See Step 3–5 below
 
 ---
 
@@ -55,7 +59,17 @@ This guide covers:
 
 ---
 
-### Step 3: Generate API Token
+### Step 3a: API Token (for Web App / CloudKit JS)
+
+1. In CloudKit Dashboard
+2. Go to **API Access** → **API Tokens**
+3. Click **"+"** to add a new token
+4. Enter a name (e.g., `Systems Inspector Web`)
+5. Optionally restrict **Allowed Origins** (e.g., `https://yourdomain.com`)
+6. Copy the generated token
+7. Add to frontend `.env`: `VITE_CLOUDKIT_API_TOKEN=your-token`
+
+### Step 3b: Server-to-Server Key (for Backend)
 
 1. In CloudKit Dashboard
 2. Go to **API Access** → **Server-to-Server Keys**

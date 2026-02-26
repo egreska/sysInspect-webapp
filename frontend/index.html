@@ -9,6 +9,10 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- CloudKit JS appends Sign in/out buttons to these - both must exist when setUpAuth runs -->
+    <div id="apple-sign-in-button" style="display:none"></div>
+    <div id="apple-sign-out-button" style="display:none"></div>
+    <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
+    <script type="module" src="/src/cloudkitBootstrap.tsx"></script>
   </body>
 </html>
