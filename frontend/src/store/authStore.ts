@@ -45,11 +45,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         cloudKitReady: true,
         error: null,
       });
-      // Listen for sign in/out (long-lived promises - catch to avoid unhandled rejections)
-      whenUserSignsIn().then((id) => {
+      // Listen for sign in/out (wrap in Promise.resolve - CloudKit may return non-standard thenable)
+      Promise.resolve(whenUserSignsIn()).then((id) => {
         set({ user: userIdentityToUser(id), isAuthenticated: true });
       }).catch(() => {});
-      whenUserSignsOut().then(() => {
+      Promise.resolve(whenUserSignsOut()).then(() => {
         set({ user: null, isAuthenticated: false });
       }).catch(() => {});
     } catch (err) {
