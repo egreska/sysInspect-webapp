@@ -2,10 +2,12 @@
  * CloudKit JS Browser SDK Service
  *
  * Wraps Apple's CloudKit JS for Systems Inspector.
+ * Must match iOS app configuration:
+ * - Container: iCloud.SysInspectDB (from Systems Inspector.entitlements)
  * - Private Database: container.privateCloudDatabase (user-scoped data)
  * - Zone: com.apple.coredata.cloudkit.zone (Core Data + CloudKit)
- * - Record types: CD_ prefix (e.g. CD_Customer, CD_Inspection, CD_InspectionItem)
- * - Environment: defaults to development
+ * - Record types: CD_ prefix (CD_Customer, CD_Inspection, CD_InspectionItem)
+ * - Environment: defaults to development (Xcode debug builds)
  */
 
 declare global {

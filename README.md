@@ -4,7 +4,7 @@ Professional web application for accessing CloudKit data and generating inspecti
 
 ## 🌐 Deployment Information
 
-**Domain:** "your domain url"  
+**Domain:** sysinspect.skynet97.org  
 **Platform:** Coolify  
 **Status:** Development
 
@@ -74,7 +74,7 @@ Frontend runs at http://localhost:5173
 ### Environment Variables
 
 See `frontend/.env.example`:
-- `VITE_CLOUDKIT_CONTAINER_ID` – CloudKit container (e.g. iCloud.com.yourcompany.SystemsInspector)
+- `VITE_CLOUDKIT_CONTAINER_ID` – CloudKit container (must match iOS: `iCloud.SysInspectDB`)
 - `VITE_CLOUDKIT_API_TOKEN` – API token from CloudKit Dashboard → API Access → API Tokens
 - `VITE_CLOUDKIT_ENVIRONMENT` – `development` or `production`
 
