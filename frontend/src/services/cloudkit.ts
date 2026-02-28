@@ -46,9 +46,14 @@ interface CloudKitContainer {
   privateCloudDatabase: CloudKitDatabase;
 }
 
+interface CloudKitRecordLookup {
+  recordName: string;
+  zoneID?: { zoneName: string };
+}
+
 interface CloudKitDatabase {
   performQuery: (request: CloudKitQueryRequest) => Promise<CloudKitQueryResponse>;
-  fetchRecords: (request: CloudKitFetchRequest) => Promise<CloudKitFetchResponse>;
+  fetchRecords: (lookups: CloudKitRecordLookup[]) => Promise<CloudKitFetchResponse>;
 }
 
 export interface CloudKitUserIdentity {
@@ -81,14 +86,8 @@ interface CloudKitQueryResponse {
 }
 
 /**
- * CloudKit JS fetchRecords expects a flat record dict (with recordName at top level),
- * NOT a { records: [...] } wrapper. For zone-scoped lookups, include zoneID.
+ * CloudKit JS fetchRecords response shape.
  */
-interface CloudKitFetchRequest {
-  recordName: string;
-  zoneID?: { zoneName: string };
-}
-
 interface CloudKitFetchResponse {
   records: CloudKitRecord[];
 }
@@ -337,25 +336,28 @@ export async function queryRecords(
 
 /**
  * Fetch a single record by name from Private Database (com.apple.coredata.cloudkit.zone).
- * CloudKit JS fetchRecords takes a flat record object (not a { records: [...] } wrapper).
+ * CloudKit JS Database.fetchRecords() takes an ARRAY of record-lookup objects.
  */
 export async function fetchRecord(recordName: string): Promise<CloudKitRecord | null> {
   if (!recordName) return null;
   const db = getContainer().privateCloudDatabase;
-  const request: CloudKitFetchRequest = {
-    recordName,
-    zoneID: { zoneName: ZONE },
-  };
+  const lookups = [
+    { recordName, zoneID: { zoneName: ZONE } },
+  ];
+  console.debug(`[CloudKit] fetchRecord: looking up recordName=${recordName} in zone=${ZONE}`);
   let response: CloudKitFetchResponse;
   try {
-    response = await Promise.resolve(db.fetchRecords(request));
+    response = await Promise.resolve(db.fetchRecords(lookups));
   } catch (err) {
     const msg = extractCloudKitError(err);
     console.error(`CloudKit fetchRecord failed for ${recordName}:`, msg, err);
     throw new Error(msg);
   }
-  const records = response.records || [];
-  return records[0] || null;
+  const records = (response?.records || response) as CloudKitRecord[] | CloudKitFetchResponse;
+  const list = Array.isArray(records) ? records : (records as CloudKitFetchResponse).records || [];
+  console.debug(`[CloudKit] fetchRecord response:`, list.length, 'records', list[0] ? `recordType=${list[0].recordType}` : '(empty)');
+  const good = list.filter((r) => !r.serverErrorCode);
+  return good[0] || null;
 }
 
 /**
@@ -399,8 +401,13 @@ export async function fetchInspections(customerId: string): Promise<CloudKitReco
     { fieldName: 'CD_date', ascending: false }
   );
   console.debug(`[CloudKit] fetched ${all.length} total CD_Inspection records, filtering for customer ${customerId}`);
+  if (all.length > 0) {
+    console.debug('[CloudKit] CD_Inspection[0] CD_customer raw value:', JSON.stringify(all[0].fields.CD_customer));
+    console.debug('[CloudKit] CD_Inspection[0] all field keys:', Object.keys(all[0].fields));
+  }
   return all.filter((r) => {
     const ref = extractRecordName(r.fields.CD_customer?.value);
+    console.debug(`[CloudKit] inspection ${r.recordName}: CD_customer ref=${ref}, match=${ref === customerId}`);
     return ref === customerId;
   });
 }
@@ -416,6 +423,9 @@ export async function fetchInspectionItems(inspectionId: string): Promise<CloudK
     { fieldName: 'CD_sequenceNumber', ascending: true }
   );
   console.debug(`[CloudKit] fetched ${all.length} total CD_InspectionItem records, filtering for inspection ${inspectionId}`);
+  if (all.length > 0) {
+    console.debug('[CloudKit] CD_InspectionItem[0] CD_inspection raw value:', JSON.stringify(all[0].fields.CD_inspection));
+  }
   return all.filter((r) => {
     const ref = extractRecordName(r.fields.CD_inspection?.value);
     return ref === inspectionId;

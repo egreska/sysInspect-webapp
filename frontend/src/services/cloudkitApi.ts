@@ -29,13 +29,20 @@ export async function getCustomers(): Promise<Customer[]> {
 
 export async function getCustomerById(id: string): Promise<Customer | null> {
   const record = await fetchRecord(id);
-  if (!record || record.recordType !== 'CD_Customer') return null;
+  if (!record) return null;
+  console.debug('[CloudKit] getCustomerById record:', record.recordName, 'type:', record.recordType, 'fields:', Object.keys(record.fields || {}));
   return mapCustomerRecord(record);
 }
 
 export async function getInspectionsByCustomerId(customerId: string): Promise<Inspection[]> {
-  const records = await fetchInspections(customerId);
-  return records.map(mapInspectionRecord);
+  try {
+    const records = await fetchInspections(customerId);
+    console.debug(`[CloudKit] getInspectionsByCustomerId(${customerId}): ${records.length} inspections matched`);
+    return records.map(mapInspectionRecord);
+  } catch (err) {
+    console.error('CloudKit getInspectionsByCustomerId failed:', err);
+    throw err;
+  }
 }
 
 async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promise<InspectionItem> {
