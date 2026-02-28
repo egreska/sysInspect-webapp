@@ -13,7 +13,6 @@
 declare global {
   interface Window {
     CloudKit?: CloudKitGlobal;
-    cloudkitloaded?: () => void;
   }
 }
 
@@ -104,28 +103,20 @@ let configured = false;
 let currentEnvironment: 'development' | 'production' = 'development';
 
 /**
- * Wait for CloudKit JS to load, then configure
+ * Wait for CloudKit JS to load, then configure.
+ * Uses the 'cloudkitloaded' window event per Apple's documented async pattern:
+ * https://cdn.apple-cloudkit.com/cloudkit-catalog/
  */
 export function initCloudKit(): Promise<void> {
   if (configured && container) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
     let settled = false;
-    const previousCloudKitLoaded = window.cloudkitloaded;
-    let callbackInstalled = false;
-
-    const restoreCloudKitLoaded = () => {
-      if (!callbackInstalled) return;
-      if (window.cloudkitloaded === onCloudKitLoaded) {
-        window.cloudkitloaded = previousCloudKitLoaded;
-      }
-      callbackInstalled = false;
-    };
 
     const timeoutId = setTimeout(() => {
       if (!settled && !configured) {
         settled = true;
-        restoreCloudKitLoaded();
+        window.removeEventListener('cloudkitloaded', handler);
         reject(new Error('CloudKit JS failed to load'));
       }
     }, 10000);
@@ -134,27 +125,17 @@ export function initCloudKit(): Promise<void> {
       if (settled) return;
       settled = true;
       clearTimeout(timeoutId);
-      restoreCloudKitLoaded();
       resolve();
     };
     const onReject = (err: Error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeoutId);
-      restoreCloudKitLoaded();
       reject(err);
     };
 
-    const onCloudKitLoaded = () => {
-      if (!window.CloudKit) return;
-      // Preserve any previous callback behavior if it exists.
-      if (typeof previousCloudKitLoaded === 'function' && previousCloudKitLoaded !== onCloudKitLoaded) {
-        try {
-          previousCloudKitLoaded();
-        } catch {
-          // Ignore callback errors from previous handlers.
-        }
-      }
+    const handler = () => {
+      window.removeEventListener('cloudkitloaded', handler);
       doConfigure(onResolve, onReject);
     };
 
@@ -163,8 +144,7 @@ export function initCloudKit(): Promise<void> {
       return;
     }
 
-    window.cloudkitloaded = onCloudKitLoaded;
-    callbackInstalled = true;
+    window.addEventListener('cloudkitloaded', handler);
   });
 }
 
@@ -267,27 +247,34 @@ export async function queryRecords(
   resultsLimit = 100
 ): Promise<CloudKitRecord[]> {
   const db = getContainer().privateCloudDatabase;
-  const query: CloudKitQuery = {
-    recordType,
-    filterBy: filters.length > 0 ? filters : undefined,
-    sortBy: sortBy ? [sortBy] : undefined,
-  };
+
+  // Build query dict — only include keys that have values (no undefined props)
+  const query: CloudKitQuery = { recordType };
+  if (filters.length > 0) query.filterBy = filters;
+  if (sortBy) query.sortBy = [sortBy];
+
   const allRecords: CloudKitRecord[] = [];
-  let continuationMarker: unknown | undefined;
+  let marker: unknown = null;
+  let isFirstPage = true;
 
   do {
     const request: CloudKitQueryRequest = {
       query,
       zoneID: { zoneName: ZONE },
       resultsLimit,
-      continuationMarker,
     };
-    const response = await db.performQuery(request);
+    if (!isFirstPage && marker) {
+      request.continuationMarker = marker;
+    }
+
+    const response = await Promise.resolve(db.performQuery(request));
+
     if (response.records?.length) {
       allRecords.push(...response.records);
     }
-    continuationMarker = response.continuationMarker;
-    if (!response.moreComing || !continuationMarker) break;
+    marker = response.continuationMarker ?? null;
+    isFirstPage = false;
+    if (!response.moreComing || !marker) break;
   } while (true);
 
   return allRecords;
@@ -303,7 +290,7 @@ export async function fetchRecords(recordNames: string[]): Promise<CloudKitRecor
     records: recordNames.map((recordName) => ({ recordName })),
     zoneID: { zoneName: ZONE },
   };
-  const response = await db.fetchRecords(request);
+  const response = await Promise.resolve(db.fetchRecords(request));
   return response.records || [];
 }
 

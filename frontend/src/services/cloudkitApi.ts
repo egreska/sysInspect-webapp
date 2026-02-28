@@ -17,8 +17,13 @@ import {
  * so we get only their data. Query all CD_Customer in the zone.
  */
 export async function getCustomers(): Promise<Customer[]> {
-  const records = await queryRecords('CD_Customer', [], { fieldName: 'CD_name', ascending: true });
-  return records.map(mapCustomerRecord);
+  try {
+    const records = await queryRecords('CD_Customer', [], { fieldName: 'CD_name', ascending: true });
+    return records.map(mapCustomerRecord);
+  } catch (err) {
+    console.error('CloudKit getCustomers failed:', err);
+    throw err;
+  }
 }
 
 export async function getCustomerById(id: string): Promise<Customer | null> {
@@ -33,7 +38,7 @@ export async function getInspectionsByCustomerId(customerId: string): Promise<In
 }
 
 async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promise<InspectionItem> {
-  const photoVal = r.fields.CD_photoURL?.value as { downloadURL?: string } | undefined;
+  const photoVal = r.fields.CD_photoData?.value as { downloadURL?: string } | undefined;
   let photoData: string | null = null;
   if (photoVal?.downloadURL) {
     try {
