@@ -57,7 +57,11 @@ export interface CloudKitUserIdentity {
   lookupInfo?: { emailAddress?: string };
 }
 
-interface CloudKitQuery {
+/**
+ * CloudKit JS performQuery expects a FLAT dictionary (not a nested query sub-object).
+ * recordType, filterBy, sortBy go at the same level as zoneID and resultsLimit.
+ */
+interface CloudKitQueryRequest {
   recordType: string;
   filterBy?: Array<{
     fieldName: string;
@@ -65,10 +69,6 @@ interface CloudKitQuery {
     fieldValue: { value: unknown; type: string };
   }>;
   sortBy?: Array<{ fieldName: string; ascending: boolean }>;
-}
-
-interface CloudKitQueryRequest {
-  query: CloudKitQuery;
   zoneID: { zoneName: string };
   resultsLimit?: number;
   continuationMarker?: unknown;
@@ -287,21 +287,19 @@ export async function queryRecords(
 ): Promise<CloudKitRecord[]> {
   const db = getContainer().privateCloudDatabase;
 
-  // Build query dict — only include keys that have values (no undefined props)
-  const query: CloudKitQuery = { recordType };
-  if (filters.length > 0) query.filterBy = filters;
-  if (sortBy) query.sortBy = [sortBy];
-
   const allRecords: CloudKitRecord[] = [];
   let marker: unknown = null;
   let isFirstPage = true;
 
   do {
+    // CloudKit JS performQuery takes a FLAT dict (recordType at top level, not nested in query)
     const request: CloudKitQueryRequest = {
-      query,
+      recordType,
       zoneID: { zoneName: ZONE },
       resultsLimit,
     };
+    if (filters.length > 0) request.filterBy = filters;
+    if (sortBy) request.sortBy = [sortBy];
     if (!isFirstPage && marker) {
       request.continuationMarker = marker;
     }
