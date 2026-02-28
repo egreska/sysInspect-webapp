@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { customersAPI } from '../services/api';
+import { queryRecords, extractRecordName, mapInspectionRecord } from '../services/cloudkit';
 import { BarChart, Users, FileText, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { format, isThisMonth } from 'date-fns';
+import type { Inspection } from '../types';
 
 export default function DashboardPage() {
   const { data, isLoading } = useQuery({
@@ -9,10 +12,36 @@ export default function DashboardPage() {
     queryFn: customersAPI.getAll,
   });
 
-  // Ensure we always have an array (handles wrong routing / API returning HTML)
-  const customers = Array.isArray(data) ? data : [];
+  const { data: allInspections, isLoading: loadingInspections } = useQuery({
+    queryKey: ['all-inspections'],
+    queryFn: async (): Promise<(Inspection & { customerName?: string })[]> => {
+      const records = await queryRecords('CD_Inspection');
+      const customerRecords = await queryRecords('CD_Customer');
+      const customerMap = new Map(
+        customerRecords.map((c) => [c.recordName, (c.fields.CD_name?.value as string) || ''])
+      );
+      return records.map((r) => {
+        const mapped = mapInspectionRecord(r);
+        const custRef = extractRecordName(r.fields.CD_customer?.value);
+        return { ...mapped, customerName: custRef ? customerMap.get(custRef) : undefined };
+      });
+    },
+  });
 
-  if (isLoading) {
+  const customers = Array.isArray(data) ? data : [];
+  const inspections = Array.isArray(allInspections) ? allInspections : [];
+  const thisMonthCount = inspections.filter(
+    (i) => i.date && isThisMonth(new Date(i.date))
+  ).length;
+  const recentInspections = [...inspections]
+    .sort((a, b) => {
+      const da = a.date ? new Date(a.date).getTime() : 0;
+      const db = b.date ? new Date(b.date).getTime() : 0;
+      return db - da;
+    })
+    .slice(0, 5);
+
+  if (isLoading && loadingInspections) {
     return <div className="text-center py-12">Loading...</div>;
   }
 
@@ -44,7 +73,7 @@ export default function DashboardPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Inspections</p>
-              <p className="text-2xl font-bold text-gray-900">-</p>
+              <p className="text-2xl font-bold text-gray-900">{inspections.length}</p>
             </div>
           </div>
         </div>
@@ -56,7 +85,7 @@ export default function DashboardPage() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">This Month</p>
-              <p className="text-2xl font-bold text-gray-900">-</p>
+              <p className="text-2xl font-bold text-gray-900">{thisMonthCount}</p>
             </div>
           </div>
         </div>
@@ -86,19 +115,60 @@ export default function DashboardPage() {
             <h4 className="font-medium text-gray-900">View Customers</h4>
             <p className="text-sm text-gray-600 mt-1">Browse all customers</p>
           </Link>
-          
-          <div className="p-4 border-2 border-gray-200 rounded-lg opacity-50 cursor-not-allowed">
-            <FileText className="h-6 w-6 text-gray-400 mb-2" />
+
+          <Link
+            to="/customers"
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+          >
+            <FileText className="h-6 w-6 text-green-600 mb-2" />
             <h4 className="font-medium text-gray-900">Recent Inspections</h4>
             <p className="text-sm text-gray-600 mt-1">View recent work</p>
-          </div>
-          
-          <div className="p-4 border-2 border-gray-200 rounded-lg opacity-50 cursor-not-allowed">
-            <BarChart className="h-6 w-6 text-gray-400 mb-2" />
+          </Link>
+
+          <Link
+            to="/customers"
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors"
+          >
+            <BarChart className="h-6 w-6 text-orange-600 mb-2" />
             <h4 className="font-medium text-gray-900">Reports</h4>
             <p className="text-sm text-gray-600 mt-1">Generate reports</p>
-          </div>
+          </Link>
         </div>
+      </div>
+
+      {/* Recent Inspections */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Inspections</h3>
+        </div>
+        {loadingInspections ? (
+          <div className="p-6 text-center text-gray-500">Loading inspections...</div>
+        ) : recentInspections.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">No inspections yet</div>
+        ) : (
+          <div className="divide-y">
+            {recentInspections.map((ins) => (
+              <Link
+                key={ins.id}
+                to={`/inspections/${ins.id}`}
+                className="block p-6 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-medium text-gray-900">
+                      {(ins as { customerName?: string }).customerName || 'Inspection'}
+                      {ins.date && ` - ${format(new Date(ins.date), 'MMM dd, yyyy')}`}
+                    </h4>
+                    {ins.inspectorName && (
+                      <p className="text-sm text-gray-600 mt-1">Inspector: {ins.inspectorName}</p>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-400">View Report &rarr;</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent Customers */}

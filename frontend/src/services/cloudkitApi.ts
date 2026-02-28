@@ -44,12 +44,24 @@ export async function getInspectionsByCustomerId(customerId: string): Promise<In
   }
 }
 
+function extractDownloadURL(field: { value?: unknown } | undefined): string | null {
+  if (!field || !field.value) return null;
+  const v = field.value as Record<string, unknown>;
+  if (typeof v.downloadURL === 'string') return v.downloadURL;
+  if (typeof v === 'string') return null;
+  if (v.value && typeof (v.value as Record<string, unknown>).downloadURL === 'string') {
+    return (v.value as Record<string, unknown>).downloadURL as string;
+  }
+  return null;
+}
+
 async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promise<InspectionItem> {
-  const photoVal = r.fields.CD_photoData?.value as { downloadURL?: string } | undefined;
+  const photoUrl = extractDownloadURL(r.fields.CD_photoData);
   let photoData: string | null = null;
-  if (photoVal?.downloadURL) {
+  if (photoUrl) {
+    console.debug('[CloudKit] Fetching photo from:', photoUrl.substring(0, 80) + '...');
     try {
-      const resp = await fetch(photoVal.downloadURL);
+      const resp = await fetch(photoUrl);
       if (resp.ok) {
         const blob = await resp.blob();
         const reader = new FileReader();
@@ -58,10 +70,14 @@ async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promis
           reader.onerror = rej;
           reader.readAsDataURL(blob);
         });
+      } else {
+        console.warn(`[CloudKit] Photo fetch HTTP ${resp.status} for item ${r.recordName}`);
       }
-    } catch {
-      // Ignore photo fetch errors
+    } catch (err) {
+      console.warn('[CloudKit] Photo fetch error for item', r.recordName, err);
     }
+  } else if (r.fields.CD_photoData?.value) {
+    console.debug('[CloudKit] CD_photoData present but no downloadURL. Raw shape:', JSON.stringify(r.fields.CD_photoData).substring(0, 200));
   }
   return {
     id: r.recordName,
