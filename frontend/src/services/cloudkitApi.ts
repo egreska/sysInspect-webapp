@@ -46,17 +46,23 @@ export async function getInspectionsByCustomerId(customerId: string): Promise<In
 
 function extractDownloadURL(field: { value?: unknown } | undefined): string | null {
   if (!field || !field.value) return null;
-  const v = field.value as Record<string, unknown>;
-  if (typeof v.downloadURL === 'string') return v.downloadURL;
-  if (typeof v === 'string') return null;
-  if (v.value && typeof (v.value as Record<string, unknown>).downloadURL === 'string') {
-    return (v.value as Record<string, unknown>).downloadURL as string;
+  const v = field.value;
+  // Asset field: { value: { downloadURL: "https://..." } }
+  if (typeof v === 'object' && v !== null) {
+    const obj = v as Record<string, unknown>;
+    if (typeof obj.downloadURL === 'string') return obj.downloadURL;
+    if (obj.value && typeof (obj.value as Record<string, unknown>).downloadURL === 'string') {
+      return (obj.value as Record<string, unknown>).downloadURL as string;
+    }
   }
+  // String field containing a URL (e.g., CD_photoURL synced as a string)
+  if (typeof v === 'string' && v.startsWith('http')) return v;
   return null;
 }
 
 async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promise<InspectionItem> {
-  const photoUrl = extractDownloadURL(r.fields.CD_photoData);
+  const photoField = r.fields.CD_photoURL || r.fields.CD_photoData_ckAsset || r.fields.CD_photoData;
+  const photoUrl = extractDownloadURL(photoField);
   let photoData: string | null = null;
   if (photoUrl) {
     console.debug('[CloudKit] Fetching photo from:', photoUrl.substring(0, 80) + '...');
@@ -76,8 +82,11 @@ async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promis
     } catch (err) {
       console.warn('[CloudKit] Photo fetch error for item', r.recordName, err);
     }
-  } else if (r.fields.CD_photoData?.value) {
-    console.debug('[CloudKit] CD_photoData present but no downloadURL. Raw shape:', JSON.stringify(r.fields.CD_photoData).substring(0, 200));
+  } else {
+    const photoKeys = Object.keys(r.fields).filter(k => k.toLowerCase().includes('photo'));
+    if (photoKeys.length > 0) {
+      console.debug('[CloudKit] Photo field keys found:', photoKeys, 'Raw:', JSON.stringify(photoKeys.map(k => ({ k, v: r.fields[k] }))).substring(0, 300));
+    }
   }
   return {
     id: r.recordName,
