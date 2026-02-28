@@ -93,10 +93,49 @@ export interface CloudKitRecord {
   recordName: string;
   recordType: string;
   fields: Record<string, { value?: unknown }>;
+  serverErrorCode?: string;
+  reason?: string;
+}
+
+// CloudKit JS error responses can be objects, arrays, or CKError wrappers
+interface CloudKitError {
+  ckErrorCode?: string;
+  serverErrorCode?: string;
+  reason?: string;
+  message?: string;
+  recordName?: string;
 }
 
 /** Core Data + CloudKit zone (required for CD_ record types) */
 const ZONE = 'com.apple.coredata.cloudkit.zone';
+
+/**
+ * Extract a readable error message from CloudKit JS error responses.
+ * CloudKit JS rejects with various shapes: CKError objects, arrays of errors, or plain objects.
+ */
+function extractCloudKitError(err: unknown): string {
+  if (!err) return 'Unknown CloudKit error';
+
+  // Array of errors (CloudKit JS often rejects with an array)
+  if (Array.isArray(err)) {
+    const details = err.map((e: CloudKitError) =>
+      e.ckErrorCode || e.serverErrorCode || e.reason || e.message || JSON.stringify(e)
+    );
+    return `CloudKit error: ${details.join('; ')}`;
+  }
+
+  // Object with ckErrorCode / serverErrorCode
+  const obj = err as CloudKitError;
+  if (obj.ckErrorCode || obj.serverErrorCode || obj.reason) {
+    return `CloudKit ${obj.ckErrorCode || obj.serverErrorCode || ''}: ${obj.reason || obj.message || ''}`.trim();
+  }
+
+  // Standard Error
+  if (err instanceof Error) return err.message;
+
+  // Last resort
+  try { return JSON.stringify(err); } catch { return String(err); }
+}
 
 let container: CloudKitContainer | null = null;
 let configured = false;
@@ -267,10 +306,24 @@ export async function queryRecords(
       request.continuationMarker = marker;
     }
 
-    const response = await Promise.resolve(db.performQuery(request));
+    let response: CloudKitQueryResponse;
+    try {
+      response = await Promise.resolve(db.performQuery(request));
+    } catch (err) {
+      const msg = extractCloudKitError(err);
+      console.error(`CloudKit performQuery failed for ${recordType}:`, msg, err);
+      throw new Error(msg);
+    }
 
+    // Check for per-record errors in the response
     if (response.records?.length) {
-      allRecords.push(...response.records);
+      for (const rec of response.records) {
+        if (rec.serverErrorCode) {
+          console.warn(`CloudKit record error: ${rec.serverErrorCode} - ${rec.reason || ''}`);
+        } else {
+          allRecords.push(rec);
+        }
+      }
     }
     marker = response.continuationMarker ?? null;
     isFirstPage = false;
@@ -290,7 +343,14 @@ export async function fetchRecords(recordNames: string[]): Promise<CloudKitRecor
     records: recordNames.map((recordName) => ({ recordName })),
     zoneID: { zoneName: ZONE },
   };
-  const response = await Promise.resolve(db.fetchRecords(request));
+  let response: CloudKitFetchResponse;
+  try {
+    response = await Promise.resolve(db.fetchRecords(request));
+  } catch (err) {
+    const msg = extractCloudKitError(err);
+    console.error('CloudKit fetchRecords failed:', msg, err);
+    throw new Error(msg);
+  }
   return response.records || [];
 }
 
