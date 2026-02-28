@@ -61,31 +61,16 @@ function extractDownloadURL(field: { value?: unknown } | undefined): string | nu
 }
 
 async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promise<InspectionItem> {
-  const photoField = r.fields.CD_photoURL || r.fields.CD_photoData_ckAsset || r.fields.CD_photoData;
+  // CloudKit asset field: CD_photoData_ckAsset (Core Data renames binary+externalStorage)
+  const photoField = r.fields.CD_photoData_ckAsset || r.fields.CD_photoData || r.fields.CD_photoURL;
   const photoUrl = extractDownloadURL(photoField);
-  let photoData: string | null = null;
   if (photoUrl) {
-    console.debug('[CloudKit] Fetching photo from:', photoUrl.substring(0, 80) + '...');
-    try {
-      const resp = await fetch(photoUrl);
-      if (resp.ok) {
-        const blob = await resp.blob();
-        const reader = new FileReader();
-        photoData = await new Promise<string>((res, rej) => {
-          reader.onload = () => res((reader.result as string).split(',')[1] || '');
-          reader.onerror = rej;
-          reader.readAsDataURL(blob);
-        });
-      } else {
-        console.warn(`[CloudKit] Photo fetch HTTP ${resp.status} for item ${r.recordName}`);
-      }
-    } catch (err) {
-      console.warn('[CloudKit] Photo fetch error for item', r.recordName, err);
-    }
+    console.debug('[CloudKit] Photo URL found for item', r.recordName, photoUrl.substring(0, 80) + '...');
   } else {
     const photoKeys = Object.keys(r.fields).filter(k => k.toLowerCase().includes('photo'));
     if (photoKeys.length > 0) {
-      console.debug('[CloudKit] Photo field keys found:', photoKeys, 'Raw:', JSON.stringify(photoKeys.map(k => ({ k, v: r.fields[k] }))).substring(0, 300));
+      console.debug('[CloudKit] Photo fields present but no URL:', photoKeys,
+        JSON.stringify(photoKeys.map(k => ({ k, v: r.fields[k] }))).substring(0, 300));
     }
   }
   return {
@@ -100,7 +85,8 @@ async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promis
     })(),
     comments: (r.fields.CD_comments?.value as string) || '',
     sequenceNumber: (r.fields.CD_sequenceNumber?.value as number) || 0,
-    photoData,
+    photoData: null,
+    photoUrl: photoUrl,
     upright: !!(r.fields.CD_upright?.value),
     beam: !!(r.fields.CD_beam?.value),
     bracingDiagonal: !!(r.fields.CD_bracingDiagonal?.value),

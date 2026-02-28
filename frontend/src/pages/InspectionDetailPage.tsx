@@ -165,11 +165,12 @@ export default function InspectionDetailPage() {
                   <p className="text-gray-700 mb-4 italic">{item.comments}</p>
                 )}
 
-                {item.photoData && (
+                {(item.photoUrl || item.photoData) && (
                   <img
-                    src={`data:image/jpeg;base64,${item.photoData}`}
+                    src={item.photoUrl || `data:image/jpeg;base64,${item.photoData}`}
                     alt={`Inspection ${item.location}`}
                     className="max-w-md rounded-lg border"
+                    crossOrigin="anonymous"
                   />
                 )}
 

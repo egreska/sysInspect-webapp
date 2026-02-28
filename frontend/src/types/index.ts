@@ -34,6 +34,7 @@ export interface InspectionItem {
   comments?: string;
   sequenceNumber: number;
   photoData?: string | null;
+  photoUrl?: string | null;
   
   // Upright damage
   upright: boolean;

@@ -127,9 +127,41 @@ function wrapText(doc: jsPDF, text: string, maxWidth: number): string[] {
   return doc.splitTextToSize(text, maxWidth) as string[];
 }
 
-export function generatePDF(inspection: Inspection): Blob {
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/jpeg', 0.7);
+  } catch {
+    return null;
+  }
+}
+
+export async function generatePDF(inspection: Inspection): Promise<Blob> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
   const items = inspection.items || [];
+
+  // Pre-load all photo URLs as base64 for embedding in PDF
+  const photoCache = new Map<string, string>();
+  await Promise.all(
+    items.map(async (item) => {
+      if (item.photoUrl) {
+        const b64 = await loadImageAsBase64(item.photoUrl);
+        if (b64) photoCache.set(item.id, b64);
+      }
+    })
+  );
   let y = MARGIN;
 
   // --- Header ---
@@ -203,12 +235,13 @@ export function generatePDF(inspection: Inspection): Blob {
 
     // Image column
     const imgW = COL_WIDTHS[0];
-    if (item.photoData) {
+    const cachedImg = photoCache.get(item.id);
+    const imgSrc = cachedImg || (item.photoData ? `data:image/jpeg;base64,${item.photoData}` : null);
+    if (imgSrc) {
       try {
-        const imgData = `data:image/jpeg;base64,${item.photoData}`;
         const maxImgW = imgW - 10;
         const maxImgH = ROW_HEIGHT - 10;
-        doc.addImage(imgData, 'JPEG', x + 5, y + 5, maxImgW, maxImgH);
+        doc.addImage(imgSrc, 'JPEG', x + 5, y + 5, maxImgW, maxImgH);
       } catch {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
