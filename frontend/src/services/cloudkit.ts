@@ -387,32 +387,39 @@ export async function fetchCustomers(userId: string): Promise<CloudKitRecord[]> 
   );
 }
 
+/**
+ * Fetch inspections for a customer.  CD_customer is a REFERENCE field (Core Data
+ * relationship), so we cannot reliably filter with EQUALS on a plain string.
+ * Instead we fetch all CD_Inspection records and filter client-side.
+ */
 export async function fetchInspections(customerId: string): Promise<CloudKitRecord[]> {
-  return queryRecords(
+  const all = await queryRecords(
     'CD_Inspection',
-    [
-      {
-        fieldName: 'CD_customer',
-        comparator: 'EQUALS',
-        fieldValue: { value: customerId },
-      },
-    ],
+    [],
     { fieldName: 'CD_date', ascending: false }
   );
+  console.debug(`[CloudKit] fetched ${all.length} total CD_Inspection records, filtering for customer ${customerId}`);
+  return all.filter((r) => {
+    const ref = extractRecordName(r.fields.CD_customer?.value);
+    return ref === customerId;
+  });
 }
 
+/**
+ * Fetch inspection items for an inspection.  CD_inspection is a REFERENCE field,
+ * so we fetch all CD_InspectionItem records and filter client-side.
+ */
 export async function fetchInspectionItems(inspectionId: string): Promise<CloudKitRecord[]> {
-  return queryRecords(
+  const all = await queryRecords(
     'CD_InspectionItem',
-    [
-      {
-        fieldName: 'CD_inspection',
-        comparator: 'EQUALS',
-        fieldValue: { value: inspectionId },
-      },
-    ],
+    [],
     { fieldName: 'CD_sequenceNumber', ascending: true }
   );
+  console.debug(`[CloudKit] fetched ${all.length} total CD_InspectionItem records, filtering for inspection ${inspectionId}`);
+  return all.filter((r) => {
+    const ref = extractRecordName(r.fields.CD_inspection?.value);
+    return ref === inspectionId;
+  });
 }
 
 /**
