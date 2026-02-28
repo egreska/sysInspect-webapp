@@ -46,14 +46,8 @@ interface CloudKitContainer {
   privateCloudDatabase: CloudKitDatabase;
 }
 
-interface CloudKitRecordLookup {
-  recordName: string;
-  zoneID?: { zoneName: string };
-}
-
 interface CloudKitDatabase {
-  performQuery: (request: CloudKitQueryRequest) => Promise<CloudKitQueryResponse>;
-  fetchRecords: (lookups: CloudKitRecordLookup[]) => Promise<CloudKitFetchResponse>;
+  performQuery: (query: CloudKitQuery, options?: CloudKitQueryOptions) => Promise<CloudKitQueryResponse>;
 }
 
 export interface CloudKitUserIdentity {
@@ -63,33 +57,31 @@ export interface CloudKitUserIdentity {
 }
 
 /**
- * CloudKit JS performQuery expects a FLAT dictionary (not a nested query sub-object).
- * recordType, filterBy, sortBy go at the same level as zoneID and resultsLimit.
+ * CloudKit JS performQuery(query, options?):
+ * - query: { recordType, filterBy?, sortBy? }
+ * - options: { zoneID?, resultsLimit?, continuationMarker?, desiredKeys? }
  */
-interface CloudKitQueryRequest {
+interface CloudKitQuery {
   recordType: string;
   filterBy?: Array<{
     fieldName: string;
     comparator: string;
     fieldValue: { value: unknown };
   }>;
-  sortBy?: Array<{ fieldName: string; ascending: boolean }>;
-  zoneID: { zoneName: string };
+  sortBy?: { fieldName: string; ascending: boolean };
+}
+
+interface CloudKitQueryOptions {
+  zoneID?: { zoneName: string };
   resultsLimit?: number;
   continuationMarker?: unknown;
+  desiredKeys?: string[];
 }
 
 interface CloudKitQueryResponse {
   records: CloudKitRecord[];
   continuationMarker?: unknown;
   moreComing?: boolean;
-}
-
-/**
- * CloudKit JS fetchRecords response shape.
- */
-interface CloudKitFetchResponse {
-  records: CloudKitRecord[];
 }
 
 export interface CloudKitRecord {
@@ -280,7 +272,9 @@ export function triggerSignOut(): void {
 
 /**
  * Query records from CloudKit Private Database (Core Data + CloudKit zone).
- * Uses container.privateCloudDatabase and com.apple.coredata.cloudkit.zone.
+ * CloudKit JS: database.performQuery(query, options?)
+ *   query  = { recordType, filterBy?, sortBy? }
+ *   options = { zoneID?, resultsLimit?, continuationMarker? }
  */
 export async function queryRecords(
   recordType: string,
@@ -292,31 +286,27 @@ export async function queryRecords(
 
   const allRecords: CloudKitRecord[] = [];
   let marker: unknown = null;
-  let isFirstPage = true;
 
   do {
-    // CloudKit JS performQuery takes a FLAT dict (recordType at top level, not nested in query)
-    const request: CloudKitQueryRequest = {
-      recordType,
+    const query: CloudKitQuery = { recordType };
+    if (filters.length > 0) query.filterBy = filters;
+    if (sortBy) query.sortBy = sortBy;
+
+    const options: CloudKitQueryOptions = {
       zoneID: { zoneName: ZONE },
       resultsLimit,
     };
-    if (filters.length > 0) request.filterBy = filters;
-    if (sortBy) request.sortBy = [sortBy];
-    if (!isFirstPage && marker) {
-      request.continuationMarker = marker;
-    }
+    if (marker) options.continuationMarker = marker;
 
     let response: CloudKitQueryResponse;
     try {
-      response = await Promise.resolve(db.performQuery(request));
+      response = await Promise.resolve(db.performQuery(query, options));
     } catch (err) {
       const msg = extractCloudKitError(err);
       console.error(`CloudKit performQuery failed for ${recordType}:`, msg, err);
       throw new Error(msg);
     }
 
-    // Check for per-record errors in the response
     if (response.records?.length) {
       for (const rec of response.records) {
         if (rec.serverErrorCode) {
@@ -327,37 +317,39 @@ export async function queryRecords(
       }
     }
     marker = response.continuationMarker ?? null;
-    isFirstPage = false;
     if (!response.moreComing || !marker) break;
   } while (true);
 
+  console.debug(`[CloudKit] queryRecords(${recordType}): ${allRecords.length} records`);
   return allRecords;
 }
 
 /**
- * Fetch a single record by name from Private Database (com.apple.coredata.cloudkit.zone).
- * CloudKit JS Database.fetchRecords() takes an ARRAY of record-lookup objects.
+ * Fetch a single record by recordName from the Private Database.
+ * Uses performQuery (which we know works) instead of fetchRecords (which has
+ * an unclear API signature in CloudKit JS). Queries all records of the given
+ * type and finds the one matching.  If recordType is unknown, tries each type.
  */
-export async function fetchRecord(recordName: string): Promise<CloudKitRecord | null> {
+export async function fetchRecord(
+  recordName: string,
+  recordType?: string
+): Promise<CloudKitRecord | null> {
   if (!recordName) return null;
-  const db = getContainer().privateCloudDatabase;
-  const lookups = [
-    { recordName, zoneID: { zoneName: ZONE } },
-  ];
-  console.debug(`[CloudKit] fetchRecord: looking up recordName=${recordName} in zone=${ZONE}`);
-  let response: CloudKitFetchResponse;
-  try {
-    response = await Promise.resolve(db.fetchRecords(lookups));
-  } catch (err) {
-    const msg = extractCloudKitError(err);
-    console.error(`CloudKit fetchRecord failed for ${recordName}:`, msg, err);
-    throw new Error(msg);
+
+  const types = recordType
+    ? [recordType]
+    : ['CD_Customer', 'CD_Inspection', 'CD_InspectionItem'];
+
+  for (const rt of types) {
+    const records = await queryRecords(rt);
+    const match = records.find((r) => r.recordName === recordName);
+    if (match) {
+      console.debug(`[CloudKit] fetchRecord found ${recordName} as ${rt}`);
+      return match;
+    }
   }
-  const records = (response?.records || response) as CloudKitRecord[] | CloudKitFetchResponse;
-  const list = Array.isArray(records) ? records : (records as CloudKitFetchResponse).records || [];
-  console.debug(`[CloudKit] fetchRecord response:`, list.length, 'records', list[0] ? `recordType=${list[0].recordType}` : '(empty)');
-  const good = list.filter((r) => !r.serverErrorCode);
-  return good[0] || null;
+  console.warn(`[CloudKit] fetchRecord: ${recordName} not found in types ${types.join(', ')}`);
+  return null;
 }
 
 /**
