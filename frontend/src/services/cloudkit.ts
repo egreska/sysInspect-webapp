@@ -107,12 +107,25 @@ let currentEnvironment: 'development' | 'production' = 'development';
  * Wait for CloudKit JS to load, then configure
  */
 export function initCloudKit(): Promise<void> {
+  if (configured && container) return Promise.resolve();
+
   return new Promise((resolve, reject) => {
     let settled = false;
+    const previousCloudKitLoaded = window.cloudkitloaded;
+    let callbackInstalled = false;
+
+    const restoreCloudKitLoaded = () => {
+      if (!callbackInstalled) return;
+      if (window.cloudkitloaded === onCloudKitLoaded) {
+        window.cloudkitloaded = previousCloudKitLoaded;
+      }
+      callbackInstalled = false;
+    };
+
     const timeoutId = setTimeout(() => {
       if (!settled && !configured) {
         settled = true;
-        window.removeEventListener('cloudkitloaded', handler);
+        restoreCloudKitLoaded();
         reject(new Error('CloudKit JS failed to load'));
       }
     }, 10000);
@@ -121,17 +134,27 @@ export function initCloudKit(): Promise<void> {
       if (settled) return;
       settled = true;
       clearTimeout(timeoutId);
+      restoreCloudKitLoaded();
       resolve();
     };
     const onReject = (err: Error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeoutId);
+      restoreCloudKitLoaded();
       reject(err);
     };
 
-    const handler = () => {
-      window.removeEventListener('cloudkitloaded', handler);
+    const onCloudKitLoaded = () => {
+      if (!window.CloudKit) return;
+      // Preserve any previous callback behavior if it exists.
+      if (typeof previousCloudKitLoaded === 'function' && previousCloudKitLoaded !== onCloudKitLoaded) {
+        try {
+          previousCloudKitLoaded();
+        } catch {
+          // Ignore callback errors from previous handlers.
+        }
+      }
       doConfigure(onResolve, onReject);
     };
 
@@ -139,7 +162,9 @@ export function initCloudKit(): Promise<void> {
       doConfigure(onResolve, onReject);
       return;
     }
-    window.addEventListener('cloudkitloaded', handler);
+
+    window.cloudkitloaded = onCloudKitLoaded;
+    callbackInstalled = true;
   });
 }
 
@@ -247,13 +272,25 @@ export async function queryRecords(
     filterBy: filters.length > 0 ? filters : undefined,
     sortBy: sortBy ? [sortBy] : undefined,
   };
-  const request = {
-    query,
-    zoneID: { zoneName: ZONE },
-    resultsLimit,
-  };
-  const response = await db.performQuery(request);
-  return response.records || [];
+  const allRecords: CloudKitRecord[] = [];
+  let continuationMarker: unknown | undefined;
+
+  do {
+    const request: CloudKitQueryRequest = {
+      query,
+      zoneID: { zoneName: ZONE },
+      resultsLimit,
+      continuationMarker,
+    };
+    const response = await db.performQuery(request);
+    if (response.records?.length) {
+      allRecords.push(...response.records);
+    }
+    continuationMarker = response.continuationMarker;
+    if (!response.moreComing || !continuationMarker) break;
+  } while (true);
+
+  return allRecords;
 }
 
 /**
