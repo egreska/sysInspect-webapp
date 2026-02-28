@@ -10,6 +10,7 @@ import {
   mapCustomerRecord,
   mapInspectionRecord,
   queryRecords,
+  extractRecordName,
 } from './cloudkit';
 
 /**
@@ -113,10 +114,10 @@ export async function getInspectionById(id: string): Promise<Inspection | null> 
   if (!inspection) return null;
 
   const r = inspection as import('./cloudkit').CloudKitRecord;
-  const customerRef = r.fields.CD_customer?.value as { recordName?: string } | undefined;
+  const customerId = extractRecordName(r.fields.CD_customer?.value);
   let customer: Customer | null = null;
-  if (customerRef?.recordName) {
-    customer = await getCustomerById(customerRef.recordName);
+  if (customerId) {
+    customer = await getCustomerById(customerId);
   }
 
   const itemRecords = await fetchInspectionItems(id);
@@ -127,7 +128,7 @@ export async function getInspectionById(id: string): Promise<Inspection | null> 
     id: r.recordName,
     date: r.fields.CD_date?.value as string | undefined,
     inspectorName: (r.fields.CD_inspectorName?.value as string) || '',
-    customerId: customerRef?.recordName,
+    customerId,
     customer: customer || undefined,
     items,
     createdDate: r.fields.CD_date?.value as string | undefined,

@@ -66,7 +66,7 @@ interface CloudKitQueryRequest {
   filterBy?: Array<{
     fieldName: string;
     comparator: string;
-    fieldValue: { value: unknown; type: string };
+    fieldValue: { value: unknown };
   }>;
   sortBy?: Array<{ fieldName: string; ascending: boolean }>;
   zoneID: { zoneName: string };
@@ -80,9 +80,13 @@ interface CloudKitQueryResponse {
   moreComing?: boolean;
 }
 
+/**
+ * CloudKit JS fetchRecords expects a flat record dict (with recordName at top level),
+ * NOT a { records: [...] } wrapper. For zone-scoped lookups, include zoneID.
+ */
 interface CloudKitFetchRequest {
-  records: Array<{ recordName: string }>;
-  zoneID: { zoneName: string };
+  recordName: string;
+  zoneID?: { zoneName: string };
 }
 
 interface CloudKitFetchResponse {
@@ -281,7 +285,7 @@ export function triggerSignOut(): void {
  */
 export async function queryRecords(
   recordType: string,
-  filters: Array<{ fieldName: string; comparator: string; fieldValue: { value: unknown; type: string } }> = [],
+  filters: Array<{ fieldName: string; comparator: string; fieldValue: { value: unknown } }> = [],
   sortBy?: { fieldName: string; ascending: boolean },
   resultsLimit = 100
 ): Promise<CloudKitRecord[]> {
@@ -332,13 +336,14 @@ export async function queryRecords(
 }
 
 /**
- * Fetch records by name from Private Database (com.apple.coredata.cloudkit.zone).
+ * Fetch a single record by name from Private Database (com.apple.coredata.cloudkit.zone).
+ * CloudKit JS fetchRecords takes a flat record object (not a { records: [...] } wrapper).
  */
-export async function fetchRecords(recordNames: string[]): Promise<CloudKitRecord[]> {
-  if (recordNames.length === 0) return [];
+export async function fetchRecord(recordName: string): Promise<CloudKitRecord | null> {
+  if (!recordName) return null;
   const db = getContainer().privateCloudDatabase;
   const request: CloudKitFetchRequest = {
-    records: recordNames.map((recordName) => ({ recordName })),
+    recordName,
     zoneID: { zoneName: ZONE },
   };
   let response: CloudKitFetchResponse;
@@ -346,18 +351,30 @@ export async function fetchRecords(recordNames: string[]): Promise<CloudKitRecor
     response = await Promise.resolve(db.fetchRecords(request));
   } catch (err) {
     const msg = extractCloudKitError(err);
-    console.error('CloudKit fetchRecords failed:', msg, err);
+    console.error(`CloudKit fetchRecord failed for ${recordName}:`, msg, err);
     throw new Error(msg);
   }
-  return response.records || [];
+  const records = response.records || [];
+  return records[0] || null;
 }
 
 /**
- * Fetch a single record by name
+ * CloudKit JS may return reference values as a string (recordName),
+ * an object { recordName }, or { value: { recordName } }. Normalize to string.
  */
-export async function fetchRecord(recordName: string): Promise<CloudKitRecord | null> {
-  const records = await fetchRecords([recordName]);
-  return records[0] || null;
+export function extractRecordName(ref: unknown): string | undefined {
+  if (!ref) return undefined;
+  if (typeof ref === 'string') return ref;
+  if (typeof ref === 'object') {
+    const obj = ref as Record<string, unknown>;
+    if (typeof obj.recordName === 'string') return obj.recordName;
+    if (typeof obj.value === 'string') return obj.value;
+    if (typeof obj.value === 'object' && obj.value) {
+      const inner = obj.value as Record<string, unknown>;
+      if (typeof inner.recordName === 'string') return inner.recordName;
+    }
+  }
+  return undefined;
 }
 
 // --- Domain helpers (Core Data + CloudKit uses CD_ prefix) ---
@@ -365,7 +382,7 @@ export async function fetchRecord(recordName: string): Promise<CloudKitRecord | 
 export async function fetchCustomers(userId: string): Promise<CloudKitRecord[]> {
   return queryRecords(
     'CD_Customer',
-    [{ fieldName: 'CD_userId', comparator: 'EQUALS', fieldValue: { value: userId, type: 'STRING' } }],
+    [{ fieldName: 'CD_userId', comparator: 'EQUALS', fieldValue: { value: userId } }],
     { fieldName: 'CD_name', ascending: true }
   );
 }
@@ -377,7 +394,7 @@ export async function fetchInspections(customerId: string): Promise<CloudKitReco
       {
         fieldName: 'CD_customer',
         comparator: 'EQUALS',
-        fieldValue: { value: { recordName: customerId }, type: 'REFERENCE' },
+        fieldValue: { value: customerId },
       },
     ],
     { fieldName: 'CD_date', ascending: false }
@@ -391,7 +408,7 @@ export async function fetchInspectionItems(inspectionId: string): Promise<CloudK
       {
         fieldName: 'CD_inspection',
         comparator: 'EQUALS',
-        fieldValue: { value: { recordName: inspectionId }, type: 'REFERENCE' },
+        fieldValue: { value: inspectionId },
       },
     ],
     { fieldName: 'CD_sequenceNumber', ascending: true }
@@ -424,7 +441,7 @@ export function mapInspectionRecord(r: CloudKitRecord) {
     id: r.recordName,
     date: r.fields.CD_date?.value as string | undefined,
     inspectorName: (r.fields.CD_inspectorName?.value as string) || '',
-    customerId: (r.fields.CD_customer?.value as { recordName?: string })?.recordName,
+    customerId: extractRecordName(r.fields.CD_customer?.value),
     createdDate: r.fields.CD_date?.value as string | undefined,
   };
 }
