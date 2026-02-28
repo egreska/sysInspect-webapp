@@ -1,33 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { inspectionsAPI, reportsAPI } from '../services/api';
-import { ArrowLeft, Download, AlertCircle, Wrench, Eye } from 'lucide-react';
+import { inspectionsAPI } from '../services/api';
+import { ArrowLeft, FileText, AlertCircle, Wrench, Eye } from 'lucide-react';
 import { format } from 'date-fns';
-import { useState } from 'react';
 import type { InspectionItem } from '../types';
 
 export default function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [downloading, setDownloading] = useState(false);
 
   const { data: inspection, isLoading } = useQuery({
     queryKey: ['inspection', id],
     queryFn: () => inspectionsAPI.getById(id!),
     enabled: !!id,
   });
-
-  const handleDownloadPDF = async () => {
-    if (!id) return;
-    const baseName = (inspection?.customer?.name || 'report').replace(/[/\\?%*:|"<>]/g, '-');
-    setDownloading(true);
-    try {
-      await reportsAPI.downloadPDF(id, `inspection-${baseName}.pdf`);
-    } catch (error) {
-      alert('Failed to download PDF');
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   if (isLoading) {
     return <div className="text-center py-12">Loading inspection...</div>;
@@ -52,14 +37,13 @@ export default function InspectionDetailPage() {
           Back to Customer
         </Link>
         
-        <button
-          onClick={handleDownloadPDF}
-          disabled={downloading}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        <Link
+          to={`/inspections/${id}/report`}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <Download className="w-4 h-4 mr-2" />
-          {downloading ? 'Generating...' : 'Download PDF'}
-        </button>
+          <FileText className="w-4 h-4 mr-2" />
+          Preview Report
+        </Link>
       </div>
 
       {/* Inspection Header */}

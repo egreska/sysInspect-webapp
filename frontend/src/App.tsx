@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import CustomersPage from './pages/CustomersPage';
 import CustomerDetailPage from './pages/CustomerDetailPage';
 import InspectionDetailPage from './pages/InspectionDetailPage';
+import ReportPreviewPage from './pages/ReportPreviewPage';
 import Layout from './components/Layout';
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
@@ -41,6 +42,7 @@ function App() {
             <Route path="customers" element={<CustomersPage />} />
             <Route path="customers/:id" element={<CustomerDetailPage />} />
             <Route path="inspections/:id" element={<InspectionDetailPage />} />
+            <Route path="inspections/:id/report" element={<ReportPreviewPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
