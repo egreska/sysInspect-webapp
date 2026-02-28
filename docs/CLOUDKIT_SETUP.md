@@ -34,7 +34,7 @@ The web app uses **CloudKit JS** (browser SDK) with Sign in with Apple. The back
 2. Select your iOS project
 3. Go to **Signing & Capabilities** tab
 4. Find **iCloud** capability
-5. Note your Container ID (e.g., `iCloud.com.yourcompany.SystemsInspector`)
+5. Note your Container ID (e.g., `iCloud.SysInspectDB` – must match webapp)
 
 **Or from Apple Developer Portal:**
 
@@ -54,7 +54,7 @@ The web app uses **CloudKit JS** (browser SDK) with Sign in with Apple. The back
 4. Verify your data is there:
    - Click **Data** in the sidebar
    - Select **Production** or **Development**
-   - Browse **Record Types**: Customer, Inspection, InspectionItem, User
+   - Browse **Record Types**: CD_Customer, CD_Inspection, CD_InspectionItem (Core Data + CloudKit prefix)
    - Verify you see your data
 
 ---
@@ -110,7 +110,7 @@ Create or update `backend/.env`:
 
 ```bash
 # CloudKit Configuration
-CLOUDKIT_CONTAINER_ID=iCloud.com.yourcompany.SystemsInspector
+CLOUDKIT_CONTAINER_ID=iCloud.SysInspectDB
 CLOUDKIT_ENVIRONMENT=production
 CLOUDKIT_SERVER_KEY_ID=a1b2c3d4e5f6g7h8i9j0
 CLOUDKIT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour\nPrivate\nKey\nHere\n-----END PRIVATE KEY-----"
@@ -187,7 +187,7 @@ node test-cloudkit.js
 **Expected Output:**
 ```
 Testing CloudKit connection...
-Container: iCloud.com.yourcompany.SystemsInspector
+Container: iCloud.SysInspectDB
 Environment: production
 
 Fetching user: your-test-email@example.com

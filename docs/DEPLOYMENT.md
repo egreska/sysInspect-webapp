@@ -44,16 +44,16 @@ ls -la
 # Should see: frontend/, Dockerfile, docs/
 ```
 
-### Step 2: Configure Environment Variables
+### Step 2: Configure Build Variables (Critical - must be available during build)
 
 **Production (Coolify):** Set variables in Coolify’s UI (Application → Environment Variables).
 
 **Build-time (Vite):** These are baked into the frontend at build time. Set in Coolify as build args or in a build script:
 
 ```bash
-VITE_CLOUDKIT_CONTAINER_ID=iCloud.com.yourapp.SystemsInspector
+VITE_CLOUDKIT_CONTAINER_ID=iCloud.SysInspectDB
 VITE_CLOUDKIT_API_TOKEN=your-api-token-here
-VITE_CLOUDKIT_ENVIRONMENT=production
+VITE_CLOUDKIT_ENVIRONMENT=development
 ```
 
 **Note:** For Vite, env vars must be available during `npm run build`. If Coolify doesn’t pass them, use a build script that creates `.env.production` from Coolify’s env vars before running the build.
@@ -95,9 +95,9 @@ git push origin main
 - Exposed port: `5173` (frontend only)
 
 **Build Arguments:** In Coolify → Build Arguments, add:
-- `VITE_CLOUDKIT_CONTAINER_ID` – your CloudKit container ID
+- `VITE_CLOUDKIT_CONTAINER_ID` – must match iOS app (`iCloud.SysInspectDB` from entitlements)
 - `VITE_CLOUDKIT_API_TOKEN` – API token from CloudKit Dashboard
-- `VITE_CLOUDKIT_ENVIRONMENT` – `production` or `development`
+- `VITE_CLOUDKIT_ENVIRONMENT` – `development` (default) or `production` for production deployment
 
 #### 5.3 Single-Port Routing
 
@@ -150,13 +150,38 @@ git push origin main
 docker build -t test-build -f webapp/Dockerfile webapp/
 ```
 
-### CloudKit Errors in Browser
+### Dashboard shows no data (but data exists in CloudKit Dashboard)
 
-- Verify `VITE_CLOUDKIT_*` env vars are set at build time
-- Check API token in CloudKit Dashboard
-- Ensure Sign in with Apple is enabled for the web app
+**Cause:** CloudKit **Development** and **Production** are separate databases. The web app must use the same environment where your data lives.
 
-See [CLOUDKIT_SETUP.md](./CLOUDKIT_SETUP.md) for details.
+**Fix:**
+1. In [CloudKit Dashboard](https://icloud.developer.apple.com) → **Data**, check whether you're viewing **Development** or **Production**
+2. Set `VITE_CLOUDKIT_ENVIRONMENT` to match:
+   - Data in Development → `VITE_CLOUDKIT_ENVIRONMENT=development`
+   - Data in Production → `VITE_CLOUDKIT_ENVIRONMENT=production`
+3. **Redeploy** (full rebuild) – env vars are baked in at build time
+4. Verify: The app footer shows "CloudKit: development" or "CloudKit: production"
+
+**Note:** iOS debug builds typically use Development; TestFlight/App Store use Production.
+
+---
+
+### "CloudKit not configured" or ".then is not a function"
+
+**Cause:** Build-time variables were not available during Docker build.
+
+**Fix:**
+1. Add `VITE_CLOUDKIT_CONTAINER_ID`, `VITE_CLOUDKIT_API_TOKEN`, `VITE_CLOUDKIT_ENVIRONMENT` in Coolify → Environment Variables
+2. Ensure **Advanced** → **Inject Build Args to Dockerfile** is **Enabled**
+3. **Redeploy** (full rebuild) – do not just restart the container
+4. Verify variable names match exactly (no typos, correct casing)
+
+**Test locally:**
+```bash
+docker build -t test --build-arg VITE_CLOUDKIT_CONTAINER_ID=iCloud.SysInspectDB --build-arg VITE_CLOUDKIT_API_TOKEN=your-token webapp/
+```
+
+See [CLOUDKIT_SETUP.md](./CLOUDKIT_SETUP.md) for API token setup.
 
 ---
 
