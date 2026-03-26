@@ -67,8 +67,11 @@ export default function LoginPage() {
                 <p className="font-medium">CloudKit not configured</p>
                 <p className="text-sm mt-1">{error}</p>
                 <p className="text-sm mt-2">
-                  Set VITE_CLOUDKIT_CONTAINER_ID and VITE_CLOUDKIT_API_TOKEN in your environment.
-                  Create an API token in CloudKit Dashboard → API Access → API Tokens.
+                  Set <code className="text-xs bg-amber-100 px-1 rounded">VITE_CLOUDKIT_CONTAINER_ID</code>,{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">VITE_CLOUDKIT_API_TOKEN</code>, and{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">VITE_CLOUDKIT_ENVIRONMENT</code> as
+                  runtime variables (Docker) or in <code className="text-xs">frontend/.env</code> for local dev.
+                  API token: CloudKit Dashboard → API Access → API Tokens.
                 </p>
               </div>
             </div>

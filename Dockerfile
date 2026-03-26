@@ -27,9 +27,14 @@ RUN npm install -g serve
 
 COPY --from=frontend-builder /app/frontend/dist ./dist
 
+# Node used only by entrypoint to safely JSON-encode runtime-config.js (no shell escaping issues)
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 EXPOSE 5173
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
   CMD wget --no-verbose --tries=1 --spider http://localhost:5173/ || exit 1
 
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["serve", "-s", "dist", "-l", "5173", "--no-clipboard"]

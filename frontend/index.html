@@ -13,6 +13,8 @@
     <!-- CloudKit JS appends Sign in/out buttons to these - both must exist when setUpAuth runs -->
     <div id="apple-sign-in-button" style="display:none"></div>
     <div id="apple-sign-out-button" style="display:none"></div>
+    <!-- Runtime CloudKit config (Docker entrypoint writes dist/runtime-config.js from env vars) -->
+    <script src="/runtime-config.js"></script>
     <!-- CloudKit JS major path: ck/2 — pin intentionally; review Apple release notes before changing. -->
     <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
     <script type="module" src="/src/cloudkitBootstrap.tsx"></script>

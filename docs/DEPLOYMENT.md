@@ -44,26 +44,30 @@ ls -la
 # Should see: frontend/, Dockerfile, docs/
 ```
 
-### Step 2: Configure Build Variables (Critical - must be available during build)
+### Step 2: Configure CloudKit variables (runtime **or** build-time)
 
-**Production (Coolify):** Set variables in Coolify’s UI (Application → Environment Variables).
-
-**Build-time (Vite):** These are baked into the frontend at build time. Set in Coolify as build args or in a build script:
+**Recommended (Docker / Coolify):** Set these as **normal runtime environment variables** on the application (same names as below). On each container start, `docker-entrypoint.sh` writes `dist/runtime-config.js` from those values so the browser receives them **without** a rebuild.
 
 ```bash
 VITE_CLOUDKIT_CONTAINER_ID=iCloud.SysInspectDB
 VITE_CLOUDKIT_API_TOKEN=your-api-token-here
-VITE_CLOUDKIT_ENVIRONMENT=development
+VITE_CLOUDKIT_ENVIRONMENT=development   # or production — must match where your CloudKit data lives
 ```
 
-**Note:** For Vite, env vars must be available during `npm run build`. If Coolify doesn’t pass them, use a build script that creates `.env.production` from Coolify’s env vars before running the build.
+**Optional build-time (Vite):** If you pass the same variables as **Docker build args** during `docker build`, they are also embedded in the JS bundle. Runtime variables **override** non-empty values when both are set.
+
+**Local `npm run dev`:** Use `frontend/.env` or `.env.local` (Vite reads `import.meta.env`); `runtime-config.js` can stay empty.
 
 ### Step 3: Test Locally with Docker
 
 ```bash
 cd webapp
 docker build -t sysinspect-webapp .
-docker run -p 5173:5173 sysinspect-webapp
+docker run -p 5173:5173 \
+  -e VITE_CLOUDKIT_CONTAINER_ID=iCloud.SysInspectDB \
+  -e VITE_CLOUDKIT_API_TOKEN=your-token \
+  -e VITE_CLOUDKIT_ENVIRONMENT=development \
+  sysinspect-webapp
 
 # Access frontend
 open http://localhost:5173
@@ -94,10 +98,14 @@ git push origin main
 - Build Context: `webapp/`
 - Exposed port: `5173` (frontend only)
 
-**Build Arguments:** In Coolify → Build Arguments, add:
+**Environment variables (required):** In Coolify → **Environment Variables** (runtime), add:
 - `VITE_CLOUDKIT_CONTAINER_ID` – must match iOS app (`iCloud.SysInspectDB` from entitlements)
 - `VITE_CLOUDKIT_API_TOKEN` – API token from CloudKit Dashboard
-- `VITE_CLOUDKIT_ENVIRONMENT` – `development` (default) or `production` for production deployment
+- `VITE_CLOUDKIT_ENVIRONMENT` – `development` or `production` (must match your CloudKit data)
+
+**Build arguments:** Optional. Only needed if you want values baked into the bundle at build time; runtime vars are enough for the provided Dockerfile + entrypoint.
+
+**If you still see “CloudKit not configured”:** The container did not receive the three variables, or the image was built from an old Dockerfile without `ENTRYPOINT`. Redeploy after pulling the latest `webapp/Dockerfile` and `docker-entrypoint.sh`.
 
 #### 5.3 Single-Port Routing
 

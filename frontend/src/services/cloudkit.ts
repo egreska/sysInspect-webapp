@@ -15,7 +15,39 @@ import { logger } from '../utils/logger';
 declare global {
   interface Window {
     CloudKit?: CloudKitGlobal;
+    /** Written by `public/runtime-config.js`; Docker entrypoint overwrites at container start. */
+    __CLOUDKIT_RUNTIME_CONFIG__?: {
+      containerId?: string;
+      apiToken?: string;
+      environment?: string;
+    };
   }
+}
+
+function trimEnv(s: string | undefined): string {
+  return (s ?? '').trim();
+}
+
+/**
+ * Build-time (Vite) or runtime (Docker) CloudKit settings.
+ * Runtime values win when non-empty so Coolify runtime env works without rebuild.
+ */
+function getCloudKitEnvVars(): {
+  containerId: string;
+  apiToken: string;
+  environment: 'development' | 'production';
+} {
+  const rt = typeof window !== 'undefined' ? window.__CLOUDKIT_RUNTIME_CONFIG__ : undefined;
+  const containerId =
+    trimEnv(rt?.containerId) || trimEnv(import.meta.env.VITE_CLOUDKIT_CONTAINER_ID);
+  const apiToken =
+    trimEnv(rt?.apiToken) || trimEnv(import.meta.env.VITE_CLOUDKIT_API_TOKEN);
+  const envRaw =
+    trimEnv(rt?.environment) ||
+    trimEnv(import.meta.env.VITE_CLOUDKIT_ENVIRONMENT) ||
+    'development';
+  const environment = envRaw === 'production' ? 'production' : 'development';
+  return { containerId, apiToken, environment };
 }
 
 // CloudKit JS types (simplified - the CDN script doesn't ship types)
@@ -208,9 +240,7 @@ export function initCloudKit(): Promise<void> {
 }
 
 function doConfigure(resolve: () => void, reject: (err: Error) => void) {
-  const containerId = import.meta.env.VITE_CLOUDKIT_CONTAINER_ID;
-  const apiToken = import.meta.env.VITE_CLOUDKIT_API_TOKEN;
-  const environment = (import.meta.env.VITE_CLOUDKIT_ENVIRONMENT || 'development') as 'development' | 'production';
+  const { containerId, apiToken, environment } = getCloudKitEnvVars();
   currentEnvironment = environment;
 
   if (!containerId || !apiToken) {

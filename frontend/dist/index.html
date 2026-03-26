@@ -7,7 +7,7 @@
     <meta name="description" content="Systems Inspector - Professional Inspection Management" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>Systems Inspector</title>
-    <script type="module" crossorigin src="/assets/index-D69Ut0aA.js"></script>
+    <script type="module" crossorigin src="/assets/index-CopqbGqJ.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/react-vendor-Bg1tyte_.js">
     <link rel="stylesheet" crossorigin href="/assets/index-BRkydRZy.css">
   </head>
@@ -16,6 +16,8 @@
     <!-- CloudKit JS appends Sign in/out buttons to these - both must exist when setUpAuth runs -->
     <div id="apple-sign-in-button" style="display:none"></div>
     <div id="apple-sign-out-button" style="display:none"></div>
+    <!-- Runtime CloudKit config (Docker entrypoint writes dist/runtime-config.js from env vars) -->
+    <script src="/runtime-config.js"></script>
     <!-- CloudKit JS major path: ck/2 — pin intentionally; review Apple release notes before changing. -->
     <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
   </body>
