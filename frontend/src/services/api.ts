@@ -9,7 +9,6 @@ import {
   getInspectionsByCustomerId,
   getInspectionById,
 } from './cloudkitApi';
-import { generatePDF } from './pdfGenerator';
 
 export const customersAPI = {
   getAll: async (): Promise<Customer[]> => getCustomers(),
@@ -29,25 +28,5 @@ export const inspectionsAPI = {
     const i = await getInspectionById(id);
     if (!i) throw new Error('Inspection not found');
     return i;
-  },
-};
-
-export const reportsAPI = {
-  generatePDF: async (inspectionId: string): Promise<Blob> => {
-    const inspection = await getInspectionById(inspectionId);
-    if (!inspection) throw new Error('Inspection not found');
-    return generatePDF(inspection);
-  },
-
-  downloadPDF: async (inspectionId: string, filename?: string) => {
-    const blob = await reportsAPI.generatePDF(inspectionId);
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename || `inspection-report-${inspectionId}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
   },
 };

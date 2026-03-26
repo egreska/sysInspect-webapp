@@ -121,7 +121,6 @@ export const QUERY_DESIRED_KEYS: Record<string, readonly string[]> = {
     'CD_zipCode',
     'CD_site',
     'CD_createdDate',
-    'CD_userId',
   ],
   CD_Inspection: ['CD_date', 'CD_inspectorName', 'CD_customer'],
 };
@@ -402,14 +401,6 @@ export function extractRecordName(ref: unknown): string | undefined {
 }
 
 // --- Domain helpers (Core Data + CloudKit uses CD_ prefix) ---
-
-export async function fetchCustomers(userId: string): Promise<CloudKitRecord[]> {
-  return queryRecords(
-    'CD_Customer',
-    [{ fieldName: 'CD_userId', comparator: 'EQUALS', fieldValue: { value: userId } }],
-    { fieldName: 'CD_name', ascending: true }
-  );
-}
 
 /**
  * Fetch inspections for a customer.  CD_customer is a REFERENCE field (Core Data

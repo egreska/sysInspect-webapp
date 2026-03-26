@@ -126,81 +126,14 @@ CLOUDKIT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour\nPrivate\nKey\nHere\n---
 
 ### Step 6: Test CloudKit Connection
 
-Create a test script `backend/test-cloudkit.js`:
+This repository ships a **frontend-only** web app (CloudKit JS in the browser). There is no `backend/` test harness here.
 
-```javascript
-import cloudkit from './src/services/cloudkit.js';
-import dotenv from 'dotenv';
+**Verify connectivity:**
 
-dotenv.config();
+1. **CloudKit Dashboard** — Open [CloudKit Dashboard](https://icloud.developer.apple.com/) → your container → **Data** → confirm `CD_Customer` / `CD_Inspection` records in the correct environment (Development vs Production).
+2. **Web app** — Build with `VITE_CLOUDKIT_*` set, deploy or run `npm run dev`, sign in with Apple, and open Customers / Dashboard.
 
-async function testConnection() {
-  try {
-    console.log('Testing CloudKit connection...');
-    console.log('Container:', process.env.CLOUDKIT_CONTAINER_ID);
-    console.log('Environment:', process.env.CLOUDKIT_ENVIRONMENT);
-    
-    // Test fetching a user
-    const testEmail = 'your-test-email@example.com';
-    console.log(`\nFetching user: ${testEmail}`);
-    
-    const user = await cloudkit.fetchUserByEmail(testEmail);
-    
-    if (user) {
-      console.log('✅ SUCCESS! User found:', {
-        email: user.fields.email?.value,
-        userId: user.fields.userId?.value
-      });
-    } else {
-      console.log('⚠️  No user found with that email');
-    }
-    
-    // Test fetching customers
-    if (user) {
-      console.log('\nFetching customers...');
-      const customers = await cloudkit.fetchCustomers(user.fields.userId?.value);
-      console.log(`✅ Found ${customers.length} customers`);
-      
-      if (customers.length > 0) {
-        console.log('First customer:', {
-          name: customers[0].fields.name?.value,
-          id: customers[0].recordName
-        });
-      }
-    }
-    
-    console.log('\n✅ CloudKit connection successful!');
-  } catch (error) {
-    console.error('❌ CloudKit connection failed:', error.message);
-    process.exit(1);
-  }
-}
-
-testConnection();
-```
-
-Run the test:
-
-```bash
-cd backend
-node test-cloudkit.js
-```
-
-**Expected Output:**
-```
-Testing CloudKit connection...
-Container: iCloud.SysInspectDB
-Environment: production
-
-Fetching user: your-test-email@example.com
-✅ SUCCESS! User found: { email: 'your-test-email@example.com', userId: '...' }
-
-Fetching customers...
-✅ Found 5 customers
-First customer: { name: 'ACME Corp', id: '...' }
-
-✅ CloudKit connection successful!
-```
+If you add a separate Node or server-side CloudKit client later, use Apple’s server-to-server APIs and your own test script.
 
 ---
 

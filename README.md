@@ -13,12 +13,11 @@ Professional web application for accessing CloudKit data and generating inspecti
 ### Frontend (CloudKit JS)
 - **Framework:** React 18 + TypeScript
 - **Build Tool:** Vite
-- **UI Library:** Shadcn/UI (Radix UI + Tailwind CSS)
-- **State Management:** React Query (TanStack Query)
+- **Styling:** Tailwind CSS
+- **State Management:** React Query (TanStack Query), Zustand (auth)
 - **Routing:** React Router v6
 - **CloudKit:** CloudKit JS browser SDK (Sign in with Apple)
 - **PDF Generation:** jsPDF (client-side)
-- **Rich Text Editor:** TipTap (ProseMirror-based)
 
 ### Deployment
 - **Container:** Docker (frontend-only)
@@ -47,8 +46,7 @@ webapp/
 ├── docs/                     # Documentation
 │   ├── DEPLOYMENT.md        # Coolify deployment guide
 │   ├── CLOUDKIT_SETUP.md    # CloudKit configuration
-│   ├── SECURITY.md          # Web token, CSP, headers, incident steps
-│   └── API.md               # API documentation
+│   └── SECURITY.md          # Web token, CSP, headers, incident steps
 │
 ├── Dockerfile                # Frontend-only production build
 └── README.md
