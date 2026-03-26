@@ -16,6 +16,7 @@ RUN npm ci
 
 COPY frontend/ ./
 RUN npm run build
+# dist/ includes public/serve.json — `serve -s dist` applies CSP and security headers (see webapp/docs/SECURITY.md)
 
 # Production image - serve static frontend
 FROM node:20-alpine

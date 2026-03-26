@@ -1,0 +1,7 @@
+# Netlify (and compatible static hosts): https://docs.netlify.com/routing/headers/
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; script-src 'self' https://cdn.apple-cloudkit.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.apple-cloudkit.com https://api.apple-cloudkit.com https://*.icloud.com https://*.icloud-content.com; frame-src https://appleid.apple.com https://*.apple.com; object-src 'none'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY

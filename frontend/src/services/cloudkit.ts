@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 /**
  * CloudKit JS Browser SDK Service
  *
@@ -103,6 +105,30 @@ interface CloudKitError {
 
 /** Core Data + CloudKit zone (required for CD_ record types) */
 const ZONE = 'com.apple.coredata.cloudkit.zone';
+
+/**
+ * Limit fields returned by CloudKit (smaller payloads, less data in browser memory).
+ * Omit for record types that need full field sets (e.g. CD_InspectionItem).
+ */
+export const QUERY_DESIRED_KEYS: Record<string, readonly string[]> = {
+  CD_Customer: [
+    'CD_name',
+    'CD_contactName',
+    'CD_phone',
+    'CD_address',
+    'CD_city',
+    'CD_state',
+    'CD_zipCode',
+    'CD_site',
+    'CD_createdDate',
+    'CD_userId',
+  ],
+  CD_Inspection: ['CD_date', 'CD_inspectorName', 'CD_customer'],
+};
+
+export interface QueryRecordsExtras {
+  desiredKeys?: string[];
+}
 
 /**
  * Extract a readable error message from CloudKit JS error responses.
@@ -280,7 +306,8 @@ export async function queryRecords(
   recordType: string,
   filters: Array<{ fieldName: string; comparator: string; fieldValue: { value: unknown } }> = [],
   sortBy?: { fieldName: string; ascending: boolean },
-  resultsLimit = 100
+  resultsLimit = 100,
+  extras?: QueryRecordsExtras
 ): Promise<CloudKitRecord[]> {
   const db = getContainer().privateCloudDatabase;
 
@@ -297,20 +324,23 @@ export async function queryRecords(
       resultsLimit,
     };
     if (marker) options.continuationMarker = marker;
+    const presetKeys = QUERY_DESIRED_KEYS[recordType];
+    const desiredKeys = extras?.desiredKeys ?? (presetKeys ? [...presetKeys] : undefined);
+    if (desiredKeys?.length) options.desiredKeys = desiredKeys;
 
     let response: CloudKitQueryResponse;
     try {
       response = await Promise.resolve(db.performQuery(query, options));
     } catch (err) {
       const msg = extractCloudKitError(err);
-      console.error(`CloudKit performQuery failed for ${recordType}:`, msg, err);
+      logger.error(`CloudKit performQuery failed for ${recordType}: ${msg}`, err);
       throw new Error(msg);
     }
 
     if (response.records?.length) {
       for (const rec of response.records) {
         if (rec.serverErrorCode) {
-          console.warn(`CloudKit record error: ${rec.serverErrorCode} - ${rec.reason || ''}`);
+          logger.warn(`CloudKit record error: ${rec.serverErrorCode} - ${rec.reason || ''}`);
         } else {
           allRecords.push(rec);
         }
@@ -320,7 +350,7 @@ export async function queryRecords(
     if (!response.moreComing || !marker) break;
   } while (true);
 
-  console.debug(`[CloudKit] queryRecords(${recordType}): ${allRecords.length} records`);
+  logger.debug(`[CloudKit] queryRecords(${recordType}): ${allRecords.length} records`);
   return allRecords;
 }
 
@@ -341,14 +371,14 @@ export async function fetchRecord(
     : ['CD_Customer', 'CD_Inspection', 'CD_InspectionItem'];
 
   for (const rt of types) {
-    const records = await queryRecords(rt);
+    const records = await queryRecords(rt, [], undefined, 100);
     const match = records.find((r) => r.recordName === recordName);
     if (match) {
-      console.debug(`[CloudKit] fetchRecord found ${recordName} as ${rt}`);
+      logger.debug(`[CloudKit] fetchRecord found record as ${rt}`);
       return match;
     }
   }
-  console.warn(`[CloudKit] fetchRecord: ${recordName} not found in types ${types.join(', ')}`);
+  logger.warn(`[CloudKit] fetchRecord: not found in types ${types.join(', ')}`);
   return null;
 }
 
@@ -392,14 +422,9 @@ export async function fetchInspections(customerId: string): Promise<CloudKitReco
     [],
     { fieldName: 'CD_date', ascending: false }
   );
-  console.debug(`[CloudKit] fetched ${all.length} total CD_Inspection records, filtering for customer ${customerId}`);
-  if (all.length > 0) {
-    console.debug('[CloudKit] CD_Inspection[0] CD_customer raw value:', JSON.stringify(all[0].fields.CD_customer));
-    console.debug('[CloudKit] CD_Inspection[0] all field keys:', Object.keys(all[0].fields));
-  }
+  logger.debug(`[CloudKit] fetched ${all.length} CD_Inspection records (client filter by customer)`);
   return all.filter((r) => {
     const ref = extractRecordName(r.fields.CD_customer?.value);
-    console.debug(`[CloudKit] inspection ${r.recordName}: CD_customer ref=${ref}, match=${ref === customerId}`);
     return ref === customerId;
   });
 }
@@ -414,10 +439,7 @@ export async function fetchInspectionItems(inspectionId: string): Promise<CloudK
     [],
     { fieldName: 'CD_sequenceNumber', ascending: true }
   );
-  console.debug(`[CloudKit] fetched ${all.length} total CD_InspectionItem records, filtering for inspection ${inspectionId}`);
-  if (all.length > 0) {
-    console.debug('[CloudKit] CD_InspectionItem[0] CD_inspection raw value:', JSON.stringify(all[0].fields.CD_inspection));
-  }
+  logger.debug(`[CloudKit] fetched ${all.length} CD_InspectionItem records (client filter by inspection)`);
   return all.filter((r) => {
     const ref = extractRecordName(r.fields.CD_inspection?.value);
     return ref === inspectionId;

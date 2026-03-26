@@ -47,6 +47,7 @@ webapp/
 ├── docs/                     # Documentation
 │   ├── DEPLOYMENT.md        # Coolify deployment guide
 │   ├── CLOUDKIT_SETUP.md    # CloudKit configuration
+│   ├── SECURITY.md          # Web token, CSP, headers, incident steps
 │   └── API.md               # API documentation
 │
 ├── Dockerfile                # Frontend-only production build

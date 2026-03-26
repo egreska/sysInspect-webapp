@@ -2,6 +2,7 @@
  * CloudKit JS-based API - replaces backend for data access.
  * Uses Sign in with Apple for auth; fetches directly from CloudKit.
  */
+import { logger } from '../utils/logger';
 import type { Customer, Inspection, InspectionItem } from '../types';
 import {
   fetchRecord,
@@ -22,7 +23,7 @@ export async function getCustomers(): Promise<Customer[]> {
     const records = await queryRecords('CD_Customer', [], { fieldName: 'CD_name', ascending: true });
     return records.map(mapCustomerRecord);
   } catch (err) {
-    console.error('CloudKit getCustomers failed:', err);
+    logger.error('CloudKit getCustomers failed', err);
     throw err;
   }
 }
@@ -36,10 +37,10 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
 export async function getInspectionsByCustomerId(customerId: string): Promise<Inspection[]> {
   try {
     const records = await fetchInspections(customerId);
-    console.debug(`[CloudKit] getInspectionsByCustomerId(${customerId}): ${records.length} inspections matched`);
+    logger.debug(`[CloudKit] getInspectionsByCustomerId: ${records.length} inspections matched`);
     return records.map(mapInspectionRecord);
   } catch (err) {
-    console.error('CloudKit getInspectionsByCustomerId failed:', err);
+    logger.error('CloudKit getInspectionsByCustomerId failed', err);
     throw err;
   }
 }
@@ -65,12 +66,11 @@ async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promis
   const photoField = r.fields.CD_photoData_ckAsset || r.fields.CD_photoData || r.fields.CD_photoURL;
   const photoUrl = extractDownloadURL(photoField);
   if (photoUrl) {
-    console.debug('[CloudKit] Photo URL found for item', r.recordName, photoUrl.substring(0, 80) + '...');
+    logger.debug('[CloudKit] Photo URL resolved for inspection item');
   } else {
-    const photoKeys = Object.keys(r.fields).filter(k => k.toLowerCase().includes('photo'));
+    const photoKeys = Object.keys(r.fields).filter((k) => k.toLowerCase().includes('photo'));
     if (photoKeys.length > 0) {
-      console.debug('[CloudKit] Photo fields present but no URL:', photoKeys,
-        JSON.stringify(photoKeys.map(k => ({ k, v: r.fields[k] }))).substring(0, 300));
+      logger.debug('[CloudKit] Photo fields present but no download URL', photoKeys);
     }
   }
   return {

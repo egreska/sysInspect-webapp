@@ -119,6 +119,14 @@ The app is frontend-only. One port serves the SPA:
 
 ---
 
+## Security headers and CloudKit token
+
+- **Headers:** The production build copies `frontend/public/serve.json` and `_headers` into `dist/`. The Docker image runs `serve -s dist`, which applies `serve.json` response headers (CSP, `X-Content-Type-Options`, `Referrer-Policy`, etc.). If your reverse proxy (Coolify/nginx) **overwrites** response headers, configure the same policies at the proxy or forward `serve` headers unchanged.
+- **Vercel / Netlify:** Use `frontend/vercel.json` or `public/_headers` respectively when deploying there.
+- **Token:** Restrict and rotate the CloudKit web API token per [SECURITY.md](./SECURITY.md).
+
+---
+
 ## 🔄 Updates & Rollbacks
 
 ### Update Application
@@ -187,7 +195,7 @@ See [CLOUDKIT_SETUP.md](./CLOUDKIT_SETUP.md) for API token setup.
 
 ## ✅ Deployment Checklist
 
-- [ ] CloudKit API token created
+- [ ] CloudKit API token created with **Allowed Origins** set to your domains
 - [ ] Build-time env vars configured (VITE_CLOUDKIT_*)
 - [ ] Domain configured with SSL
 - [ ] Health checks passing

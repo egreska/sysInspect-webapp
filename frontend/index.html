@@ -5,6 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Systems Inspector - Professional Inspection Management" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>Systems Inspector</title>
   </head>
   <body>
@@ -12,6 +13,7 @@
     <!-- CloudKit JS appends Sign in/out buttons to these - both must exist when setUpAuth runs -->
     <div id="apple-sign-in-button" style="display:none"></div>
     <div id="apple-sign-out-button" style="display:none"></div>
+    <!-- CloudKit JS major path: ck/2 — pin intentionally; review Apple release notes before changing. -->
     <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
     <script type="module" src="/src/cloudkitBootstrap.tsx"></script>
   </body>

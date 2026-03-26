@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './index.css';
 import { initCloudKit } from './services/cloudkit';
+import { logger } from './utils/logger';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,7 +35,7 @@ function bootstrap() {
       renderApp();
     })
     .catch((err) => {
-      console.error('CloudKit init failed:', err);
+      logger.error('CloudKit init failed', err);
       // Still render app so user sees login - CloudKit errors will surface there
       renderApp();
     });

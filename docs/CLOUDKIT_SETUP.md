@@ -65,9 +65,11 @@ The web app uses **CloudKit JS** (browser SDK) with Sign in with Apple. The back
 2. Go to **API Access** → **API Tokens**
 3. Click **"+"** to add a new token
 4. Enter a name (e.g., `Systems Inspector Web`)
-5. Optionally restrict **Allowed Origins** (e.g., `https://yourdomain.com`)
+5. **Restrict Allowed Origins** to your real HTTPS site(s) (staging + production). The token is still present in the built JS, but origin limits reduce misuse from other sites.
 6. Copy the generated token
 7. Add to frontend `.env`: `VITE_CLOUDKIT_API_TOKEN=your-token`
+
+See [SECURITY.md](./SECURITY.md) for rotation, CSP, and incident response.
 
 ### Step 3b: Server-to-Server Key (for Backend)
 
