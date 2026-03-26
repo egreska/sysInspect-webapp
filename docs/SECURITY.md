@@ -10,19 +10,16 @@ Operational notes for the CloudKit JS frontend (`webapp/frontend`).
   - **Rotate** the token periodically and after any suspected leak; rebuild and redeploy after rotation.
 - Never commit real tokens. Use `.env` / CI secrets only. The repository root `.gitignore` includes `.env`.
 
-## Content Security Policy (CSP) and headers
+## HTTP security headers (no CSP on `serve`)
 
-The following are shipped for static hosting:
+The following are shipped for static hosting (`serve.json`, `_headers`, `vercel.json`):
 
-| Mechanism | Purpose |
-|-----------|---------|
-| `public/serve.json` | Used by [`serve`](https://github.com/vercel/serve) in the Docker image (`serve -s dist`) so Coolify/local static runs get headers. |
-| `public/_headers` | Netlify-style header file copied to `dist/` for hosts that honor it. |
-| `vercel.json` | Header rules when deploying the `frontend` directory to Vercel. |
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` (camera/mic/geo disabled)
+- `X-Frame-Options: DENY`
 
-If you terminate TLS or cache in front of the app (Coolify, nginx, Cloudflare), you can **duplicate** the same headers there instead of or in addition to `serve.json`.
-
-After upgrading **CloudKit JS** or changing auth flows, test Sign in with Apple and data loads. If the browser console reports CSP violations, add only the minimum new `connect-src` / `frame-src` hosts (see Network tab) and update all three files above together.
+**Content-Security-Policy is not set** in those files. A strict CSP applied by `serve` blocked **CloudKit JS** and **Sign in with Apple** (extra script/connect/form targets and Apple endpoints). If you want CSP, add it at your **reverse proxy** (Coolify, nginx, Cloudflare) and start with **`Content-Security-Policy-Report-Only`**, watch reports for blocked URLs, then tighten and switch to enforcing.
 
 ## Production logging
 

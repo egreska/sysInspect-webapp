@@ -121,7 +121,7 @@ The app is frontend-only. One port serves the SPA:
 
 ## Security headers and CloudKit token
 
-- **Headers:** The production build copies `frontend/public/serve.json` and `_headers` into `dist/`. The Docker image runs `serve -s dist`, which applies `serve.json` response headers (CSP, `X-Content-Type-Options`, `Referrer-Policy`, etc.). If your reverse proxy (Coolify/nginx) **overwrites** response headers, configure the same policies at the proxy or forward `serve` headers unchanged.
+- **Headers:** The production build copies `frontend/public/serve.json` and `_headers` into `dist/`. The Docker image runs `serve -s dist`, which applies `serve.json` response headers (`X-Content-Type-Options`, `Referrer-Policy`, etc.). **CSP is not** set here (CloudKit + Sign in with Apple need many Apple endpoints). If your reverse proxy overwrites headers, mirror these or add CSP only after **Report-Only** testing (see [SECURITY.md](./SECURITY.md)).
 - **Vercel / Netlify:** Use `frontend/vercel.json` or `public/_headers` respectively when deploying there.
 - **Token:** Restrict and rotate the CloudKit web API token per [SECURITY.md](./SECURITY.md).
 
