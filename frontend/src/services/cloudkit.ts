@@ -15,7 +15,6 @@ import { logger } from '../utils/logger';
 declare global {
   interface Window {
     CloudKit?: CloudKitGlobal;
-    /** Written by `public/runtime-config.js`; Docker entrypoint overwrites at container start. */
     __CLOUDKIT_RUNTIME_CONFIG__?: {
       containerId?: string;
       apiToken?: string;
@@ -28,22 +27,50 @@ function trimEnv(s: string | undefined): string {
   return (s ?? '').trim();
 }
 
+/** JSON blob in index.html; Docker entrypoint overwrites it before `serve` starts. */
+function readCloudKitFromDom(): {
+  containerId?: string;
+  apiToken?: string;
+  environment?: string;
+} | null {
+  if (typeof document === 'undefined') return null;
+  const el = document.getElementById('cloudkit-runtime-json');
+  const raw = el?.textContent?.trim();
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      containerId: typeof o.containerId === 'string' ? o.containerId : undefined,
+      apiToken: typeof o.apiToken === 'string' ? o.apiToken : undefined,
+      environment: typeof o.environment === 'string' ? o.environment : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Build-time (Vite) or runtime (Docker) CloudKit settings.
- * Runtime values win when non-empty so Coolify runtime env works without rebuild.
+ * Order: DOM (injected HTML) → window override → Vite build-time env.
+ * DOM first: config is embedded in index.html (Docker inject), not a separate JS URL.
  */
 function getCloudKitEnvVars(): {
   containerId: string;
   apiToken: string;
   environment: 'development' | 'production';
 } {
-  const rt = typeof window !== 'undefined' ? window.__CLOUDKIT_RUNTIME_CONFIG__ : undefined;
+  const dom = readCloudKitFromDom();
+  const win = typeof window !== 'undefined' ? window.__CLOUDKIT_RUNTIME_CONFIG__ : undefined;
   const containerId =
-    trimEnv(rt?.containerId) || trimEnv(import.meta.env.VITE_CLOUDKIT_CONTAINER_ID);
+    trimEnv(dom?.containerId) ||
+    trimEnv(win?.containerId) ||
+    trimEnv(import.meta.env.VITE_CLOUDKIT_CONTAINER_ID);
   const apiToken =
-    trimEnv(rt?.apiToken) || trimEnv(import.meta.env.VITE_CLOUDKIT_API_TOKEN);
+    trimEnv(dom?.apiToken) ||
+    trimEnv(win?.apiToken) ||
+    trimEnv(import.meta.env.VITE_CLOUDKIT_API_TOKEN);
   const envRaw =
-    trimEnv(rt?.environment) ||
+    trimEnv(dom?.environment) ||
+    trimEnv(win?.environment) ||
     trimEnv(import.meta.env.VITE_CLOUDKIT_ENVIRONMENT) ||
     'development';
   const environment = envRaw === 'production' ? 'production' : 'development';

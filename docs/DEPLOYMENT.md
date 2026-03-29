@@ -46,7 +46,7 @@ ls -la
 
 ### Step 2: Configure CloudKit variables (runtime **or** build-time)
 
-**Recommended (Docker / Coolify):** Set these as **normal runtime environment variables** on the application (same names as below). On each container start, `docker-entrypoint.sh` writes `dist/runtime-config.js` from those values so the browser receives them **without** a rebuild.
+**Recommended (Docker / Coolify):** Set these as **runtime environment variables** on the container (names below). On each start, `docker-entrypoint.sh` runs `inject-cloudkit-config.cjs`, which **embeds** the values into `dist/index.html` inside `<script type="application/json" id="cloudkit-runtime-json">`. That avoids relying on a separate `/runtime-config.js` file, which `serve -s` can incorrectly serve as `index.html` (SPA fallback).
 
 ```bash
 VITE_CLOUDKIT_CONTAINER_ID=iCloud.SysInspectDB
@@ -56,7 +56,7 @@ VITE_CLOUDKIT_ENVIRONMENT=development   # or production — must match where you
 
 **Optional build-time (Vite):** If you pass the same variables as **Docker build args** during `docker build`, they are also embedded in the JS bundle. Runtime variables **override** non-empty values when both are set.
 
-**Local `npm run dev`:** Use `frontend/.env` or `.env.local` (Vite reads `import.meta.env`); `runtime-config.js` can stay empty.
+**Local `npm run dev`:** Use `frontend/.env` or `.env.local` (Vite reads `import.meta.env`). The JSON block in `index.html` stays empty in dev.
 
 ### Step 3: Test Locally with Docker
 
@@ -103,9 +103,15 @@ git push origin main
 - `VITE_CLOUDKIT_API_TOKEN` – API token from CloudKit Dashboard
 - `VITE_CLOUDKIT_ENVIRONMENT` – `development` or `production` (must match your CloudKit data)
 
+Aliases (if your host strips the `VITE_` prefix): `CLOUDKIT_CONTAINER_ID`, `CLOUDKIT_API_TOKEN`, `CLOUDKIT_ENVIRONMENT`.
+
 **Build arguments:** Optional. Only needed if you want values baked into the bundle at build time; runtime vars are enough for the provided Dockerfile + entrypoint.
 
-**If you still see “CloudKit not configured”:** The container did not receive the three variables, or the image was built from an old Dockerfile without `ENTRYPOINT`. Redeploy after pulling the latest `webapp/Dockerfile` and `docker-entrypoint.sh`.
+**If you still see “CloudKit not configured”:**
+1. In Coolify, **do not replace** the image `ENTRYPOINT` / use a custom start command that skips `docker-entrypoint.sh` — the inject step must run before `serve`.
+2. Confirm the three variables are on the **running** container (runtime), not only build-time.
+3. **View page source** in the browser: you should see `id="cloudkit-runtime-json"` with non-empty `containerId` and `apiToken`. If they are empty strings, env vars are not reaching the container.
+4. Redeploy using the latest `Dockerfile`, `docker-entrypoint.sh`, and `inject-cloudkit-config.cjs` from `webapp/`.
 
 #### 5.3 Single-Port Routing
 

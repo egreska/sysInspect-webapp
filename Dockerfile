@@ -27,9 +27,9 @@ RUN npm install -g serve
 
 COPY --from=frontend-builder /app/frontend/dist ./dist
 
-# Node used only by entrypoint to safely JSON-encode runtime-config.js (no shell escaping issues)
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+COPY inject-cloudkit-config.cjs /inject-cloudkit-config.cjs
+RUN chmod +x /docker-entrypoint.sh /inject-cloudkit-config.cjs
 
 EXPOSE 5173
 
