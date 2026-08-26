@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { inspectionsAPI } from '../services/api';
-import { ArrowLeft, FileText, AlertCircle, Wrench, Eye } from 'lucide-react';
+import { ArrowLeft, FileText, AlertCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import type { InspectionItem } from '../types';
 
@@ -22,8 +22,8 @@ export default function InspectionDetailPage() {
     return <div className="text-center py-12">Inspection not found</div>;
   }
 
-  const criticalCount = inspection.items?.filter(i => i.importance === 'Critical').length || 0;
-  const repairCount = inspection.items?.filter(i => i.importance === 'Repair').length || 0;
+  const needsImmediateCount =
+    inspection.items?.filter(i => i.importance === 'Needs immediate attention').length || 0;
   const monitorCount = inspection.items?.filter(i => i.importance === 'Monitor').length || 0;
 
   return (
@@ -79,23 +79,13 @@ export default function InspectionDetailPage() {
       )}
 
       {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center">
             <AlertCircle className="h-8 w-8 text-red-600 mr-3" />
             <div>
-              <p className="text-sm text-red-600 font-medium">Critical</p>
-              <p className="text-2xl font-bold text-red-900">{criticalCount}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <Wrench className="h-8 w-8 text-orange-600 mr-3" />
-            <div>
-              <p className="text-sm text-orange-600 font-medium">Repair Required</p>
-              <p className="text-2xl font-bold text-orange-900">{repairCount}</p>
+              <p className="text-sm text-red-600 font-medium">Needs immediate attention</p>
+              <p className="text-2xl font-bold text-red-900">{needsImmediateCount}</p>
             </div>
           </div>
         </div>
@@ -134,10 +124,8 @@ export default function InspectionDetailPage() {
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      item.importance === 'Critical'
+                      item.importance === 'Needs immediate attention'
                         ? 'bg-red-100 text-red-800'
-                        : item.importance === 'Repair'
-                        ? 'bg-orange-100 text-orange-800'
                         : 'bg-blue-100 text-blue-800'
                     }`}
                   >

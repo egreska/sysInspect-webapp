@@ -30,7 +30,7 @@ export interface InspectionItem {
   id: string;
   location: string;
   bayNumber?: string;
-  importance: 'Critical' | 'Repair' | 'Monitor';
+  importance: 'Needs immediate attention' | 'Monitor';
   comments?: string;
   sequenceNumber: number;
   photoData?: string | null;

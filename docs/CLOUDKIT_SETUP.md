@@ -301,8 +301,8 @@ node -e "require('dotenv').config(); console.log('Container:', process.env.CLOUD
   fields: {
     location: { value: 'Warehouse A, Row 5' },
     bayNumber: { value: '10' },
-    importance: { value: 'Critical' },
-    comments: { value: 'Needs immediate attention' },
+    importance: { value: 'Needs immediate attention' },
+    comments: { value: 'Column dented at base' },
     sequenceNumber: { value: 1 },
     upright: { value: true },
     uprightFrontDamage: { value: true },

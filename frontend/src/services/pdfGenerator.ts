@@ -275,11 +275,8 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
     const impW = COL_WIDTHS[2] - 10;
     const impStr = item.importance || 'Monitor';
     doc.setFontSize(8);
-    if (impStr === 'Critical') {
+    if (impStr === 'Needs immediate attention') {
       doc.setTextColor(200, 0, 0);
-      doc.setFont('helvetica', 'bold');
-    } else if (impStr === 'Repair') {
-      doc.setTextColor(200, 100, 0);
       doc.setFont('helvetica', 'bold');
     } else {
       doc.setTextColor(0);

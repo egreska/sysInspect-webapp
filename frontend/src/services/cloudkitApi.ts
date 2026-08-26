@@ -3,7 +3,7 @@
  * Uses Sign in with Apple for auth; fetches directly from CloudKit.
  */
 import { logger } from '../utils/logger';
-import type { Customer, Inspection, InspectionItem } from '../types';
+import type { Customer, Inspection } from '../types';
 import {
   fetchRecord,
   fetchInspections,
@@ -13,6 +13,7 @@ import {
   queryRecords,
   extractRecordName,
 } from './cloudkit';
+import { decodeInspectionItem } from './inspectionItemCodec';
 
 /**
  * Fetch all customers. Private database is scoped to the signed-in iCloud user,
@@ -45,87 +46,6 @@ export async function getInspectionsByCustomerId(customerId: string): Promise<In
   }
 }
 
-function extractDownloadURL(field: { value?: unknown } | undefined): string | null {
-  if (!field || !field.value) return null;
-  const v = field.value;
-  // Asset field: { value: { downloadURL: "https://..." } }
-  if (typeof v === 'object' && v !== null) {
-    const obj = v as Record<string, unknown>;
-    if (typeof obj.downloadURL === 'string') return obj.downloadURL;
-    if (obj.value && typeof (obj.value as Record<string, unknown>).downloadURL === 'string') {
-      return (obj.value as Record<string, unknown>).downloadURL as string;
-    }
-  }
-  // String field containing a URL (e.g., CD_photoURL synced as a string)
-  if (typeof v === 'string' && v.startsWith('http')) return v;
-  return null;
-}
-
-async function mapInspectionItem(r: import('./cloudkit').CloudKitRecord): Promise<InspectionItem> {
-  // CloudKit asset field: CD_photoData_ckAsset (Core Data renames binary+externalStorage)
-  const photoField = r.fields.CD_photoData_ckAsset || r.fields.CD_photoData || r.fields.CD_photoURL;
-  const photoUrl = extractDownloadURL(photoField);
-  if (photoUrl) {
-    logger.debug('[CloudKit] Photo URL resolved for inspection item');
-  } else {
-    const photoKeys = Object.keys(r.fields).filter((k) => k.toLowerCase().includes('photo'));
-    if (photoKeys.length > 0) {
-      logger.debug('[CloudKit] Photo fields present but no download URL', photoKeys);
-    }
-  }
-  return {
-    id: r.recordName,
-    location: (r.fields.CD_location?.value as string) || '',
-    bayNumber: (r.fields.CD_bayNumber?.value as string) || '',
-    importance: (() => {
-      const v = (r.fields.CD_importance?.value as string) || 'Monitor';
-      if (v === 'Needs immediate attention') return 'Critical' as const;
-      if (v === 'Critical' || v === 'Repair' || v === 'Monitor') return v;
-      return 'Monitor' as const;
-    })(),
-    comments: (r.fields.CD_comments?.value as string) || '',
-    sequenceNumber: (r.fields.CD_sequenceNumber?.value as number) || 0,
-    photoData: null,
-    photoUrl: photoUrl,
-    upright: !!(r.fields.CD_upright?.value),
-    beam: !!(r.fields.CD_beam?.value),
-    bracingDiagonal: !!(r.fields.CD_bracingDiagonal?.value),
-    bracingHorizontal: !!(r.fields.CD_bracingHorizontal?.value),
-    basePlate: !!(r.fields.CD_basePlate?.value),
-    anchors: !!(r.fields.CD_anchors?.value),
-    wireDeck: !!(r.fields.CD_wireDeck?.value),
-    postProtector: !!(r.fields.CD_postProtector?.value),
-    aisleGuarding: !!(r.fields.CD_aisleGuarding?.value),
-    uprightFrontDamage: !!(r.fields.CD_uprightFrontDamage?.value),
-    uprightFrontTwisted: !!(r.fields.CD_uprightFrontTwisted?.value),
-    uprightRearDamage: !!(r.fields.CD_uprightRearDamage?.value),
-    uprightRearTwisted: !!(r.fields.CD_uprightRearTwisted?.value),
-    uprightAlignmentOutOfAlignment: !!(r.fields.CD_uprightAlignmentOutOfAlignment?.value),
-    uprightAlignmentOutOfVerticalPlumb: !!(r.fields.CD_uprightAlignmentOutOfVerticalPlumb?.value),
-    beamFrontDamage: !!(r.fields.CD_beamFrontDamage?.value),
-    beamFrontBowed: !!(r.fields.CD_beamFrontBowed?.value),
-    beamRearDamage: !!(r.fields.CD_beamRearDamage?.value),
-    beamRearBowed: !!(r.fields.CD_beamRearBowed?.value),
-    bracingDamage: !!(r.fields.CD_bracingDamage?.value),
-    basePlateDamaged: !!(r.fields.CD_basePlateDamaged?.value),
-    basePlateTwisted: !!(r.fields.CD_basePlateTwisted?.value),
-    basePlateFloorDamaged: !!(r.fields.CD_basePlateFloorDamaged?.value),
-    anchorsDamaged: !!(r.fields.CD_anchorsDamaged?.value),
-    anchorsMissing: !!(r.fields.CD_anchorsMissing?.value),
-    anchorsTorqued: !!(r.fields.CD_anchorsTorqued?.value),
-    wireDeckDamaged: !!(r.fields.CD_wireDeckDamaged?.value),
-    wireDeckMissing: !!(r.fields.CD_wireDeckMissing?.value),
-    wireDeckOutOfPosition: !!(r.fields.CD_wireDeckOutOfPosition?.value),
-    postProtectorDamaged: !!(r.fields.CD_postProtectorDamaged?.value),
-    postProtectorMissing: !!(r.fields.CD_postProtectorMissing?.value),
-    postProtectorRepairRequired: !!(r.fields.CD_postProtectorRepairRequired?.value),
-    aisleGuardingDamaged: !!(r.fields.CD_aisleGuardingDamaged?.value),
-    aisleGuardingMissing: !!(r.fields.CD_aisleGuardingMissing?.value),
-    aisleGuardingRepairRequired: !!(r.fields.CD_aisleGuardingRepairRequired?.value),
-  };
-}
-
-
 export async function getInspectionById(id: string): Promise<Inspection | null> {
   const r = await fetchRecord(id, 'CD_Inspection');
   if (!r) return null;
@@ -136,7 +56,7 @@ export async function getInspectionById(id: string): Promise<Inspection | null> 
   }
 
   const itemRecords = await fetchInspectionItems(id);
-  const items = await Promise.all(itemRecords.map((ir) => mapInspectionItem(ir)));
+  const items = itemRecords.map(decodeInspectionItem);
   items.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
 
   return {

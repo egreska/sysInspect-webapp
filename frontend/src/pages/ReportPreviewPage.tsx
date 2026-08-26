@@ -233,15 +233,12 @@ export default function ReportPreviewPage() {
                           value={item.importance}
                           onChange={(e) => updateItem(index, 'importance', e.target.value)}
                           className={`w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-medium ${
-                            item.importance === 'Critical'
+                            item.importance === 'Needs immediate attention'
                               ? 'border-red-300 text-red-800 bg-red-50'
-                              : item.importance === 'Repair'
-                              ? 'border-orange-300 text-orange-800 bg-orange-50'
                               : 'border-blue-300 text-blue-800 bg-blue-50'
                           }`}
                         >
-                          <option value="Critical">Critical</option>
-                          <option value="Repair">Repair</option>
+                          <option value="Needs immediate attention">Needs immediate attention</option>
                           <option value="Monitor">Monitor</option>
                         </select>
                       </div>

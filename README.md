@@ -1,116 +1,45 @@
-# Systems Inspector Web Application
+# Systems Inspector — Web
 
-Professional web application for accessing CloudKit data and generating inspection reports.
+React (Vite) + TypeScript frontend using **CloudKit JS** (Sign in with Apple) to read the same data as the iOS app. PDF generation is client-side (e.g. jsPDF).
 
-## 🌐 Deployment Information
+## Deploy
 
-**Domain:** sysinspect.skynet97.org  
-**Platform:** Coolify  
-**Status:** Development
+**Domain (example):** sysinspect.skynet97.org — adjust for your environment.  
+Build with the repo **Dockerfile**; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## 🏗️ Architecture
+## Stack
 
-### Frontend (CloudKit JS)
-- **Framework:** React 18 + TypeScript
-- **Build Tool:** Vite
-- **Styling:** Tailwind CSS
-- **State Management:** React Query (TanStack Query), Zustand (auth)
-- **Routing:** React Router v6
-- **CloudKit:** CloudKit JS browser SDK (Sign in with Apple)
-- **PDF Generation:** jsPDF (client-side)
+- React 18, TypeScript, Vite, Tailwind  
+- React Router, TanStack Query, Zustand (auth UI state)  
+- CloudKit JS + API token from Apple Developer / CloudKit Dashboard  
 
-### Deployment
-- **Container:** Docker (frontend-only)
-- **Reverse Proxy:** Handled by Coolify
-- **SSL:** Automatic via Coolify/Let's Encrypt
-
-## 📁 Project Structure
+## Layout
 
 ```
 webapp/
-├── frontend/                 # React + TypeScript frontend
-│   ├── src/
-│   │   ├── components/      # Reusable UI components
-│   │   ├── pages/           # Route pages
-│   │   ├── services/       # CloudKit, API, PDF
-│   │   ├── store/          # Auth state
-│   │   └── types/          # TypeScript types
-│   └── package.json
-│
-├── _unused/                  # Deprecated (backend, old docker config)
-│   ├── backend/             # Former Node.js backend
-│   ├── docker-entrypoint.sh
-│   ├── docker-compose.local.yml
-│   └── README.md
-│
-├── docs/                     # Documentation
-│   ├── DEPLOYMENT.md        # Coolify deployment guide
-│   ├── CLOUDKIT_SETUP.md    # CloudKit configuration
-│   └── SECURITY.md          # Web token, CSP, headers, incident steps
-│
-├── Dockerfile                # Frontend-only production build
-└── README.md
+├── frontend/          # App source
+├── docs/              # DEPLOYMENT, CLOUDKIT_SETUP, SECURITY
+├── Dockerfile
+└── inject-cloudkit-config.cjs
 ```
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 20+
-- npm or yarn
-- CloudKit API token
-
-### Local Development
+## Local dev
 
 ```bash
-cd webapp/frontend
+cd frontend
 npm install
-cp .env.example .env   # Add VITE_CLOUDKIT_* variables
+cp .env.example .env   # VITE_CLOUDKIT_* — see .env.example
 npm run dev
 ```
 
-Frontend runs at http://localhost:5173
+Default dev server: http://localhost:5173
 
-### Environment Variables
+## Env (frontend)
 
-See `frontend/.env.example`:
-- `VITE_CLOUDKIT_CONTAINER_ID` – CloudKit container (must match iOS: `iCloud.SysInspectDB`)
-- `VITE_CLOUDKIT_API_TOKEN` – API token from CloudKit Dashboard → API Access → API Tokens
-- `VITE_CLOUDKIT_ENVIRONMENT` – `development` or `production`
+Match the iOS container where applicable, e.g. `iCloud.SysInspectDB`. See `frontend/.env.example`.
 
-## 🔐 CloudKit Configuration
+## Documentation
 
-The webapp uses **CloudKit JS** (browser SDK) with Sign in with Apple. Create an API token in CloudKit Dashboard → API Access → API Tokens.
-
-See `docs/CLOUDKIT_SETUP.md` for detailed instructions.
-
-## 📦 Deployment to Coolify
-
-```bash
-docker build -t sysinspect-webapp .
-# Deploy via Coolify - see docs/DEPLOYMENT.md
-```
-
-## 🎯 Features
-
-- ✅ Sign in with Apple (CloudKit JS)
-- ✅ Customer list and search
-- ✅ Inspection browsing
-- ✅ Report viewing
-- ✅ PDF export (client-side)
-- ✅ Responsive design
-
-## 📚 Documentation
-
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [CloudKit Setup](docs/CLOUDKIT_SETUP.md)
-- [API Documentation](docs/API.md)
-
-## 🔒 Security
-
-- HTTPS only
-- Sign in with Apple (CloudKit)
-- CORS, input validation, XSS protection
-
----
-
-**Built with ❤️ for Professional Inspectors**
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md)  
+- [CLOUDKIT_SETUP.md](docs/CLOUDKIT_SETUP.md)  
+- [SECURITY.md](docs/SECURITY.md)  
