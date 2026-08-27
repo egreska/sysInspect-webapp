@@ -12,6 +12,16 @@ import { decodeCustomer } from './customerCodec';
 import { decodeInspection } from './inspectionCodec';
 import { decodeInspectionItem } from './inspectionItemCodec';
 
+function dateMs(value: string | undefined): number {
+  if (!value) return 0;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function sortInspectionsByDateDesc(inspections: Inspection[]): Inspection[] {
+  return [...inspections].sort((a, b) => dateMs(b.date) - dateMs(a.date));
+}
+
 export async function getCustomers(): Promise<Customer[]> {
   try {
     const records = await queryRecords('CD_Customer', [], { fieldName: 'CD_name', ascending: true });
@@ -34,16 +44,12 @@ export async function getCustomerById(id: string): Promise<Customer | null> {
  */
 export async function getInspectionsByCustomerId(customerId: string): Promise<Inspection[]> {
   try {
-    const records = await queryRecords(
-      'CD_Inspection',
-      [],
-      { fieldName: 'CD_date', ascending: false }
-    );
+    const records = await queryRecords('CD_Inspection');
     const matched = records.filter(
       (r) => extractRecordName(r.fields.CD_customer?.value) === customerId
     );
     logger.debug(`[CloudKit] getInspectionsByCustomerId: ${matched.length} inspections matched`);
-    return matched.map(decodeInspection);
+    return sortInspectionsByDateDesc(matched.map(decodeInspection));
   } catch (err) {
     logger.error('CloudKit getInspectionsByCustomerId failed', err);
     throw err;
@@ -52,12 +58,8 @@ export async function getInspectionsByCustomerId(customerId: string): Promise<In
 
 export async function getAllInspections(): Promise<Inspection[]> {
   try {
-    const records = await queryRecords(
-      'CD_Inspection',
-      [],
-      { fieldName: 'CD_date', ascending: false }
-    );
-    return records.map(decodeInspection);
+    const records = await queryRecords('CD_Inspection');
+    return sortInspectionsByDateDesc(records.map(decodeInspection));
   } catch (err) {
     logger.error('CloudKit getAllInspections failed', err);
     throw err;

@@ -44,4 +44,9 @@ describe('decodeInspection', () => {
     expect(inspection.inspectorName).toBe('Alex');
     expect(inspection.customerId).toBeUndefined();
   });
+
+  it('decodes a millisecond CloudKit date to ISO', () => {
+    const inspection = decodeInspection(record({ CD_date: 1690848000000 }));
+    expect(inspection.date).toBe(new Date(1690848000000).toISOString());
+  });
 });

@@ -5,14 +5,26 @@ import { Link } from 'react-router-dom';
 import { format, isThisMonth } from 'date-fns';
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['customers'],
     queryFn: customersAPI.getAll,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
-  const { data: allInspections, isLoading: loadingInspections } = useQuery({
+  const {
+    data: allInspections,
+    isLoading: loadingInspections,
+    isError: inspectionsError,
+    error: inspectionsErr,
+    refetch: refetchInspections,
+  } = useQuery({
     queryKey: ['all-inspections'],
     queryFn: inspectionsAPI.getAll,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const customers = Array.isArray(data) ? data : [];
@@ -34,6 +46,32 @@ export default function DashboardPage() {
 
   if (isLoading && loadingInspections) {
     return <div className="text-center py-12">Loading...</div>;
+  }
+
+  if (isError || inspectionsError) {
+    const message =
+      (isError && error instanceof Error && error.message) ||
+      (inspectionsError && inspectionsErr instanceof Error && inspectionsErr.message) ||
+      'CloudKit query failed';
+    return (
+      <div className="space-y-4">
+        <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-800">
+          <p className="font-medium">Unable to load dashboard data</p>
+          <p className="mt-2 text-sm">{message}</p>
+          <button
+            type="button"
+            className="mt-4 text-sm font-medium text-red-900 underline"
+            onClick={() => {
+              void refetch();
+              void refetchInspections();
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

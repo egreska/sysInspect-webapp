@@ -12,6 +12,19 @@ import { logger } from '../utils/logger';
  * - Environment: defaults to development (Xcode debug builds)
  */
 
+/**
+ * Continue paging while CloudKit gives a continuation marker.
+ * `moreComing` is optional in CloudKit JS; treating a missing flag as "done"
+ * dropped every page after the first (resultsLimit 100).
+ */
+export function shouldFetchNextQueryPage(response: {
+  moreComing?: boolean;
+  continuationMarker?: unknown;
+}): boolean {
+  if (response.moreComing === false) return false;
+  return response.continuationMarker != null;
+}
+
 declare global {
   interface Window {
     CloudKit?: CloudKitGlobal;
@@ -135,7 +148,7 @@ interface CloudKitQuery {
     comparator: string;
     fieldValue: { value: unknown };
   }>;
-  sortBy?: { fieldName: string; ascending: boolean };
+  sortBy?: Array<{ fieldName: string; ascending: boolean }>;
 }
 
 interface CloudKitQueryOptions {
@@ -375,11 +388,13 @@ export async function queryRecords(
 
   const allRecords: CloudKitRecord[] = [];
   let marker: unknown = null;
+  let pages = 0;
 
   do {
+    pages += 1;
     const query: CloudKitQuery = { recordType };
     if (filters.length > 0) query.filterBy = filters;
-    if (sortBy) query.sortBy = sortBy;
+    if (sortBy) query.sortBy = [sortBy];
 
     const options: CloudKitQueryOptions = {
       zoneID: { zoneName: ZONE },
@@ -408,8 +423,8 @@ export async function queryRecords(
         }
       }
     }
-    marker = response.continuationMarker ?? null;
-    if (!response.moreComing || !marker) break;
+    if (!shouldFetchNextQueryPage(response) || pages >= 50) break;
+    marker = response.continuationMarker;
   } while (true);
 
   logger.debug(`[CloudKit] queryRecords(${recordType}): ${allRecords.length} records`);
