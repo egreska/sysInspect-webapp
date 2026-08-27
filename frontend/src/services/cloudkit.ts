@@ -107,8 +107,14 @@ interface CloudKitContainer {
   privateCloudDatabase: CloudKitDatabase;
 }
 
+interface CloudKitFetchRecordsInput {
+  records: Array<{ recordName: string }>;
+  zoneID: { zoneName: string };
+}
+
 interface CloudKitDatabase {
   performQuery: (query: CloudKitQuery, options?: CloudKitQueryOptions) => Promise<CloudKitQueryResponse>;
+  fetchRecords: (input: CloudKitFetchRecordsInput) => Promise<CloudKitQueryResponse>;
 }
 
 export interface CloudKitUserIdentity {
@@ -411,16 +417,25 @@ export async function queryRecords(
 }
 
 /**
- * Fetch a single record by recordName from the Private Database.
- * Uses performQuery (which we know works) instead of fetchRecords (which has
- * an unclear API signature in CloudKit JS). Queries all records of the given
- * type and finds the one matching.  If recordType is unknown, tries each type.
+ * Fetch a single record by recordName from the Private Database Core Data zone.
+ * Tries CloudKit JS fetchRecords first; if that API rejects, scans the type via performQuery.
  */
 export async function fetchRecord(
   recordName: string,
   recordType?: string
 ): Promise<CloudKitRecord | null> {
   if (!recordName) return null;
+
+  const byName = await fetchRecordByName(recordName);
+  if (byName.ok) {
+    const fetched = byName.record;
+    if (!fetched) return null;
+    if (!recordType || !fetched.recordType || fetched.recordType === recordType) {
+      return fetched;
+    }
+    logger.warn(`[CloudKit] fetchRecord: ${recordName} is ${fetched.recordType}, expected ${recordType}`);
+    return null;
+  }
 
   const types = recordType
     ? [recordType]
@@ -430,12 +445,43 @@ export async function fetchRecord(
     const records = await queryRecords(rt, [], undefined, 100);
     const match = records.find((r) => r.recordName === recordName);
     if (match) {
-      logger.debug(`[CloudKit] fetchRecord found record as ${rt}`);
+      logger.debug(`[CloudKit] fetchRecord found record as ${rt} via query fallback`);
       return match;
     }
   }
   logger.warn(`[CloudKit] fetchRecord: not found in types ${types.join(', ')}`);
   return null;
+}
+
+async function fetchRecordByName(
+  recordName: string
+): Promise<{ ok: true; record: CloudKitRecord | null } | { ok: false }> {
+  const db = getContainer().privateCloudDatabase;
+  if (typeof db.fetchRecords !== 'function') {
+    return { ok: false };
+  }
+  try {
+    const response = await Promise.resolve(
+      db.fetchRecords({
+        records: [{ recordName }],
+        zoneID: { zoneName: ZONE },
+      })
+    );
+    const rec = response.records?.find((r) => r.recordName === recordName);
+    if (rec?.serverErrorCode) {
+      return { ok: true, record: null };
+    }
+    if (rec) {
+      logger.debug(`[CloudKit] fetchRecords found ${recordName}`);
+      return { ok: true, record: rec };
+    }
+    return { ok: false };
+  } catch (err) {
+    logger.debug(
+      `[CloudKit] fetchRecords failed, will query by type: ${extractCloudKitError(err)}`
+    );
+    return { ok: false };
+  }
 }
 
 /**
@@ -455,72 +501,4 @@ export function extractRecordName(ref: unknown): string | undefined {
     }
   }
   return undefined;
-}
-
-// --- Domain helpers (Core Data + CloudKit uses CD_ prefix) ---
-
-/**
- * Fetch inspections for a customer.  CD_customer is a REFERENCE field (Core Data
- * relationship), so we cannot reliably filter with EQUALS on a plain string.
- * Instead we fetch all CD_Inspection records and filter client-side.
- */
-export async function fetchInspections(customerId: string): Promise<CloudKitRecord[]> {
-  const all = await queryRecords(
-    'CD_Inspection',
-    [],
-    { fieldName: 'CD_date', ascending: false }
-  );
-  logger.debug(`[CloudKit] fetched ${all.length} CD_Inspection records (client filter by customer)`);
-  return all.filter((r) => {
-    const ref = extractRecordName(r.fields.CD_customer?.value);
-    return ref === customerId;
-  });
-}
-
-/**
- * Fetch inspection items for an inspection.  CD_inspection is a REFERENCE field,
- * so we fetch all CD_InspectionItem records and filter client-side.
- */
-export async function fetchInspectionItems(inspectionId: string): Promise<CloudKitRecord[]> {
-  const all = await queryRecords(
-    'CD_InspectionItem',
-    [],
-    { fieldName: 'CD_sequenceNumber', ascending: true }
-  );
-  logger.debug(`[CloudKit] fetched ${all.length} CD_InspectionItem records (client filter by inspection)`);
-  return all.filter((r) => {
-    const ref = extractRecordName(r.fields.CD_inspection?.value);
-    return ref === inspectionId;
-  });
-}
-
-/**
- * Map CloudKit CD_Customer record to Customer type
- */
-export function mapCustomerRecord(r: CloudKitRecord) {
-  return {
-    id: r.recordName,
-    name: (r.fields.CD_name?.value as string) || '',
-    contactName: (r.fields.CD_contactName?.value as string) || '',
-    phone: (r.fields.CD_phone?.value as string) || '',
-    address: (r.fields.CD_address?.value as string) || '',
-    city: (r.fields.CD_city?.value as string) || '',
-    state: (r.fields.CD_state?.value as string) || '',
-    zipCode: (r.fields.CD_zipCode?.value as string) || '',
-    site: (r.fields.CD_site?.value as string) || '',
-    createdDate: (r.fields.CD_createdDate?.value as string) || '',
-  };
-}
-
-/**
- * Map CloudKit CD_Inspection record to Inspection type
- */
-export function mapInspectionRecord(r: CloudKitRecord) {
-  return {
-    id: r.recordName,
-    date: r.fields.CD_date?.value as string | undefined,
-    inspectorName: (r.fields.CD_inspectorName?.value as string) || '',
-    customerId: extractRecordName(r.fields.CD_customer?.value),
-    createdDate: r.fields.CD_date?.value as string | undefined,
-  };
 }

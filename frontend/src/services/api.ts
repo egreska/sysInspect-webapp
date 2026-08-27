@@ -7,6 +7,7 @@ import {
   getCustomers,
   getCustomerById,
   getInspectionsByCustomerId,
+  getAllInspections,
   getInspectionById,
 } from './cloudkitApi';
 
@@ -24,6 +25,8 @@ export const customersAPI = {
 };
 
 export const inspectionsAPI = {
+  getAll: async (): Promise<Inspection[]> => getAllInspections(),
+
   getById: async (id: string): Promise<Inspection> => {
     const i = await getInspectionById(id);
     if (!i) throw new Error('Inspection not found');

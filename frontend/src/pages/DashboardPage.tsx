@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { customersAPI } from '../services/api';
-import { queryRecords, extractRecordName, mapInspectionRecord } from '../services/cloudkit';
+import { customersAPI, inspectionsAPI } from '../services/api';
 import { BarChart, Users, FileText, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, isThisMonth } from 'date-fns';
-import type { Inspection } from '../types';
 
 export default function DashboardPage() {
   const { data, isLoading } = useQuery({
@@ -14,22 +12,15 @@ export default function DashboardPage() {
 
   const { data: allInspections, isLoading: loadingInspections } = useQuery({
     queryKey: ['all-inspections'],
-    queryFn: async (): Promise<(Inspection & { customerName?: string })[]> => {
-      const records = await queryRecords('CD_Inspection');
-      const customerRecords = await queryRecords('CD_Customer');
-      const customerMap = new Map(
-        customerRecords.map((c) => [c.recordName, (c.fields.CD_name?.value as string) || ''])
-      );
-      return records.map((r) => {
-        const mapped = mapInspectionRecord(r);
-        const custRef = extractRecordName(r.fields.CD_customer?.value);
-        return { ...mapped, customerName: custRef ? customerMap.get(custRef) : undefined };
-      });
-    },
+    queryFn: inspectionsAPI.getAll,
   });
 
   const customers = Array.isArray(data) ? data : [];
-  const inspections = Array.isArray(allInspections) ? allInspections : [];
+  const customerNames = new Map(customers.map((c) => [c.id, c.name]));
+  const inspections = (Array.isArray(allInspections) ? allInspections : []).map((i) => ({
+    ...i,
+    customerName: i.customerId ? customerNames.get(i.customerId) : undefined,
+  }));
   const thisMonthCount = inspections.filter(
     (i) => i.date && isThisMonth(new Date(i.date))
   ).length;
@@ -156,7 +147,7 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <h4 className="font-medium text-gray-900">
-                      {(ins as { customerName?: string }).customerName || 'Inspection'}
+                      {ins.customerName || 'Inspection'}
                       {ins.date && ` - ${format(new Date(ins.date), 'MMM dd, yyyy')}`}
                     </h4>
                     {ins.inspectorName && (

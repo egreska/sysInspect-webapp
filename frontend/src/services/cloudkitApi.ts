@@ -1,28 +1,21 @@
 /**
- * CloudKit JS-based API - replaces backend for data access.
- * Uses Sign in with Apple for auth; fetches directly from CloudKit.
+ * Domain CloudKit queries. Pages talk to this module (via api.ts), not queryRecords.
  */
 import { logger } from '../utils/logger';
 import type { Customer, Inspection } from '../types';
 import {
   fetchRecord,
-  fetchInspections,
-  fetchInspectionItems,
-  mapCustomerRecord,
-  mapInspectionRecord,
   queryRecords,
   extractRecordName,
 } from './cloudkit';
+import { decodeCustomer } from './customerCodec';
+import { decodeInspection } from './inspectionCodec';
 import { decodeInspectionItem } from './inspectionItemCodec';
 
-/**
- * Fetch all customers. Private database is scoped to the signed-in iCloud user,
- * so we get only their data. Query all CD_Customer in the zone.
- */
 export async function getCustomers(): Promise<Customer[]> {
   try {
     const records = await queryRecords('CD_Customer', [], { fieldName: 'CD_name', ascending: true });
-    return records.map(mapCustomerRecord);
+    return records.map(decodeCustomer);
   } catch (err) {
     logger.error('CloudKit getCustomers failed', err);
     throw err;
@@ -32,16 +25,41 @@ export async function getCustomers(): Promise<Customer[]> {
 export async function getCustomerById(id: string): Promise<Customer | null> {
   const record = await fetchRecord(id, 'CD_Customer');
   if (!record) return null;
-  return mapCustomerRecord(record);
+  return decodeCustomer(record);
 }
 
+/**
+ * Inspections for a customer. CD_customer is a Core Data REFERENCE, so this
+ * queries all CD_Inspection records and filters in the browser.
+ */
 export async function getInspectionsByCustomerId(customerId: string): Promise<Inspection[]> {
   try {
-    const records = await fetchInspections(customerId);
-    logger.debug(`[CloudKit] getInspectionsByCustomerId: ${records.length} inspections matched`);
-    return records.map(mapInspectionRecord);
+    const records = await queryRecords(
+      'CD_Inspection',
+      [],
+      { fieldName: 'CD_date', ascending: false }
+    );
+    const matched = records.filter(
+      (r) => extractRecordName(r.fields.CD_customer?.value) === customerId
+    );
+    logger.debug(`[CloudKit] getInspectionsByCustomerId: ${matched.length} inspections matched`);
+    return matched.map(decodeInspection);
   } catch (err) {
     logger.error('CloudKit getInspectionsByCustomerId failed', err);
+    throw err;
+  }
+}
+
+export async function getAllInspections(): Promise<Inspection[]> {
+  try {
+    const records = await queryRecords(
+      'CD_Inspection',
+      [],
+      { fieldName: 'CD_date', ascending: false }
+    );
+    return records.map(decodeInspection);
+  } catch (err) {
+    logger.error('CloudKit getAllInspections failed', err);
     throw err;
   }
 }
@@ -49,23 +67,20 @@ export async function getInspectionsByCustomerId(customerId: string): Promise<In
 export async function getInspectionById(id: string): Promise<Inspection | null> {
   const r = await fetchRecord(id, 'CD_Inspection');
   if (!r) return null;
-  const customerId = extractRecordName(r.fields.CD_customer?.value);
-  let customer: Customer | null = null;
-  if (customerId) {
-    customer = await getCustomerById(customerId);
+  const inspection = decodeInspection(r);
+  if (inspection.customerId) {
+    inspection.customer = (await getCustomerById(inspection.customerId)) || undefined;
   }
 
-  const itemRecords = await fetchInspectionItems(id);
-  const items = itemRecords.map(decodeInspectionItem);
+  const itemRecords = await queryRecords(
+    'CD_InspectionItem',
+    [],
+    { fieldName: 'CD_sequenceNumber', ascending: true }
+  );
+  const items = itemRecords
+    .filter((item) => extractRecordName(item.fields.CD_inspection?.value) === id)
+    .map(decodeInspectionItem);
   items.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
-
-  return {
-    id: r.recordName,
-    date: r.fields.CD_date?.value as string | undefined,
-    inspectorName: (r.fields.CD_inspectorName?.value as string) || '',
-    customerId,
-    customer: customer || undefined,
-    items,
-    createdDate: r.fields.CD_date?.value as string | undefined,
-  };
+  inspection.items = items;
+  return inspection;
 }
