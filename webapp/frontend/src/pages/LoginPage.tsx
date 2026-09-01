@@ -1,11 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
+function CloudKitButtonContainer() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const signIn = document.getElementById('apple-sign-in-button');
+    const signOut = document.getElementById('apple-sign-out-button');
+    if (signIn && containerRef.current) {
+      // Move button into the login card so it's visible (it's in body by default, below the fold)
+      if (signIn.parentElement !== containerRef.current) {
+        containerRef.current.appendChild(signIn);
+      }
+      signIn.style.display = 'flex';
+      signIn.style.justifyContent = 'center';
+      signIn.style.width = '100%';
+    }
+    if (signOut) signOut.style.display = 'none';
+    return () => {
+      if (signIn) {
+        signIn.style.display = 'none';
+        document.body.appendChild(signIn);
+      }
+    };
+  }, []);
+  return <div ref={containerRef} className="min-h-[44px] w-full" />;
+}
+
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login, isLoading, error, isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading, error, cloudKitReady, checkAuthAfterPopup } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,14 +38,17 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await login(email, password);
-    } catch (err) {
-      // Error is handled by the store
-    }
-  };
+  // Workaround: Apple Sign-in popup may close without resolving whenUserSignsIn promise.
+  // Re-check auth when window regains focus (popup closed).
+  useEffect(() => {
+    const onFocus = () => {
+      if (cloudKitReady && !isAuthenticated && !isLoading) {
+        checkAuthAfterPopup();
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [cloudKitReady, isAuthenticated, isLoading, checkAuthAfterPopup]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
@@ -32,54 +59,31 @@ export default function LoginPage() {
             <p className="text-gray-600 mt-2">Sign in to access your inspections</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="your@email.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
+          {!cloudKitReady || isLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading...</div>
+          ) : error ? (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg">
+                <p className="font-medium">CloudKit not configured</p>
+                <p className="text-sm mt-1">{error}</p>
+                <p className="text-sm mt-2">
+                  Set <code className="text-xs bg-amber-100 px-1 rounded">VITE_CLOUDKIT_CONTAINER_ID</code>,{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">VITE_CLOUDKIT_API_TOKEN</code>, and{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">VITE_CLOUDKIT_ENVIRONMENT</code> as
+                  runtime variables (Docker) or in <code className="text-xs">frontend/.env</code> for local dev.
+                  API token: CloudKit Dashboard → API Access → API Tokens.
+                </p>
               </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
+            </div>
+          ) : (
+            <div className="space-y-6 flex flex-col items-center justify-center">
+              {/* CloudKit appends Sign in with Apple button to apple-sign-in-button; we move it here */}
+              <CloudKitButtonContainer />
+            </div>
+          )}
 
           <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Use your iOS app credentials to sign in</p>
+            <p>Sign in with the same Apple ID used in the iOS app</p>
           </div>
         </div>
       </div>

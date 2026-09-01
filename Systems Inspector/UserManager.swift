@@ -15,9 +15,32 @@ class UserManager {
     static let shared = UserManager()
     
     private let coreDataManager: CoreDataManager
+    private var defaults: UserDefaults
+
+    private enum SessionKeys {
+        static let sessionUserId = "currentUserID"
+        static let lastUserId = "lastUserID"
+        static let legacyEmail = "currentUserEmail"
+        static let legacyLoggedIn = "isLoggedIn"
+    }
     
     private init() {
         self.coreDataManager = CoreDataManager.shared
+        self.defaults = .standard
+        migrateLegacySessionKeysIfNeeded()
+        sessionUserId = storedSessionUserId
+    }
+
+    private(set) var sessionUserId: UUID?
+
+    var lastUserId: UUID? {
+        storedUUID(for: SessionKeys.lastUserId)
+    }
+
+    func use(_ defaults: UserDefaults) {
+        self.defaults = defaults
+        migrateLegacySessionKeysIfNeeded()
+        sessionUserId = storedSessionUserId
     }
     
     // MARK: - User Creation
@@ -61,24 +84,18 @@ class UserManager {
             user.isActive = true
             
             user.email = email.lowercased()
-            
-            // NEW: Secure password hashing with salt
-            let (hash, salt) = hashPasswordSecure(password)
-            user.passwordHash = hash
-            user.passwordSalt = salt
+            applyPassword(password, to: user)
             
             try context.save()
             print("✅ Local user created successfully")
             
             // Log account creation
             AnalyticsManager.shared.logAccountCreated()
-            
-            UserDefaults.standard.set(user.email, forKey: "currentUserEmail")
-            UserDefaults.standard.set(user.id?.uuidString, forKey: "currentUserID")
-            UserDefaults.standard.set(true, forKey: "isLoggedIn")
-            
-            coreDataManager.currentUserID = user.id
-            
+
+            if let userId = user.id {
+                startSession(userId: userId)
+            }
+
             return true
             
         } catch {
@@ -133,21 +150,9 @@ class UserManager {
             
             var authenticationSuccessful = false
             var needsMigration = false
-            
-            // Check if user has new secure password hashing (has salt)
-            if let storedSalt = user.passwordSalt,
-               let storedHash = user.passwordHash {
-                // Use new secure verification
-                authenticationSuccessful = verifyPasswordSecure(password, hash: storedHash, salt: storedSalt)
-                print("✅ Using secure password verification")
-            } else {
-                // Legacy verification for old passwords (no salt)
-                let legacyHash = hashPasswordLegacy(password)
-                if user.passwordHash == legacyHash {
-                    authenticationSuccessful = true
-                    needsMigration = true
-                    print("⚠️ Using legacy password verification - will migrate to secure hashing")
-                }
+            if passwordMatches(password, user: user) {
+                authenticationSuccessful = true
+                needsMigration = user.passwordSalt == nil
             }
             
             if authenticationSuccessful {
@@ -157,9 +162,7 @@ class UserManager {
                 // Migrate to secure hashing if using legacy password
                 if needsMigration {
                     print("🔄 Migrating password to secure hashing...")
-                    let (newHash, newSalt) = hashPasswordSecure(password)
-                    user.passwordHash = newHash
-                    user.passwordSalt = newSalt
+                    applyPassword(password, to: user)
                     print("✅ Password migrated to secure hashing")
                 }
                 
@@ -167,13 +170,9 @@ class UserManager {
                 user.lastLoginDate = Date()
                 try context.save()
                 
-                // Set session information
-                UserDefaults.standard.set(user.email, forKey: "currentUserEmail")
-                UserDefaults.standard.set(user.id?.uuidString, forKey: "currentUserID")
-                UserDefaults.standard.set(true, forKey: "isLoggedIn")
-                
-                // Set current user ID in CoreDataManager
-                coreDataManager.currentUserID = user.id
+                if let userId = user.id {
+                    startSession(userId: userId)
+                }
                 
                 print("✅ Authentication successful")
                 
@@ -225,53 +224,105 @@ class UserManager {
             print("CoreDataManager: Cannot get current user - stores not loaded yet (UserManager.getCurrentUser)")
             return nil
         }
-        
-        guard let email = UserDefaults.standard.string(forKey: "currentUserEmail") else {
+        guard let id = sessionUserId ?? storedSessionUserId else {
             return nil
         }
-        
-        let context = CoreDataManager.shared.context
-        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
-        
-        do {
-            let users = try context.fetch(fetchRequest)
-            return users.first
-        } catch {
-            print("Error fetching current user: \(error.localizedDescription)")
-            return nil
-        }
+        return fetchActiveUser(id: id, in: CoreDataManager.shared.context)
     }
     
     // MARK: - Session Management
+    func startSession(userId: UUID) {
+        sessionUserId = userId
+        defaults.set(userId.uuidString, forKey: SessionKeys.sessionUserId)
+        defaults.set(userId.uuidString, forKey: SessionKeys.lastUserId)
+    }
+
+    func clearSession() {
+        sessionUserId = nil
+        defaults.removeObject(forKey: SessionKeys.sessionUserId)
+    }
+
+    func wipeSession() {
+        clearSession()
+        defaults.removeObject(forKey: SessionKeys.lastUserId)
+    }
+
     func isUserLoggedIn() -> Bool {
-        guard UserDefaults.standard.bool(forKey: "isLoggedIn"),
-              let _ = UserDefaults.standard.string(forKey: "currentUserEmail"),
-              let userIDString = UserDefaults.standard.string(forKey: "currentUserID"),
-              let userID = UUID(uuidString: userIDString) else {
+        migrateLegacySessionKeysIfNeeded()
+        guard let id = storedSessionUserId else {
+            sessionUserId = nil
             return false
         }
-        
-        // Ensure CoreDataManager has the current user ID
-        if coreDataManager.currentUserID != userID {
-            coreDataManager.currentUserID = userID
-        }
-        
+        sessionUserId = id
         return true
     }
     
     func logoutUser() async {
-        // Log logout event
         AnalyticsManager.shared.logLogout()
-        
-        UserDefaults.standard.removeObject(forKey: "currentUserEmail")
-        UserDefaults.standard.removeObject(forKey: "currentUserID")
-        UserDefaults.standard.set(false, forKey: "isLoggedIn")
-        
-        // Clear current user ID from CoreDataManager
-        coreDataManager.currentUserID = nil
-        
+        clearSession()
         print("User logged out successfully")
+    }
+
+    func completeBiometricLogin() -> Bool {
+        guard let lastId = lastUserId,
+              let user = fetchActiveUser(id: lastId, in: CoreDataManager.shared.context),
+              let userId = user.id else {
+            return false
+        }
+        startSession(userId: userId)
+        user.lastLoginDate = Date()
+        _ = CoreDataManager.shared.saveContext()
+        return true
+    }
+
+    func verifyCurrentUserPassword(_ password: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            coreDataManager.waitForStoreToLoad { [weak self] success in
+                guard let self, success,
+                      let user = self.getCurrentUser(),
+                      let email = user.email else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                continuation.resume(returning: self.verifyPassword(
+                    password,
+                    forEmail: email,
+                    in: CoreDataManager.shared.context
+                ))
+            }
+        }
+    }
+
+    private var storedSessionUserId: UUID? {
+        storedUUID(for: SessionKeys.sessionUserId)
+    }
+
+    private func storedUUID(for key: String) -> UUID? {
+        guard let raw = defaults.string(forKey: key) else { return nil }
+        return UUID(uuidString: raw)
+    }
+
+    private func migrateLegacySessionKeysIfNeeded() {
+        if defaults.string(forKey: SessionKeys.lastUserId) == nil,
+           let session = defaults.string(forKey: SessionKeys.sessionUserId) {
+            defaults.set(session, forKey: SessionKeys.lastUserId)
+        }
+        defaults.removeObject(forKey: SessionKeys.legacyLoggedIn)
+        defaults.removeObject(forKey: SessionKeys.legacyEmail)
+    }
+
+    private func fetchActiveUser(id: UUID, in context: NSManagedObjectContext) -> User? {
+        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "id == %@ AND isActive == YES", id as CVarArg)
+        fetchRequest.fetchLimit = 1
+        return try? context.fetch(fetchRequest).first
+    }
+
+    func verifyPassword(_ password: String, forEmail email: String, in context: NSManagedObjectContext) -> Bool {
+        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
+        guard let user = try? context.fetch(fetchRequest).first else { return false }
+        return passwordMatches(password, user: user)
     }
     
     // MARK: - Password Helpers
@@ -324,10 +375,23 @@ class UserManager {
         return (derivedKey.base64EncodedString(), saltData)
     }
     
-    /// Verify a password against a stored hash
-    private func verifyPasswordSecure(_ password: String, hash: String, salt: Data) -> Bool {
+    func applyPassword(_ password: String, to user: User) {
+        let (hash, salt) = hashPasswordSecure(password)
+        user.passwordHash = hash
+        user.passwordSalt = salt
+    }
+
+    func verifyPasswordSecure(_ password: String, hash: String, salt: Data) -> Bool {
         let computedHash = hashPasswordSecure(password, salt: salt)
         return computedHash.hash == hash
+    }
+
+    func passwordMatches(_ password: String, user: User) -> Bool {
+        if let storedSalt = user.passwordSalt,
+           let storedHash = user.passwordHash {
+            return verifyPasswordSecure(password, hash: storedHash, salt: storedSalt)
+        }
+        return user.passwordHash == hashPasswordLegacy(password)
     }
     
     // MARK: - User Management
@@ -381,10 +445,11 @@ class UserManager {
                 print("User \(email) deleted successfully")
                 
                 // If the deleted user was the one currently logged in, clear session
-                if UserDefaults.standard.string(forKey: "currentUserEmail")?.lowercased() == email.lowercased() {
-                    Task {
-                        await logoutUser()
-                    }
+                if sessionUserId == user.id {
+                    clearSession()
+                }
+                if lastUserId == user.id {
+                    defaults.removeObject(forKey: SessionKeys.lastUserId)
                 }
                 return true
             }
@@ -395,64 +460,83 @@ class UserManager {
         return false
     }
     
-    func changePassword(email: String, oldPassword: String, newPassword: String) async -> Bool {
-        return await withCheckedContinuation { continuation in
+    func replacePassword(email: String, newPassword: String) async -> Bool {
+        await withCheckedContinuation { continuation in
             coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self = self else {
+                guard let self else {
                     continuation.resume(returning: false)
                     return
                 }
-                
                 if !success {
                     continuation.resume(returning: false)
                     return
                 }
-                
-                let result = self.performPasswordChange(email: email, oldPassword: oldPassword, newPassword: newPassword)
-                continuation.resume(returning: result)
+                continuation.resume(returning: self.replacePassword(
+                    email: email,
+                    newPassword: newPassword,
+                    in: CoreDataManager.shared.context
+                ))
             }
         }
     }
-    
-    private func performPasswordChange(email: String, oldPassword: String, newPassword: String) -> Bool {
-        let context = CoreDataManager.shared.context
+
+    func replacePassword(email: String, newPassword: String, in context: NSManagedObjectContext) -> Bool {
         let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
-        
+        do {
+            guard let user = try context.fetch(fetchRequest).first else {
+                print("❌ User not found: \(email)")
+                return false
+            }
+            applyPassword(newPassword, to: user)
+            try context.save()
+            print("✅ Password replaced for \(email)")
+            return true
+        } catch {
+            print("❌ Error replacing password: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    func changePassword(email: String, oldPassword: String, newPassword: String) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            coreDataManager.waitForStoreToLoad { [weak self] success in
+                guard let self else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                if !success {
+                    continuation.resume(returning: false)
+                    return
+                }
+                continuation.resume(returning: self.changePassword(
+                    email: email,
+                    oldPassword: oldPassword,
+                    newPassword: newPassword,
+                    in: CoreDataManager.shared.context
+                ))
+            }
+        }
+    }
+
+    func changePassword(email: String, oldPassword: String, newPassword: String, in context: NSManagedObjectContext) -> Bool {
+        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
         do {
             let users = try context.fetch(fetchRequest)
             guard let user = users.first else {
                 print("❌ User not found: \(email)")
                 return false
             }
-            
-            var oldPasswordVerified = false
-            
-            // Verify old password (support both secure and legacy)
-            if let storedSalt = user.passwordSalt,
-               let storedHash = user.passwordHash {
-                // Use secure verification
-                oldPasswordVerified = verifyPasswordSecure(oldPassword, hash: storedHash, salt: storedSalt)
-            } else {
-                // Use legacy verification
-                let legacyHash = hashPasswordLegacy(oldPassword)
-                oldPasswordVerified = (user.passwordHash == legacyHash)
-            }
-            
+            let oldPasswordVerified = passwordMatches(oldPassword, user: user)
             guard oldPasswordVerified else {
                 print("❌ Old password did not match")
                 return false
             }
-            
-            // Set new password with secure hashing
-            let (newHash, newSalt) = hashPasswordSecure(newPassword)
-            user.passwordHash = newHash
-            user.passwordSalt = newSalt
-            
+            applyPassword(newPassword, to: user)
             try context.save()
             print("✅ Password changed successfully for \(email) using secure hashing")
             return true
-            
         } catch {
             print("❌ Error changing password: \(error.localizedDescription)")
             return false

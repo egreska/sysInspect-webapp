@@ -11,6 +11,7 @@ import UIKit
 
 // Define notification names for Core Data changes
 extension Notification.Name {
+    static let inspectionCompleted = Notification.Name("InspectionCompleted")
     static let coreDataDidSaveCustomer = Notification.Name("CoreDataDidSaveCustomer")
     static let coreDataDidDeleteCustomer = Notification.Name("CoreDataDidDeleteCustomer")
     static let coreDataDidSaveInspection = Notification.Name("CoreDataDidSaveInspection")
@@ -19,6 +20,8 @@ extension Notification.Name {
     static let coreDataDidDeleteInspectionItem = Notification.Name("CoreDataDidDeleteInspectionItem")
     static let cloudKitSyncStatusChanged = Notification.Name("CloudKitSyncStatusChanged")
     static let coreDataStoreDidLoad = Notification.Name("CoreDataStoreDidLoad")
+    /// Posted when saveContext() fails. userInfo["error"] contains the NSError.
+    static let coreDataSaveDidFail = Notification.Name("CoreDataSaveDidFail")
 }
 
 extension CoreDataManager {
@@ -32,25 +35,12 @@ extension CoreDataManager {
         
         // Perform migration on background context to avoid thread safety issues
         performBackgroundTask { backgroundContext in
-            let fetchRequest: NSFetchRequest<InspectionItem> = InspectionItem.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "photoURL != nil AND photoData == nil")
-            
             do {
-                let itemsWithLocalPhotos = try backgroundContext.fetch(fetchRequest)
+                let itemsWithLocalPhotos = try InspectionItem.itemsWithLocalPhotoFiles(in: backgroundContext)
                 print("🔄 Found \(itemsWithLocalPhotos.count) items with local photos to migrate")
                 
                 for item in itemsWithLocalPhotos {
-                    // Migrate on the background context
-                    guard item.photoData == nil,
-                          let photoPath = item.photoURL,
-                          FileManager.default.fileExists(atPath: photoPath),
-                          let image = UIImage(contentsOfFile: photoPath),
-                          let imageData = image.jpegData(compressionQuality: 0.8) else {
-                        continue
-                    }
-                    
-                    item.photoData = imageData
-                    print("🔄 Migrated local photo to CloudKit data (\(imageData.count) bytes)")
+                    item.migrateLocalPhotoToCloudKit()
                 }
                 
                 if !itemsWithLocalPhotos.isEmpty {
@@ -83,6 +73,17 @@ class CoreDataManager {
             NotificationCenter.default.post(name: .cloudKitSyncStatusChanged, object: cloudKitSyncStatus)
         }
     }
+
+    /// NSPersistentStoreRemoteChange and other callbacks can run off the main thread; UI observers must receive sync status on the main queue.
+    private func setCloudKitSyncStatus(_ status: CloudKitSyncStatus) {
+        if Thread.isMainThread {
+            cloudKitSyncStatus = status
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.cloudKitSyncStatus = status
+            }
+        }
+    }
     
     // Store loading status
     private var storesLoaded = false
@@ -106,11 +107,9 @@ class CoreDataManager {
         NotificationCenter.default.removeObserver(self)
     }
     
-    // Add a property to store the current authenticated user's ID
-    var currentUserID: UUID? {
-        didSet {
-            print("CoreDataManager: currentUserID set to \(String(describing: currentUserID))")
-        }
+    /// Current CloudKit sync status for display in Settings.
+    var currentCloudKitSyncStatus: CloudKitSyncStatus {
+        cloudKitSyncStatus
     }
     
     // MARK: - Core Data stack with CloudKit
@@ -125,6 +124,7 @@ class CoreDataManager {
         // Add lightweight migration options
         storeDescription?.setOption(true as NSNumber, forKey: NSMigratePersistentStoresAutomaticallyOption)
         storeDescription?.setOption(true as NSNumber, forKey: NSInferMappingModelAutomaticallyOption)
+        storeDescription?.shouldAddStoreAsynchronously = true
         
         container.loadPersistentStores { [weak self] (storeDescription, error) in
             DispatchQueue.main.async {
@@ -191,29 +191,36 @@ class CoreDataManager {
         class ObserverHolder {
             var observer: NSObjectProtocol?
             var timer: Timer?
+            var finished = false
+
+            func finish(_ ready: Bool, completion: @escaping (Bool) -> Void) {
+                guard !finished else { return }
+                finished = true
+                timer?.invalidate()
+                if let observer {
+                    NotificationCenter.default.removeObserver(observer)
+                }
+                completion(ready)
+            }
         }
         
         let holder = ObserverHolder()
         
         holder.timer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { _ in
-            if let observer = holder.observer {
-                notificationCenter.removeObserver(observer)
-            }
-            completion(false)
+            holder.finish(false, completion: completion)
         }
         
         holder.observer = notificationCenter.addObserver(forName: .coreDataStoreDidLoad, object: nil, queue: .main) { [weak self] _ in
-            holder.timer?.invalidate()
-            if let observer = holder.observer {
-                notificationCenter.removeObserver(observer)
-            }
-            completion(self?.isStoreLoaded == true)
+            holder.finish(self?.isStoreLoaded == true, completion: completion)
         }
-        
+
         // Trigger lazy loading if not already started
         _ = persistentContainer
+        if isStoreLoaded {
+            holder.finish(true, completion: completion)
+        }
     }
-    
+
     // MARK: - CloudKit Methods
     
     func checkCloudKitStatus() {
@@ -222,22 +229,22 @@ class CoreDataManager {
                 switch status {
                 case .available:
                     print("CloudKit: Account available")
-                    self?.cloudKitSyncStatus = .succeeded
+                    self?.setCloudKitSyncStatus(.succeeded)
                 case .noAccount:
                     print("CloudKit: No iCloud account")
-                    self?.cloudKitSyncStatus = .failed(CloudKitError.noAccount)
+                    self?.setCloudKitSyncStatus(.failed(CloudKitError.noAccount))
                 case .restricted:
                     print("CloudKit: Account restricted")
-                    self?.cloudKitSyncStatus = .failed(CloudKitError.accountRestricted)
+                    self?.setCloudKitSyncStatus(.failed(CloudKitError.accountRestricted))
                 case .couldNotDetermine:
                     print("CloudKit: Could not determine account status")
-                    self?.cloudKitSyncStatus = .failed(CloudKitError.couldNotDetermine)
+                    self?.setCloudKitSyncStatus(.failed(CloudKitError.couldNotDetermine))
                 case .temporarilyUnavailable:
                     print("CloudKit: Account temporarily unavailable")
-                    self?.cloudKitSyncStatus = .failed(CloudKitError.temporarilyUnavailable)
+                    self?.setCloudKitSyncStatus(.failed(CloudKitError.temporarilyUnavailable))
                 @unknown default:
                     print("CloudKit: Unknown account status")
-                    self?.cloudKitSyncStatus = .failed(CloudKitError.unknown)
+                    self?.setCloudKitSyncStatus(.failed(CloudKitError.unknown))
                 }
             }
         }
@@ -247,56 +254,58 @@ class CoreDataManager {
         switch error.code {
         case .networkUnavailable, .networkFailure:
             print("CloudKit: Network error - \(error.localizedDescription)")
-            cloudKitSyncStatus = .failed(error)
+            setCloudKitSyncStatus(.failed(error))
         case .quotaExceeded:
             print("CloudKit: Quota exceeded - \(error.localizedDescription)")
-            cloudKitSyncStatus = .failed(error)
+            setCloudKitSyncStatus(.failed(error))
         case .limitExceeded:
             print("CloudKit: Limit exceeded - \(error.localizedDescription)")
-            cloudKitSyncStatus = .failed(error)
+            setCloudKitSyncStatus(.failed(error))
         case .requestRateLimited:
             print("CloudKit: Request rate limited - \(error.localizedDescription)")
-            cloudKitSyncStatus = .failed(error)
+            setCloudKitSyncStatus(.failed(error))
         default:
             print("CloudKit: Other error - \(error.localizedDescription)")
-            cloudKitSyncStatus = .failed(error)
+            setCloudKitSyncStatus(.failed(error))
         }
     }
     
     @objc private func processCloudKitRemoteChanges(_ notification: Notification) {
         print("CloudKit: Processing remote changes")
-        cloudKitSyncStatus = .inProgress
-        
-        // Merge changes into view context
+        // Run entirely on the view context queue (main). Do not mix `DispatchQueue.main.async`
+        // (inProgress) with `context.perform` (succeeded): two main-queue blocks can reorder and
+        // fire duplicate UI updates during UIImageView/tint traversal (Crashlytics: objc_loadWeak).
         context.perform {
-            // The system automatically merges remote changes due to automaticallyMergesChangesFromParent = true
-            self.cloudKitSyncStatus = .succeeded
+            self.setCloudKitSyncStatus(.succeeded)
         }
     }
     
     // MARK: - Core Data operations
-    func saveContext() {
+    /// Saves the view context. Returns true if save succeeded or there were no changes; false on failure.
+    @discardableResult
+    func saveContext() -> Bool {
         guard isStoreLoaded else {
             print("CoreDataManager: Cannot save - stores not loaded yet")
             if let error = storeLoadingError {
                 print("CoreDataManager: Store loading error: \(error)")
             }
-            return
+            return false
         }
         
         guard context.hasChanges else {
-            return
+            return true
         }
         
         do {
-            cloudKitSyncStatus = .inProgress
+            setCloudKitSyncStatus(.inProgress)
             try context.save()
             print("CoreDataManager: Context saved successfully")
-            cloudKitSyncStatus = .succeeded
+            setCloudKitSyncStatus(.succeeded)
+            return true
         } catch {
             let nserror = error as NSError
             print("CoreDataManager: Save error \(nserror), \(nserror.userInfo)")
-            cloudKitSyncStatus = .failed(nserror)
+            setCloudKitSyncStatus(.failed(nserror))
             
             // Handle specific CloudKit errors
             if let ckError = nserror.userInfo[NSUnderlyingErrorKey] as? CKError {
@@ -314,22 +323,26 @@ class CoreDataManager {
             // Rollback changes on error to prevent corruption
             context.rollback()
             print("CoreDataManager: Rolled back changes due to save error")
+            NotificationCenter.default.post(name: .coreDataSaveDidFail, object: nil, userInfo: ["error": nserror])
             
             #if DEBUG
             // In debug mode, we want to know about errors but not crash the app
             assertionFailure("Core Data save failed: \(nserror), \(nserror.userInfo)")
             #endif
+            return false
         }
     }
     
-    func deleteObject(_ object: NSManagedObject) {
+    /// Deletes the object and saves. Returns true if delete and save succeeded; false otherwise.
+    @discardableResult
+    func deleteObject(_ object: NSManagedObject) -> Bool {
         guard isStoreLoaded else {
             print("CoreDataManager: Cannot delete - stores not loaded yet")
-            return
+            return false
         }
         
         context.delete(object)
-        saveContext()
+        return saveContext()
     }
     
     // MARK: - Observers
@@ -557,3 +570,14 @@ enum CloudKitError: Error, LocalizedError {
     }
 }
 
+// MARK: - CloudKit Sync Status Display
+extension CoreDataManager.CloudKitSyncStatus {
+    var displayString: String {
+        switch self {
+        case .notStarted: return "Not started"
+        case .inProgress: return "Syncing…"
+        case .succeeded: return "Active"
+        case .failed: return "Paused – tap to open Settings"
+        }
+    }
+}

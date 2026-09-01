@@ -1,32 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { inspectionsAPI, reportsAPI } from '../services/api';
-import { ArrowLeft, Download, AlertCircle, Wrench, Eye } from 'lucide-react';
+import { load } from '../services/appLoad';
+import { ArrowLeft, FileText, AlertCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import type { InspectionItem } from '../types';
 
 export default function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [downloading, setDownloading] = useState(false);
 
   const { data: inspection, isLoading } = useQuery({
     queryKey: ['inspection', id],
-    queryFn: () => inspectionsAPI.getById(id!),
+    queryFn: () => load.inspectionById(id!),
     enabled: !!id,
   });
-
-  const handleDownloadPDF = async () => {
-    if (!id) return;
-    
-    setDownloading(true);
-    try {
-      await reportsAPI.downloadPDF(id, `inspection-${inspection?.customer?.name || 'report'}.pdf`);
-    } catch (error) {
-      alert('Failed to download PDF');
-    } finally {
-      setDownloading(false);
-    }
-  };
 
   if (isLoading) {
     return <div className="text-center py-12">Loading inspection...</div>;
@@ -36,8 +22,8 @@ export default function InspectionDetailPage() {
     return <div className="text-center py-12">Inspection not found</div>;
   }
 
-  const criticalCount = inspection.items?.filter(i => i.importance === 'Critical').length || 0;
-  const repairCount = inspection.items?.filter(i => i.importance === 'Repair').length || 0;
+  const needsImmediateCount =
+    inspection.items?.filter(i => i.importance === 'Needs immediate attention').length || 0;
   const monitorCount = inspection.items?.filter(i => i.importance === 'Monitor').length || 0;
 
   return (
@@ -51,14 +37,13 @@ export default function InspectionDetailPage() {
           Back to Customer
         </Link>
         
-        <button
-          onClick={handleDownloadPDF}
-          disabled={downloading}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        <Link
+          to={`/inspections/${id}/report`}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <Download className="w-4 h-4 mr-2" />
-          {downloading ? 'Generating...' : 'Download PDF'}
-        </button>
+          <FileText className="w-4 h-4 mr-2" />
+          Preview Report
+        </Link>
       </div>
 
       {/* Inspection Header */}
@@ -94,23 +79,13 @@ export default function InspectionDetailPage() {
       )}
 
       {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center">
             <AlertCircle className="h-8 w-8 text-red-600 mr-3" />
             <div>
-              <p className="text-sm text-red-600 font-medium">Critical</p>
-              <p className="text-2xl font-bold text-red-900">{criticalCount}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <Wrench className="h-8 w-8 text-orange-600 mr-3" />
-            <div>
-              <p className="text-sm text-orange-600 font-medium">Repair Required</p>
-              <p className="text-2xl font-bold text-orange-900">{repairCount}</p>
+              <p className="text-sm text-red-600 font-medium">Needs immediate attention</p>
+              <p className="text-2xl font-bold text-red-900">{needsImmediateCount}</p>
             </div>
           </div>
         </div>
@@ -149,10 +124,8 @@ export default function InspectionDetailPage() {
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      item.importance === 'Critical'
+                      item.importance === 'Needs immediate attention'
                         ? 'bg-red-100 text-red-800'
-                        : item.importance === 'Repair'
-                        ? 'bg-orange-100 text-orange-800'
                         : 'bg-blue-100 text-blue-800'
                     }`}
                   >
@@ -164,12 +137,22 @@ export default function InspectionDetailPage() {
                   <p className="text-gray-700 mb-4 italic">{item.comments}</p>
                 )}
 
-                {item.photoData && (
-                  <img
-                    src={`data:image/jpeg;base64,${item.photoData}`}
-                    alt={`Inspection ${item.location}`}
-                    className="max-w-md rounded-lg border"
-                  />
+                {item.photoUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-3">
+                    {item.photoUrls.map((url, photoIndex) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer">
+                        <img
+                          src={url}
+                          alt={`Inspection ${item.location} photo ${photoIndex + 1}`}
+                          className="max-w-md rounded-lg border"
+                          crossOrigin="anonymous"
+                        />
+                      </a>
+                    ))}
+                    {item.photoUrls.length > 1 && (
+                      <span className="self-end text-sm text-gray-500">{item.photoUrls.length} photos</span>
+                    )}
+                  </div>
                 )}
 
                 {/* Damage Details */}
@@ -194,7 +177,7 @@ export default function InspectionDetailPage() {
   );
 }
 
-function getDamagesList(item: any): string[] {
+function getDamagesList(item: InspectionItem): string[] {
   const damages: string[] = [];
   
   if (item.uprightFrontDamage) damages.push('Upright Front Damage');
@@ -213,7 +196,7 @@ function getDamagesList(item: any): string[] {
   if (item.basePlateFloorDamaged) damages.push('Floor Damaged');
   if (item.anchorsDamaged) damages.push('Anchors Damaged');
   if (item.anchorsMissing) damages.push('Anchors Missing');
-  if (!item.anchorsTorqued) damages.push('Anchors Not Torqued');
+  if (item.anchors && !item.anchorsTorqued) damages.push('Anchors Not Torqued');
   if (item.wireDeckDamaged) damages.push('Wire Deck Damaged');
   if (item.wireDeckMissing) damages.push('Wire Deck Missing');
   if (item.wireDeckOutOfPosition) damages.push('Wire Deck Out of Position');

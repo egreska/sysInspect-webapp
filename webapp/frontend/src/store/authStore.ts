@@ -1,77 +1,90 @@
 import { create } from 'zustand';
 import type { User } from '../types';
-import { authAPI } from '../services/api';
+import {
+  setUpAuth,
+  whenUserSignsIn,
+  whenUserSignsOut,
+  triggerSignOut,
+  type CloudKitUserIdentity,
+} from '../services/cloudkit';
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  checkAuth: () => Promise<void>;
+  cloudKitReady: boolean;
+
+  initAuth: () => Promise<void>;
+  logout: () => Promise<void>;
+  checkAuthAfterPopup: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
-  isLoading: false,
-  error: null,
+function userIdentityToUser(identity: CloudKitUserIdentity | null): User | null {
+  if (!identity) return null;
+  const email = identity.lookupInfo?.emailAddress || '';
+  const userId = identity.userRecordName || '';
+  if (!userId) return null;
+  return { userId, email };
+}
 
-  login: async (email: string, password: string) => {
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  error: null,
+  cloudKitReady: false,
+
+  initAuth: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await authAPI.login({ email, password });
-      // Reject if we didn't get a real token (e.g. /api routed to frontend and returned HTML)
-      if (!response?.token || typeof response.token !== 'string') {
-        set({ error: 'Invalid response from server. Check that /api is routed to the backend.', isLoading: false });
-        throw new Error('Invalid login response');
-      }
-      localStorage.setItem('token', response.token);
+      const identity = await setUpAuth();
+      const user = userIdentityToUser(identity);
       set({
-        user: response.user ?? null,
-        token: response.token,
-        isAuthenticated: true,
+        user,
+        isAuthenticated: !!user,
         isLoading: false,
+        cloudKitReady: true,
         error: null,
       });
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Login failed';
-      set({ error: errorMessage, isLoading: false });
-      throw error;
+      // Listen for sign in/out (wrap in Promise.resolve - CloudKit may return non-standard thenable)
+      Promise.resolve(whenUserSignsIn()).then((id) => {
+        set({ user: userIdentityToUser(id), isAuthenticated: true });
+      }).catch(() => {});
+      Promise.resolve(whenUserSignsOut()).then(() => {
+        set({ user: null, isAuthenticated: false });
+      }).catch(() => {});
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'CloudKit auth failed';
+      set({
+        error: msg,
+        isLoading: false,
+        cloudKitReady: true,
+        isAuthenticated: false,
+        user: null,
+      });
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    set({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-    });
-  },
-
-  checkAuth: async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      set({ isAuthenticated: false });
-      return;
-    }
-
+  /** Workaround: Apple popup may close without resolving whenUserSignsIn. Re-check auth when window regains focus. */
+  checkAuthAfterPopup: async () => {
+    if (get().isAuthenticated) return;
     try {
-      const { valid, user } = await authAPI.verify();
-      if (valid) {
+      const identity = await setUpAuth();
+      const user = userIdentityToUser(identity);
+      if (user) {
         set({ user, isAuthenticated: true });
-      } else {
-        localStorage.removeItem('token');
-        set({ isAuthenticated: false, token: null });
       }
-    } catch (error) {
-      localStorage.removeItem('token');
-      set({ isAuthenticated: false, token: null });
+    } catch {
+      // Ignore - user may not have completed sign-in
     }
+  },
+
+  logout: async () => {
+    // Trigger CloudKit sign-out (clicks the hidden Apple button) so Sign in appears on login page
+    triggerSignOut();
+    set({ user: null, isAuthenticated: false });
+    // Brief delay so CloudKit can process sign-out before we navigate
+    await new Promise((r) => setTimeout(r, 100));
   },
 }));

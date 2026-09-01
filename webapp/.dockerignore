@@ -1,10 +1,15 @@
+# Unused/deprecated (backend no longer used)
+_unused/
+
 # Development files
-docker-compose.local.yml
 *.local.yml
 
 # Node modules (installed during build)
 node_modules
 */node_modules
+
+# Build output (always rebuilt in image)
+frontend/dist
 
 # Environment files
 .env
@@ -29,12 +34,6 @@ Thumbs.db
 # Documentation (not needed in image)
 docs/
 *.md
-!backend/README.md
-!frontend/README.md
-
-# Development only
-backend/Dockerfile.dev
-frontend/Dockerfile.dev
 
 # Logs
 logs

@@ -60,47 +60,51 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - Core Data
     
     private func setupCoreData() {
-        // This will ensure Core Data is loaded before we need it
-        _ = CoreDataManager.shared.context
-        
-        // Check CloudKit status
+        _ = CoreDataManager.shared.persistentContainer
         CoreDataManager.shared.checkCloudKitStatus()
-        
-        // NEW: Migrate existing local photos to CloudKit
-        DispatchQueue.global(qos: .background).async {
-            CoreDataManager.shared.migrateLocalPhotosToCloudKit()
+        NotificationCenter.default.addObserver(
+            forName: .coreDataStoreDidLoad,
+            object: nil,
+            queue: .main
+        ) { _ in
+            DispatchQueue.global(qos: .utility).async {
+                CoreDataManager.shared.migrateLocalPhotosToCloudKit()
+            }
         }
-        
-        print("Core Data with CloudKit initialized successfully")
     }
     
     // MARK: - UI Configuration
     
     private func configureAppearance() {
-        // Configure navigation bar appearance
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
-        appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
-        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithOpaqueBackground()
+        navAppearance.backgroundColor = AppTheme.primary
+        if let gradientImage = AppTheme.navigationBarGradientImage() {
+            navAppearance.backgroundImage = gradientImage
+        }
+        navAppearance.titleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
+        navAppearance.largeTitleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
         
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-        UINavigationBar.appearance().tintColor = .white
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
+        UINavigationBar.appearance().tintColor = AppTheme.primaryContrast
         
-        // Configure tab bar appearance
-        UITabBar.appearance().tintColor = UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
-        
-        // Configure table view appearance
-        UITableView.appearance().separatorColor = .lightGray
-        
-        // Configure button appearance
-        UIButton.appearance(whenContainedInInstancesOf: [UINavigationBar.self]).tintColor = .white
+        if #available(iOS 15.0, *) {
+            let tabAppearance = UITabBarAppearance()
+            tabAppearance.configureWithDefaultBackground()
+            tabAppearance.backgroundColor = .secondarySystemGroupedBackground
+            tabAppearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
+            UITabBar.appearance().standardAppearance = tabAppearance
+            UITabBar.appearance().scrollEdgeAppearance = tabAppearance
+        }
+        UITabBar.appearance().tintColor = AppTheme.primary
+        UITableView.appearance().separatorColor = AppTheme.separator
+        UIButton.appearance(whenContainedInInstancesOf: [UINavigationBar.self]).tintColor = AppTheme.primaryContrast
     }
     
     // MARK: - Main Tab Bar Setup
-    
+    /// Used only for iOS 12 and below (no scene delegate). On iOS 13+, SceneDelegate presents LoginViewController and MainTabBarController sets up its own tabs in setupViewControllers(). Keep this method in sync if changing tab structure.
     func createMainTabBarController() -> UITabBarController {
         let tabBarController = UITabBarController()
         

@@ -36,8 +36,8 @@ class LoginViewController: UIViewController {
     private let loginButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Log In", for: .normal)
-        button.backgroundColor = UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
-        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = AppTheme.primary
+        button.setTitleColor(AppTheme.primaryContrast, for: .normal)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -47,7 +47,7 @@ class LoginViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Log In with Face ID", for: .normal)
         button.backgroundColor = .systemGray
-        button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(AppTheme.primaryContrast, for: .normal)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -56,7 +56,7 @@ class LoginViewController: UIViewController {
     private let createAccountButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Create New Account", for: .normal)
-        button.setTitleColor(UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0), for: .normal)
+        button.setTitleColor(AppTheme.secondary, for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -64,8 +64,9 @@ class LoginViewController: UIViewController {
     private let forgotPasswordButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Forgot Password?", for: .normal)
-        button.setTitleColor(UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0), for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+        button.setTitleColor(AppTheme.secondary, for: .normal)
+        button.titleLabel?.font = .preferredFont(forTextStyle: .subheadline)
+        button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -81,7 +82,7 @@ class LoginViewController: UIViewController {
     // Overlay view to block interaction during login
     private let overlayView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        view.backgroundColor = AppTheme.overlay
         view.translatesAutoresizingMaskIntoConstraints = false
         view.isHidden = true
         return view
@@ -112,9 +113,7 @@ class LoginViewController: UIViewController {
         
         // Check if user is already logged in
         if UserManager.shared.isUserLoggedIn() {
-            Task {
-                await performSuccessfulLogin()
-            }
+            transitionToMainApp()
         }
     }
 
@@ -270,6 +269,13 @@ class LoginViewController: UIViewController {
         facialRecognitionButton.addTarget(self, action: #selector(facialRecognitionLoginTapped), for: .touchUpInside)
         forgotPasswordButton.addTarget(self, action: #selector(forgotPasswordTapped), for: .touchUpInside)
         createAccountButton.addTarget(self, action: #selector(createAccountTapped), for: .touchUpInside)
+        
+        loginButton.accessibilityLabel = "Log in"
+        loginButton.accessibilityHint = "Double tap to sign in with email and password"
+        createAccountButton.accessibilityLabel = "Create new account"
+        createAccountButton.accessibilityHint = "Double tap to create a new account"
+        forgotPasswordButton.accessibilityLabel = "Forgot password"
+        forgotPasswordButton.accessibilityHint = "Double tap to reset your password"
     }
     
     private func checkBiometricAvailability() {
@@ -280,22 +286,29 @@ class LoginViewController: UIViewController {
             switch context.biometryType {
             case .faceID:
                 facialRecognitionButton.setTitle("Log In with Face ID", for: .normal)
+                facialRecognitionButton.accessibilityLabel = "Log in with Face ID"
             case .touchID:
                 facialRecognitionButton.setTitle("Log In with Touch ID", for: .normal)
+                facialRecognitionButton.accessibilityLabel = "Log in with Touch ID"
             case .opticID:
                 if #available(iOS 17.0, *) {
                     facialRecognitionButton.setTitle("Log In with Optic ID", for: .normal)
+                    facialRecognitionButton.accessibilityLabel = "Log in with Optic ID"
                 } else {
                     facialRecognitionButton.setTitle("Biometric Login", for: .normal)
+                    facialRecognitionButton.accessibilityLabel = "Biometric login"
                 }
             case .none:
                 facialRecognitionButton.setTitle("Biometric Login", for: .normal)
+                facialRecognitionButton.accessibilityLabel = "Biometric login"
             @unknown default:
                 facialRecognitionButton.setTitle("Biometric Login", for: .normal)
+                facialRecognitionButton.accessibilityLabel = "Biometric login"
             }
             facialRecognitionButton.isEnabled = true
         } else {
             facialRecognitionButton.setTitle("Biometric Login Unavailable", for: .normal)
+            facialRecognitionButton.accessibilityLabel = "Biometric login unavailable"
             facialRecognitionButton.isEnabled = false
             facialRecognitionButton.backgroundColor = .systemGray2
         }
@@ -311,9 +324,14 @@ class LoginViewController: UIViewController {
             return
         }
         
-        guard let email = emailTextField.text, !email.isEmpty,
-              let password = passwordTextField.text, !password.isEmpty else {
+        let email = emailTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let password = passwordTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !email.isEmpty, !password.isEmpty else {
             showAlert(title: "Error", message: "Please enter both email and password.")
+            return
+        }
+        guard isValidEmail(email) else {
+            showAlert(title: "Invalid Email", message: "Please enter a valid email address.")
             return
         }
         
@@ -338,10 +356,12 @@ class LoginViewController: UIViewController {
                 self.isAuthenticating = false
                 
                 if authResult {
+                    HapticManager.success()
                     Task {
                         await self.performSuccessfulLogin()
                     }
                 } else {
+                    HapticManager.error()
                     self.showActivityIndicator(false)
                     
                     // Show remaining attempts
@@ -371,7 +391,7 @@ class LoginViewController: UIViewController {
             return
         }
         
-        guard let currentUser = UserManager.shared.getCurrentUser(), let userEmail = currentUser.email else {
+        guard UserManager.shared.lastUserId != nil else {
             showAlert(title: "No Account", message: "Please log in with email and password first to enable biometric authentication.")
             return
         }
@@ -382,7 +402,7 @@ class LoginViewController: UIViewController {
         var error: NSError?
 
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-            let reason = "Authenticate to log in to Rack Inspector"
+            let reason = "Authenticate to log in to Systems Inspector"
 
             context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { [weak self] success, authenticationError in
                 DispatchQueue.main.async {
@@ -391,19 +411,18 @@ class LoginViewController: UIViewController {
                     self.isAuthenticating = false
                     
                     if success {
+                        HapticManager.success()
                         print("🔵 LoginViewController: Biometric authentication successful")
-                        
-                        // Set user as logged in
-                        UserDefaults.standard.set(userEmail, forKey: "currentUserEmail")
-                        UserDefaults.standard.set(currentUser.id?.uuidString, forKey: "currentUserID")
-                        UserDefaults.standard.set(true, forKey: "isLoggedIn")
-                        CoreDataManager.shared.currentUserID = currentUser.id
-                        
-                        Task {
-                            await self.performSuccessfulLogin()
+                        if UserManager.shared.completeBiometricLogin() {
+                            Task {
+                                await self.performSuccessfulLogin()
+                            }
+                        } else {
+                            HapticManager.error()
+                            self.showAlert(title: "Authentication Failed", message: "No account is available for biometric login.")
                         }
-                        
                     } else {
+                        HapticManager.error()
                         let errorMessage = authenticationError?.localizedDescription ?? "Failed to authenticate with biometrics."
                         print("🔴 LoginViewController: Biometric authentication failed: \(errorMessage)")
                         self.showAlert(title: "Authentication Failed", message: errorMessage)
@@ -436,24 +455,53 @@ class LoginViewController: UIViewController {
         print("🔵 LoginViewController: Performing successful login")
         
         await MainActor.run {
-            self.showActivityIndicator(true)
-        }
-
-        // Small delay to ensure CloudKit is ready
-        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        await MainActor.run {
-            print("🔵 LoginViewController: Transitioning to MainTabBarController")
-            
-            if let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate,
-               let window = sceneDelegate.window {
-                let mainTabBarController = MainTabBarController()
-                window.rootViewController = mainTabBarController
-                UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil, completion: nil)
-                print("🔵 LoginViewController: Transitioned to MainTabBarController")
-            }
             self.showActivityIndicator(false)
+            self.showCheckmarkThenTransition()
         }
+    }
+    
+    private func showCheckmarkThenTransition() {
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            transitionToMainApp()
+            return
+        }
+        
+        let checkmarkView = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+        checkmarkView.tintColor = AppTheme.success
+        checkmarkView.contentMode = .scaleAspectFit
+        checkmarkView.translatesAutoresizingMaskIntoConstraints = false
+        checkmarkView.alpha = 0
+        checkmarkView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+        
+        view.addSubview(checkmarkView)
+        NSLayoutConstraint.activate([
+            checkmarkView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            checkmarkView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            checkmarkView.widthAnchor.constraint(equalToConstant: 80),
+            checkmarkView.heightAnchor.constraint(equalToConstant: 80)
+        ])
+        
+        UIView.animate(withDuration: 0.2, animations: {
+            checkmarkView.alpha = 1
+            checkmarkView.transform = .identity
+        }) { _ in
+            UIView.animate(withDuration: 0.25, delay: 0.25, options: [], animations: {
+                checkmarkView.alpha = 0
+            }) { _ in
+                checkmarkView.removeFromSuperview()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    self.transitionToMainApp()
+                }
+            }
+        }
+    }
+    
+    private func transitionToMainApp() {
+        guard let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate,
+              let window = sceneDelegate.window else { return }
+        let mainTabBarController = MainTabBarController()
+        window.rootViewController = mainTabBarController
+        UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil, completion: nil)
     }
 
     private func showAlert(title: String, message: String) {
@@ -469,6 +517,11 @@ class LoginViewController: UIViewController {
         } else {
             activityIndicator.stopAnimating()
         }
+    }
+    
+    private func isValidEmail(_ email: String) -> Bool {
+        let pattern = #"[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,64}"#
+        return email.range(of: pattern, options: .regularExpression) != nil
     }
     
     // MARK: - Cleanup

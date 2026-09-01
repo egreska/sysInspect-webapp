@@ -13,6 +13,7 @@
 		B7EFEAAB2DEB3B8B00B96635 /* CoreData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B71F75282DE115F9009F8964 /* CoreData.framework */; };
 		B7EFEAAE2DEB3B8D00B96635 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B71F752A2DE1161E009F8964 /* LocalAuthentication.framework */; };
 		B7EFEAB02DEB3B8E00B96635 /* MessageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B71F752C2DE1162F009F8964 /* MessageUI.framework */; };
+		B7EFEAB22DEB3B9000B96635 /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B71F752D2DE11640009F8964 /* QuickLook.framework */; };
 		E834F0691A855CA3511E3993 /* Pods_Systems_Inspector.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43F497614390ABE892D0F615 /* Pods_Systems_Inspector.framework */; };
 /* End PBXBuildFile section */
 
@@ -39,9 +40,11 @@
 		7D5E72438B1A3FB45917E85B /* libPods-Systems InspectorUITests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Systems InspectorUITests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A197175770396C4BE43106E7 /* Pods-Systems InspectorTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Systems InspectorTests.debug.xcconfig"; path = "Target Support Files/Pods-Systems InspectorTests/Pods-Systems InspectorTests.debug.xcconfig"; sourceTree = "<group>"; };
 		B6B2CFA3151B432891944190 /* Pods-Systems InspectorUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Systems InspectorUITests.release.xcconfig"; path = "Target Support Files/Pods-Systems InspectorUITests/Pods-Systems InspectorUITests.release.xcconfig"; sourceTree = "<group>"; };
+		B717BD9130472EC100B28AB3 /* Systems Inspector.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Systems Inspector.xcodeproj"; sourceTree = "<group>"; };
 		B71F75282DE115F9009F8964 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		B71F752A2DE1161E009F8964 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		B71F752C2DE1162F009F8964 /* MessageUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
+		B71F752D2DE11640009F8964 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
 		B7D8830B2F2E37DB00BB0867 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		B7F7D67D2DDE4DAE0058FD49 /* Systems Inspector.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Systems Inspector.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B7F7D68F2DDE4DAF0058FD49 /* Systems InspectorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Systems InspectorTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -78,6 +81,7 @@
 				B7EFEAAE2DEB3B8D00B96635 /* LocalAuthentication.framework in Frameworks */,
 				B7EFEAAB2DEB3B8B00B96635 /* CoreData.framework in Frameworks */,
 				B7EFEAB02DEB3B8E00B96635 /* MessageUI.framework in Frameworks */,
+				B7EFEAB22DEB3B9000B96635 /* QuickLook.framework in Frameworks */,
 				E834F0691A855CA3511E3993 /* Pods_Systems_Inspector.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -105,6 +109,7 @@
 			isa = PBXGroup;
 			children = (
 				B71F752C2DE1162F009F8964 /* MessageUI.framework */,
+				B71F752D2DE11640009F8964 /* QuickLook.framework */,
 				B71F752A2DE1161E009F8964 /* LocalAuthentication.framework */,
 				B71F75282DE115F9009F8964 /* CoreData.framework */,
 				43F497614390ABE892D0F615 /* Pods_Systems_Inspector.framework */,
@@ -114,9 +119,15 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		B7C3A1EE304737A600D44988 /* Products */ = {
+			isa = PBXGroup;
+			name = Products;
+			sourceTree = "<group>";
+		};
 		B7F7D6742DDE4DAE0058FD49 = {
 			isa = PBXGroup;
 			children = (
+				B717BD9130472EC100B28AB3 /* Systems Inspector.xcodeproj */,
 				B7F7D67F2DDE4DAE0058FD49 /* Systems Inspector */,
 				B7F7D6922DDE4DAF0058FD49 /* Systems InspectorTests */,
 				B7F7D69C2DDE4DAF0058FD49 /* Systems InspectorUITests */,
@@ -228,7 +239,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1630;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					B7F7D67C2DDE4DAE0058FD49 = {
 						CreatedOnToolsVersion = 16.3;
@@ -255,6 +266,12 @@
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B7F7D67E2DDE4DAE0058FD49 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = B7C3A1EE304737A600D44988 /* Products */;
+					ProjectRef = B717BD9130472EC100B28AB3 /* Systems Inspector.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				B7F7D67C2DDE4DAE0058FD49 /* Systems Inspector */,
@@ -295,15 +312,11 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
 				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
 				"${PODS_ROOT}/Manifest.lock",
 			);
 			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/Pods-Systems InspectorTests-checkManifestLockResult.txt",
 			);
@@ -317,15 +330,11 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
 				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
 				"${PODS_ROOT}/Manifest.lock",
 			);
 			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/Pods-Systems InspectorUITests-checkManifestLockResult.txt",
 			);
@@ -360,14 +369,13 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
 			);
 			name = "Firebase Crashlytics";
-			outputFileListPaths = (
-			);
 			outputPaths = (
 				"${DERIVED_FILE_DIR}/${ARCHS}.txt",
 			);
@@ -380,15 +388,11 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
 				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
 				"${PODS_ROOT}/Manifest.lock",
 			);
 			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/Pods-Systems Inspector-checkManifestLockResult.txt",
 			);
@@ -463,7 +467,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = NO;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -471,8 +475,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = U39R7KMC6J;
+				ENABLE_MODULE_VERIFIER = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -528,7 +533,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = NO;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -538,6 +543,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = U39R7KMC6J;
+				ENABLE_MODULE_VERIFIER = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -568,14 +574,16 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Systems Inspector/Systems Inspector.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 0.3;
+				CURRENT_PROJECT_VERSION = 0.6;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = U39R7KMC6J;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Systems-Inspector-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Pallet Rack Safety";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos during inspections.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos of inspections and site documents.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to securely log into the app.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -587,7 +595,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3;
+				MARKETING_VERSION = 0.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "EKGDev.Systems-Inspector";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -605,13 +613,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Systems Inspector/Systems Inspector.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 0.3.2;
+				CURRENT_PROJECT_VERSION = 0.6;
 				DEVELOPMENT_TEAM = U39R7KMC6J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Systems-Inspector-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Pallet Rack Safety";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos during inspections.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos of inspections and site documents.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to securely log into the app.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -623,7 +632,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3;
+				MARKETING_VERSION = 0.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "EKGDev.Systems-Inspector";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

@@ -28,12 +28,13 @@ export interface Inspection {
 
 export interface InspectionItem {
   id: string;
+  inspectionId: string;
   location: string;
   bayNumber?: string;
-  importance: 'Critical' | 'Repair' | 'Monitor';
+  importance: 'Needs immediate attention' | 'Monitor';
   comments?: string;
   sequenceNumber: number;
-  photoData?: string | null;
+  photoUrls: string[];
   
   // Upright damage
   upright: boolean;
@@ -85,14 +86,4 @@ export interface InspectionItem {
   aisleGuardingDamaged?: boolean;
   aisleGuardingMissing?: boolean;
   aisleGuardingRepairRequired?: boolean;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: User;
 }

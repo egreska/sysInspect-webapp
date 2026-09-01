@@ -10,6 +10,8 @@ import CoreData
 class CustomerDirectoryViewModel {
     // MARK: - Properties
     @Published var customers: [Customer] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
     private let coreDataManager = CoreDataManager.shared
     private var originalCustomers: [Customer] = []
     
@@ -24,81 +26,75 @@ class CustomerDirectoryViewModel {
     
     /// Fetch initial page of customers
     func fetchCustomers() {
+        errorMessage = nil
         currentPage = 0
         customers = []
         originalCustomers = []
         hasMoreCustomers = true
+        isLoading = true
         fetchNextPage()
+    }
+    
+    /// Clear any displayed error (e.g. when user dismisses alert).
+    func clearError() {
+        errorMessage = nil
     }
     
     /// Fetch next page of customers (for pagination)
     func fetchNextPage() {
-        guard !isLoadingMore, hasMoreCustomers else {
-            print("CustomerDirectoryViewModel: Already loading or no more customers")
-            return
-        }
-        
-        guard let currentUserID = coreDataManager.currentUserID else {
-            print("CustomerDirectoryViewModel: No current user ID. Not fetching customers.")
+        guard !isLoadingMore, hasMoreCustomers else { return }
+        guard let currentUserID = UserManager.shared.sessionUserId else {
             customers = []
             originalCustomers = []
             hasMoreCustomers = false
+            isLoading = false
             return
         }
-        
+        let isFirstPage = (currentPage == 0)
         isLoadingMore = true
-        
-        // Start performance timing
-        PerformanceOptimizer.shared.startTiming("fetchCustomers")
-        
-        // Use optimized fetch request
+        if isFirstPage { isLoading = true }
+        let page = currentPage
         let fetchRequest = PerformanceOptimizer.shared.optimizedCustomerFetchRequest(
             pageSize: pageSize,
-            offset: currentPage * pageSize,
+            offset: page * pageSize,
             userId: currentUserID
         )
-        
-        do {
-            // Get total count (only on first page)
-            if currentPage == 0 {
+        PerformanceOptimizer.shared.startTiming("fetchCustomers")
+        coreDataManager.performBackgroundTask { [weak self] context in
+            guard let self = self else { return }
+            do {
                 let countRequest = NSFetchRequest<Customer>(entityName: "Customer")
                 countRequest.predicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-                totalCustomerCount = try coreDataManager.context.count(for: countRequest)
-                print("📊 Total customers: \(totalCustomerCount)")
+                let total = try context.count(for: countRequest)
+                let result = try context.fetch(fetchRequest)
+                let objectIDs = result.map(\.objectID)
+                DispatchQueue.main.async {
+                    let mainContext = self.coreDataManager.context
+                    let newCustomers = objectIDs.compactMap { try? mainContext.existingObject(with: $0) as? Customer }
+                    if page == 0 {
+                        self.customers = newCustomers
+                        self.originalCustomers = newCustomers
+                        self.currentPage = 1
+                    } else {
+                        self.customers.append(contentsOf: newCustomers)
+                        self.originalCustomers.append(contentsOf: newCustomers)
+                        self.currentPage += 1
+                    }
+                    self.totalCustomerCount = total
+                    self.hasMoreCustomers = self.customers.count < total
+                    self.isLoadingMore = false
+                    self.isLoading = false
+                    PerformanceOptimizer.shared.endTiming("fetchCustomers")
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoadingMore = false
+                    self.isLoading = false
+                    self.hasMoreCustomers = false
+                    PerformanceOptimizer.shared.endTiming("fetchCustomers")
+                    self.errorMessage = "Could not load customers. Pull down to try again."
+                }
             }
-            
-            let newCustomers = try coreDataManager.context.fetch(fetchRequest)
-            print("📄 Fetched page \(currentPage + 1): \(newCustomers.count) customers")
-            
-            if currentPage == 0 {
-                customers = newCustomers
-                originalCustomers = newCustomers
-            } else {
-                customers.append(contentsOf: newCustomers)
-                originalCustomers.append(contentsOf: newCustomers)
-            }
-            
-            currentPage += 1
-            
-            // Check if there are more pages
-            hasMoreCustomers = customers.count < totalCustomerCount
-            isLoadingMore = false
-            
-            // End performance timing
-            PerformanceOptimizer.shared.endTiming("fetchCustomers")
-            
-            print("📊 Loaded \(customers.count)/\(totalCustomerCount) customers")
-            
-            // Clean up expired cache periodically
-            if currentPage % 5 == 0 {
-                PerformanceOptimizer.shared.clearExpiredCache()
-            }
-            
-        } catch {
-            print("Error fetching customers: \(error)")
-            isLoadingMore = false
-            hasMoreCustomers = false
-            PerformanceOptimizer.shared.endTiming("fetchCustomers")
         }
     }
     
@@ -110,8 +106,10 @@ class CustomerDirectoryViewModel {
     }
     
     func filterCustomers(searchText: String) {
-        guard let currentUserID = coreDataManager.currentUserID else {
+        guard let currentUserID = UserManager.shared.sessionUserId else {
+            #if DEBUG
             print("CustomerDirectoryViewModel: No current user ID. Cannot filter customers.")
+            #endif
             customers = []
             return
         }
@@ -138,132 +136,56 @@ class CustomerDirectoryViewModel {
         fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [searchPredicate, userPredicate])
 
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-        
-        // No pagination during search - load all matching results
         fetchRequest.fetchBatchSize = 50
+        fetchRequest.fetchLimit = 500  // Limit search results for performance
         
         do {
+            errorMessage = nil
             customers = try coreDataManager.context.fetch(fetchRequest)
+            #if DEBUG
             print("🔍 Search returned \(customers.count) results")
+            #endif
         } catch {
+            #if DEBUG
             print("Error filtering customers: \(error)")
+            #endif
+            errorMessage = "Search failed. Please try again."
         }
     }
     
-    func deleteCustomer(at index: Int) {
-        guard index < customers.count else { return }
-        
-        let customerToDelete = customers[index]
-        
-        // Use CoreDataManager.deleteObject for CloudKit sync
-        coreDataManager.deleteObject(customerToDelete)
-        
-        // The customer will be removed from `customers` array when fetchCustomers() is called again
-        // or implicitly if you have a sophisticated NSFetchedResultsController setup.
-        // For simplicity with @Published, we'll refetch.
-        fetchCustomers() // Refresh the list after deletion
-    }
-    
-    
-    
-    // MARK: - Customer Stats
-    func getTotalInspectionCount() -> Int {
-        var total = 0
-        // Ensure we only count inspections for customers owned by the current user
-        for customer in customers { // 'customers' array already filtered by user ID
-            total += customer.inspections?.count ?? 0
+    /// Deletes the customer at the given index. Calls completion with false if delete/save failed.
+    /// Removes customer from the displayed list without deleting from Core Data. Caller can show "Undo" and then either restoreCustomer or confirmDeleteCustomer.
+    func removeCustomerFromList(at index: Int) -> Customer? {
+        guard index < customers.count else { return nil }
+        let customer = customers.remove(at: index)
+        if let idx = originalCustomers.firstIndex(where: { $0.objectID == customer.objectID }) {
+            originalCustomers.remove(at: idx)
         }
-        return total
+        return customer
     }
     
-    func getRecentCustomers(limit: Int = 5) -> [Customer] {
-        guard let currentUserID = coreDataManager.currentUserID else { return [] }
-
-        let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        fetchRequest.predicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdDate", ascending: false)]
-        fetchRequest.fetchLimit = limit
-        
-        do {
-            return try coreDataManager.context.fetch(fetchRequest)
-        } catch {
-            print("Error fetching recent customers: \(error)")
-            return []
+    /// Re-inserts a customer that was removed via removeCustomerFromList (undo).
+    func restoreCustomer(_ customer: Customer) {
+        if !customers.contains(where: { $0.objectID == customer.objectID }) {
+            customers.append(customer)
+            originalCustomers.append(customer)
+            customers.sort { ($0.name ?? "") < ($1.name ?? "") }
+            originalCustomers.sort { ($0.name ?? "") < ($1.name ?? "") }
         }
     }
     
-    func getCustomersWithMostInspections(limit: Int = 5) -> [Customer] {
-        guard let currentUserID = coreDataManager.currentUserID else { return [] }
-
-        // First fetch all customers for the current user
-        let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        fetchRequest.predicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-        
-        do {
-            let allCustomers = try coreDataManager.context.fetch(fetchRequest)
-            
-            // Sort by inspection count (descending)
-            let sortedCustomers = allCustomers.sorted {
-                ($0.inspections?.count ?? 0) > ($1.inspections?.count ?? 0)
+    /// Permanently deletes the customer from Core Data.
+    func confirmDeleteCustomer(_ customer: Customer, completion: ((Bool) -> Void)? = nil) {
+        let success = coreDataManager.deleteObject(customer)
+        if success {
+            errorMessage = nil
+            if let idx = customers.firstIndex(where: { $0.objectID == customer.objectID }) {
+                customers.remove(at: idx)
             }
-            
-            // Return the top N customers
-            return Array(sortedCustomers.prefix(limit))
-        } catch {
-            print("Error fetching customers with most inspections: \(error)")
-            return []
+            if let idx = originalCustomers.firstIndex(where: { $0.objectID == customer.objectID }) {
+                originalCustomers.remove(at: idx)
+            }
         }
-    }
-    
-    // MARK: - Search and Filter Methods
-    func searchCustomersByName(_ name: String) -> [Customer] {
-        guard let currentUserID = coreDataManager.currentUserID else { return [] }
-
-        let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        let searchPredicate = NSPredicate(format: "name CONTAINS[cd] %@", name)
-        let userPredicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [searchPredicate, userPredicate])
-        
-        do {
-            return try coreDataManager.context.fetch(fetchRequest)
-        } catch {
-            print("Error searching customers by name: \(error)")
-            return []
-        }
-    }
-    
-    func searchCustomersByAddress(_ address: String) -> [Customer] {
-        guard let currentUserID = coreDataManager.currentUserID else { return [] }
-
-        let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        let searchPredicate = NSPredicate(format: "address CONTAINS[cd] %@", address)
-        let userPredicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [searchPredicate, userPredicate])
-        
-        do {
-            return try coreDataManager.context.fetch(fetchRequest)
-        } catch {
-            print("Error searching customers by address: \(error)")
-            return []
-        }
-    }
-    
-    func getCustomersWithInspectionsBetween(startDate: Date, endDate: Date) -> [Customer] {
-        guard let currentUserID = coreDataManager.currentUserID else { return [] }
-
-        let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        let datePredicate = NSPredicate(
-            format: "ANY inspections.date >= %@ AND ANY inspections.date <= %@",
-            startDate as NSDate, endDate as NSDate
-        )
-        let userPredicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, userPredicate])
-        
-        do {
-            return try coreDataManager.context.fetch(fetchRequest)
-        } catch {
-            print("Error fetching customers with inspections in date range: \(error)")
-            return []
-        }
+        completion?(success)
     }
 }

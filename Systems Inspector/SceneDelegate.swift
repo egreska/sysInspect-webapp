@@ -11,6 +11,16 @@ import CoreData
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    
+    /// When a customer deep link is received before login, store the customer ID and resolve after login.
+    private var pendingDeepLinkCustomerId: String?
+    
+    /// Consumes and returns the pending customer deep link ID, if any. Call after login when main tab bar is shown.
+    func consumePendingDeepLinkCustomerId() -> String? {
+        let id = pendingDeepLinkCustomerId
+        pendingDeepLinkCustomerId = nil
+        return id
+    }
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else {
@@ -25,14 +35,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         print("SceneDelegate: Window created: \(String(describing: window))")
         
-        // Go directly to LoginViewController - no custom splash screen needed
-        let loginVC = LoginViewController()
-        let navigationController = UINavigationController(rootViewController: loginVC)
-        
-        print("SceneDelegate: Created LoginViewController: \(loginVC)")
-        
-        window?.rootViewController = navigationController
-        print("SceneDelegate: Set root view controller to LoginViewController")
+        let splash = SplashViewController()
+        splash.onComplete = { [weak self] in
+            guard let self = self, let window = self.window else { return }
+            let root: UIViewController
+            if UserManager.shared.isUserLoggedIn() {
+                root = MainTabBarController()
+            } else {
+                root = UINavigationController(rootViewController: LoginViewController())
+            }
+            UIView.transition(with: window, duration: 0.25, options: .transitionCrossDissolve) {
+                window.rootViewController = root
+            }
+        }
+        window?.rootViewController = splash
+        print("SceneDelegate: Set root view controller to SplashViewController (0.3s brand moment)")
         
         window?.makeKeyAndVisible()
         print("SceneDelegate: Made window key and visible")
@@ -104,10 +121,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
     
     private func openCustomerDetails(with customerId: String) {
-        // Find the customer with the given ID and open their details
+        // If we're still on login, store for after login
+        guard window?.rootViewController is UITabBarController else {
+            pendingDeepLinkCustomerId = customerId
+            return
+        }
+        
+        performOpenCustomerDetails(customerId: customerId)
+    }
+    
+    private func performOpenCustomerDetails(customerId: String) {
         let context = CoreDataManager.shared.context
         
-        // Validate UUID format
         guard let uuid = UUID(uuidString: customerId) else {
             print("Invalid customer ID format: \(customerId)")
             return
@@ -123,56 +148,27 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 return
             }
             
-            // Safely navigate to customer details
             guard let tabBarController = window?.rootViewController as? UITabBarController,
                   let viewControllers = tabBarController.viewControllers,
                   viewControllers.count > 0,
                   let navigationController = viewControllers[0] as? UINavigationController else {
-                print("Unable to access navigation structure")
                 return
             }
             
-            // Set the tab to customers
             tabBarController.selectedIndex = 0
-            
-            // Push the customer details view controller
             let customerDetailsVC = CustomerDetailsViewController(customer: customer)
             navigationController.pushViewController(customerDetailsVC, animated: true)
-            
         } catch {
             print("Error finding customer: \(error)")
         }
     }
     
     private func showRestoreDataPrompt(for url: URL) {
-        // Show a prompt to restore data from the backup file
         let alert = UIAlertController(
             title: "Restore Backup",
-            message: "Would you like to restore your data from this backup? This will replace all current data.",
+            message: "Restore from backup is not available in this version.",
             preferredStyle: .alert
         )
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        alert.addAction(UIAlertAction(title: "Restore", style: .destructive) { [weak self] _ in
-            // Implement restore functionality
-            self?.restoreData(from: url)
-        })
-        
-        window?.rootViewController?.present(alert, animated: true)
-    }
-    
-    private func restoreData(from url: URL) {
-        // Implement restore functionality
-        // This is a placeholder - you'll need to implement the actual restoration logic
-        
-        // Show a "not implemented" message for now
-        let alert = UIAlertController(
-            title: "Not Implemented",
-            message: "Data restoration is not yet implemented.",
-            preferredStyle: .alert
-        )
-        
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         window?.rootViewController?.present(alert, animated: true)
     }

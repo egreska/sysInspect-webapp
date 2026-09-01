@@ -5,6 +5,8 @@
 //  Created by Eric Greska on 5/22/25.
 import UIKit
 import CoreData
+import QuickLook
+import MessageUI
 
 class ReportViewController: UIViewController {
     
@@ -12,16 +14,29 @@ class ReportViewController: UIViewController {
     private let reportGenerator = ReportGenerator()
     private var inspections: [Inspection] = []
     private var selectedInspection: Inspection?
+    /// Checkmarked inspections used for PDF and CSV export.
+    private var selectedInspections: [Inspection] = []
     private var selectedSortCriteria: SortCriteria = .entryOrder
     private var activeFilters: [Filter] = []
+    private var isLoadingInspections = false
+    private static let skeletonRowCount = 6
+    private lazy var progressOverlay = ReportProgressOverlay()
+    private var currentPreviewURL: URL?
     
     // MARK: - UI Components
     private let tableView = UITableView()
     private let filterButton = UIButton(type: .system)
     private let sortButton = UIButton(type: .system)
+    private let filterChipsScrollView = UIScrollView()
+    private let filterChipsStack = UIStackView()
+    private var filterChipsScrollViewHeightConstraint: NSLayoutConstraint?
     private let generatePDFButton = UIButton(type: .system)
     private let generateCSVButton = UIButton(type: .system)
-    private let noDataLabel = UILabel()
+    private lazy var reportsEmptyStateView: EmptyStateView = {
+        let view = EmptyStateView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
     
     // MARK: - Color and Style Constants
         private struct SortStyles {
@@ -36,57 +51,61 @@ class ReportViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        rebuildFilterChips()
         fetchInspections()
+        setupAccessibilityOrder()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        tabBarController?.viewControllers?[1].tabBarItem.badgeValue = nil
         fetchInspections()
+    }
+    
+    private func setupAccessibilityOrder() {
+        view.accessibilityElements = [filterButton, sortButton, filterChipsScrollView, tableView, generatePDFButton, generateCSVButton]
     }
     
     // MARK: - UI Setup
     private func setupUI() {
         title = "Generate Reports"
-        view.backgroundColor = .white
+        view.backgroundColor = AppTheme.background
         
-        // Setup TableView
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "InspectionCell")
+        tableView.register(SkeletonCell.self, forCellReuseIdentifier: SkeletonCell.reuseId)
         tableView.dataSource = self
         tableView.delegate = self
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.tableFooterView = UIView() // Remove empty cell separators
-        
-        // Setup No Data Label
-        noDataLabel.text = "No inspections available. Create an inspection first."
-        noDataLabel.textAlignment = .center
-        noDataLabel.textColor = .darkGray
-        noDataLabel.font = UIFont.systemFont(ofSize: 16)
-        noDataLabel.translatesAutoresizingMaskIntoConstraints = false
-        noDataLabel.isHidden = true
+        tableView.tableFooterView = UIView()
+        tableView.allowsMultipleSelection = true
         
         // Setup Filter Button
         filterButton.setTitle("Filter", for: .normal)
+        filterButton.accessibilityLabel = "Filter"
         filterButton.addTarget(self, action: #selector(showFilterOptions), for: .touchUpInside)
         filterButton.translatesAutoresizingMaskIntoConstraints = false
         
         // Setup Sort Button
-        sortButton.setTitle("Sort By: Entry Order", for: .normal) // CHANGED from "Sort By: Date"
+        sortButton.setTitle("Sort By: Entry Order", for: .normal)
+        sortButton.accessibilityLabel = "Sort by"
         sortButton.addTarget(self, action: #selector(showSortOptions), for: .touchUpInside)
         sortButton.translatesAutoresizingMaskIntoConstraints = false
         
         // Setup Generate PDF Button
         generatePDFButton.setTitle("Generate PDF Report", for: .normal)
+        generatePDFButton.accessibilityLabel = "Generate PDF report"
         generatePDFButton.addTarget(self, action: #selector(generatePDFReport), for: .touchUpInside)
-        generatePDFButton.backgroundColor = UIColor.systemBlue
-        generatePDFButton.setTitleColor(.white, for: .normal)
+        generatePDFButton.backgroundColor = AppTheme.primary
+        generatePDFButton.setTitleColor(AppTheme.primaryContrast, for: .normal)
         generatePDFButton.layer.cornerRadius = 8
         generatePDFButton.translatesAutoresizingMaskIntoConstraints = false
         
         // Setup Generate CSV Button
         generateCSVButton.setTitle("Generate CSV Report", for: .normal)
+        generateCSVButton.accessibilityLabel = "Generate CSV report"
         generateCSVButton.addTarget(self, action: #selector(generateCSVReport), for: .touchUpInside)
-        generateCSVButton.backgroundColor = UIColor.systemGreen
-        generateCSVButton.setTitleColor(.white, for: .normal)
+        generateCSVButton.backgroundColor = AppTheme.success
+        generateCSVButton.setTitleColor(AppTheme.primaryContrast, for: .normal)
         generateCSVButton.layer.cornerRadius = 8
         generateCSVButton.translatesAutoresizingMaskIntoConstraints = false
         
@@ -97,26 +116,45 @@ class ReportViewController: UIViewController {
         buttonStack.distribution = .fillEqually
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         
-        // Create filter/sort stack
         let filterSortStack = UIStackView(arrangedSubviews: [filterButton, sortButton])
         filterSortStack.axis = .horizontal
         filterSortStack.spacing = 10
         filterSortStack.distribution = .fillEqually
         filterSortStack.translatesAutoresizingMaskIntoConstraints = false
         
-        // Add subviews
+        filterChipsStack.axis = .horizontal
+        filterChipsStack.spacing = 8
+        filterChipsStack.alignment = .center
+        filterChipsStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        filterChipsScrollView.showsHorizontalScrollIndicator = false
+        filterChipsScrollView.translatesAutoresizingMaskIntoConstraints = false
+        filterChipsScrollView.addSubview(filterChipsStack)
+        
         view.addSubview(filterSortStack)
+        view.addSubview(filterChipsScrollView)
         view.addSubview(tableView)
         view.addSubview(buttonStack)
-        view.addSubview(noDataLabel)
         
-        // Layout Constraints
+        filterChipsScrollViewHeightConstraint = filterChipsScrollView.heightAnchor.constraint(equalToConstant: 0)
+        
         NSLayoutConstraint.activate([
             filterSortStack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             filterSortStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             filterSortStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             
-            tableView.topAnchor.constraint(equalTo: filterSortStack.bottomAnchor, constant: 8),
+            filterChipsScrollView.topAnchor.constraint(equalTo: filterSortStack.bottomAnchor, constant: 4),
+            filterChipsScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            filterChipsScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            filterChipsScrollViewHeightConstraint!,
+            
+            filterChipsStack.leadingAnchor.constraint(equalTo: filterChipsScrollView.contentLayoutGuide.leadingAnchor, constant: 16),
+            filterChipsStack.trailingAnchor.constraint(equalTo: filterChipsScrollView.contentLayoutGuide.trailingAnchor, constant: -16),
+            filterChipsStack.topAnchor.constraint(equalTo: filterChipsScrollView.contentLayoutGuide.topAnchor),
+            filterChipsStack.bottomAnchor.constraint(equalTo: filterChipsScrollView.contentLayoutGuide.bottomAnchor),
+            filterChipsStack.heightAnchor.constraint(equalToConstant: 36),
+            
+            tableView.topAnchor.constraint(equalTo: filterChipsScrollView.bottomAnchor, constant: 4),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: buttonStack.topAnchor, constant: -16),
@@ -124,32 +162,136 @@ class ReportViewController: UIViewController {
             buttonStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             buttonStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             buttonStack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            buttonStack.heightAnchor.constraint(equalToConstant: 50),
-            
-            noDataLabel.centerXAnchor.constraint(equalTo: tableView.centerXAnchor),
-            noDataLabel.centerYAnchor.constraint(equalTo: tableView.centerYAnchor)
+            buttonStack.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
     
-    // MARK: - Updated Data Fetching in ReportViewController.swift
+    private func updateEmptyState() {
+        guard inspections.isEmpty else {
+            tableView.backgroundView = nil
+            return
+        }
+        let container = UIView(frame: tableView.bounds)
+        container.backgroundColor = AppTheme.background
+        container.addSubview(reportsEmptyStateView)
+        NSLayoutConstraint.activate([
+            reportsEmptyStateView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            reportsEmptyStateView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            reportsEmptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
+            reportsEmptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32)
+        ])
+        if !activeFilters.isEmpty {
+            reportsEmptyStateView.configure(
+                symbolNames: ["line.3.horizontal.decrease.circle"],
+                symbolPointSize: 52,
+                title: "No inspections match your filters",
+                message: "Clear filters to see all inspections, or add a new inspection from a customer.",
+                buttonTitle: "Clear filters",
+                buttonAction: { [weak self] in self?.clearFiltersTapped() }
+            )
+        } else {
+            reportsEmptyStateView.configure(
+                symbolNames: ["doc.text", "clipboard"],
+                symbolPointSize: 48,
+                title: "No inspections yet",
+                message: "Add your first inspection from a customer to generate PDF or CSV reports.",
+                buttonTitle: nil,
+                buttonAction: nil
+            )
+        }
+        tableView.backgroundView = container
+    }
+    
+    @objc private func clearFiltersTapped() {
+        activeFilters = []
+        rebuildFilterChips()
+        fetchInspections()
+    }
+    
+    private func rebuildFilterChips() {
+        filterChipsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        let chipHeight: CGFloat = 32
+        for (index, filter) in activeFilters.enumerated() {
+            let label = displayLabel(for: filter)
+            let keyLabel = filter.key.prefix(1).uppercased() + filter.key.dropFirst()
+            let chip = FilterChipView(title: "\(keyLabel): \(label)")
+            chip.onRemove = { [weak self] in
+                self?.removeFilter(at: index)
+            }
+            chip.translatesAutoresizingMaskIntoConstraints = false
+            filterChipsStack.addArrangedSubview(chip)
+            chip.heightAnchor.constraint(equalToConstant: chipHeight).isActive = true
+        }
+        filterChipsScrollViewHeightConstraint?.constant = activeFilters.isEmpty ? 0 : 44
+        filterChipsScrollView.isHidden = activeFilters.isEmpty
+    }
+    
+    private func dateRangeDescriptionFromFilters() -> String? {
+        guard let dateFilter = activeFilters.first(where: { $0.key == "date" }) else { return nil }
+        return displayLabel(for: dateFilter)
+    }
+    
+    private func displayLabel(for filter: Filter) -> String {
+        switch filter.key {
+        case "date":
+            if filter.value == "7days" { return "Last 7 days" }
+            if filter.value == "30days" { return "Last 30 days" }
+            if filter.value.hasPrefix("custom:") {
+                let parts = filter.value.split(separator: ":")
+                if parts.count >= 3 { return "\(parts[1]) – \(parts[2])" }
+            }
+            return filter.value
+        default:
+            return filter.value
+        }
+    }
+    
+    private static func datePredicate(for value: String) -> NSPredicate? {
+        let cal = Calendar.current
+        let now = Date()
+        switch value {
+        case "7days":
+            guard let start = cal.date(byAdding: .day, value: -7, to: now) else { return nil }
+            return NSPredicate(format: "date >= %@ AND date <= %@", start as NSDate, now as NSDate)
+        case "30days":
+            guard let start = cal.date(byAdding: .day, value: -30, to: now) else { return nil }
+            return NSPredicate(format: "date >= %@ AND date <= %@", start as NSDate, now as NSDate)
+        case let v where v.hasPrefix("custom:"):
+            let parts = v.split(separator: ":")
+            guard parts.count >= 3 else { return nil }
+            guard let start = DateFormatters.date(from: String(parts[1]), using: DateFormatters.isoDate),
+                  let end = DateFormatters.date(from: String(parts[2]), using: DateFormatters.isoDate) else { return nil }
+            let endOfDay = cal.date(byAdding: .day, value: 1, to: end) ?? end
+            return NSPredicate(format: "date >= %@ AND date < %@", start as NSDate, endOfDay as NSDate)
+        default:
+            guard let date = DateFormatters.date(from: value, using: DateFormatters.isoDate) else { return nil }
+            return NSPredicate(format: "date >= %@ AND date < %@",
+                              date as NSDate,
+                              date.addingTimeInterval(86400) as NSDate)
+        }
+    }
+    
+    private func removeFilter(at index: Int) {
+        guard index < activeFilters.count else { return }
+        activeFilters.remove(at: index)
+        rebuildFilterChips()
+        fetchInspections()
+    }
+    
     private func fetchInspections() {
-        let fetchRequest: NSFetchRequest<Inspection> = Inspection.fetchRequest()
+        isLoadingInspections = true
+        tableView.reloadData()
         
-        // Apply active filters
+        let fetchRequest: NSFetchRequest<Inspection> = Inspection.fetchRequest()
         if !activeFilters.isEmpty {
             var predicates: [NSPredicate] = []
-            
             for filter in activeFilters {
                 switch filter.key {
                 case "customer":
                     predicates.append(NSPredicate(format: "customer.name CONTAINS[cd] %@", filter.value))
                 case "date":
-                    let dateFormatter = DateFormatter()
-                    dateFormatter.dateFormat = "yyyy-MM-dd"
-                    if let date = dateFormatter.date(from: filter.value) {
-                        predicates.append(NSPredicate(format: "date >= %@ AND date < %@",
-                                                    date as NSDate,
-                                                    date.addingTimeInterval(86400) as NSDate))
+                    if let pred = Self.datePredicate(for: filter.value) {
+                        predicates.append(pred)
                     }
                 case "inspector":
                     predicates.append(NSPredicate(format: "inspectorName CONTAINS[cd] %@", filter.value))
@@ -157,13 +299,10 @@ class ReportViewController: UIViewController {
                     break
                 }
             }
-            
             if !predicates.isEmpty {
                 fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
             }
         }
-        
-        // UPDATED: Apply inspection-level sorting only for inspection-level criteria
         switch selectedSortCriteria {
         case .date:
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
@@ -172,117 +311,47 @@ class ReportViewController: UIViewController {
         case .inspectionStatus:
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
         case .importance, .primaryLocation, .issue, .entryOrder:
-            // For item-level sorting, sort inspections by date to maintain some order
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
         }
         
-        do {
-            inspections = try CoreDataManager.shared.context.fetch(fetchRequest)
-            tableView.reloadData()
-            
-            // Show/hide no data label
-            noDataLabel.isHidden = !inspections.isEmpty
-            
-            // Clear selection if the selected inspection is no longer in the list
-            if let selectedInspection = selectedInspection, !inspections.contains(selectedInspection) {
-                self.selectedInspection = nil
-            }
-        } catch {
-            print("Error fetching inspections: \(error)")
-        }
-    }
-    
-    private func sortInspectionItems(for inspections: [Inspection]) -> [Inspection] {
-        // For item-level sorting, we need to sort the items within each inspection
-        guard case .importance = selectedSortCriteria,
-              case .primaryLocation = selectedSortCriteria,
-              case .issue = selectedSortCriteria,
-              case .entryOrder = selectedSortCriteria else {
-            return inspections // No item sorting needed
-        }
-        
-        for inspection in inspections {
-            if let items = inspection.items as? Set<InspectionItem> {
-                let sortedItems = sortItems(Array(items), criteria: selectedSortCriteria)
-                
-                // Clear existing items and re-add in sorted order
-                inspection.removeFromItems(NSSet(array: Array(items)))
-                for item in sortedItems {
-                    inspection.addToItems(item)
+        CoreDataManager.shared.performBackgroundTask { [weak self] context in
+            guard let self = self else { return }
+            do {
+                let result = try context.fetch(fetchRequest)
+                let objectIDs = result.map(\.objectID)
+                DispatchQueue.main.async {
+                    let mainContext = CoreDataManager.shared.context
+                    let mainResult = objectIDs.compactMap { try? mainContext.existingObject(with: $0) as? Inspection }
+                    self.isLoadingInspections = false
+                    self.inspections = mainResult
+                    let resultIDs = Set(objectIDs)
+                    if let selected = self.selectedInspection, !resultIDs.contains(selected.objectID) {
+                        self.selectedInspection = nil
+                    }
+                    self.selectedInspections.removeAll { !resultIDs.contains($0.objectID) }
+                    self.tableView.reloadSections(IndexSet(integer: 0), with: .automatic)
+                    self.restoreTableSelection()
+                    self.updateEmptyState()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoadingInspections = false
+                    self.tableView.reloadData()
+                    #if DEBUG
+                    print("Error fetching inspections: \(error)")
+                    #endif
                 }
             }
         }
-        
+    }
+    
+    /// Returns inspections without mutating Core Data. Item-level sort order is applied
+    /// at report generation time via ReportGenerator.getSortedInspectionItems.
+    private func sortInspectionItems(for inspections: [Inspection]) -> [Inspection] {
+        // Do not mutate inspection.items - ReportGenerator sorts in memory for display
         return inspections
     }
-    
-    private func sortItems(_ items: [InspectionItem], criteria: SortCriteria) -> [InspectionItem] {
-        switch criteria {
-        case .importance:
-            return items.sorted { item1, item2 in
-                let importance1 = item1.importance ?? "Monitor"
-                let importance2 = item2.importance ?? "Monitor"
-                
-                // "Needs immediate attention" comes first
-                if importance1 == "Needs immediate attention" && importance2 == "Monitor" {
-                    return true
-                } else if importance1 == "Monitor" && importance2 == "Needs immediate attention" {
-                    return false
-                }
-                
-                // If same importance, sort by primary location
-                return (item1.location ?? "") < (item2.location ?? "")
-            }
-            
-        case .primaryLocation:
-            return items.sorted { item1, item2 in
-                let location1 = item1.location ?? ""
-                let location2 = item2.location ?? ""
-                
-                if location1 == location2 {
-                    // If same primary location, sort by secondary location
-                    return (item1.bayNumber ?? "") < (item2.bayNumber ?? "")
-                }
-                
-                return location1 < location2
-            }
-            
-        case .issue:
-            return items.sorted { item1, item2 in
-                let issue1 = getPrimaryIssueType(for: item1)
-                let issue2 = getPrimaryIssueType(for: item2)
-                
-                if issue1 == issue2 {
-                    // If same issue type, sort by primary location
-                    return (item1.location ?? "") < (item2.location ?? "")
-                }
-                
-                return issue1 < issue2
-            }
-            
-        case .entryOrder:
-            // Sort by the order they were created (using ID as a proxy for creation order)
-            return items.sorted { item1, item2 in
-                return item1.id?.uuidString ?? "" < item2.id?.uuidString ?? ""
-            }
-            
-        default:
-            return items // No sorting for inspection-level criteria
-        }
-    }
 
-    private func getPrimaryIssueType(for item: InspectionItem) -> String {
-        // Return the first (primary) issue type found
-        if item.upright { return "Upright" }
-        if item.beam { return "Beam" }
-        if item.wireDeck { return "Wire Deck" }
-        if item.basePlate { return "Base Plate" }
-        if item.anchors { return "Anchors" }
-        if item.bracingDamage { return "Bracing Damage" }
-        if item.postProtector { return "Post Protector" }
-        if item.aisleGuarding { return "Aisle Guarding" }
-        return "No Issues"
-    }
     // MARK: - Button Actions
     @objc private func showFilterOptions() {
         let alertController = UIAlertController(title: "Filter Reports", message: "Select filter criteria", preferredStyle: .actionSheet)
@@ -299,8 +368,22 @@ class ReportViewController: UIViewController {
             self?.showInspectorFilterInput()
         })
         
+        let presets = FilterPresetStorage.load()
+        if !presets.isEmpty {
+            alertController.addAction(UIAlertAction(title: "Load preset…", style: .default) { [weak self] _ in
+                self?.showPresetPicker(presets: presets)
+            })
+        }
+        
+        if !activeFilters.isEmpty {
+            alertController.addAction(UIAlertAction(title: "Save this filter…", style: .default) { [weak self] _ in
+                self?.showSavePresetPrompt()
+            })
+        }
+        
         alertController.addAction(UIAlertAction(title: "Clear All Filters", style: .destructive) { [weak self] _ in
             self?.activeFilters = []
+            self?.rebuildFilterChips()
             self?.fetchInspections()
         })
         
@@ -418,60 +501,135 @@ class ReportViewController: UIViewController {
             fetchInspections()
         }
         
-        // MARK: - Updated Report Generation Methods
+        // MARK: - Report
+        private func reportSelection() -> ReportFromInspections.Selection {
+            ReportFromInspections.Selection(
+                list: inspections,
+                checked: selectedInspections,
+                highlighted: selectedInspection
+            )
+        }
+
         @objc private func generatePDFReport() {
-            guard let inspection = selectedInspection ?? inspections.first else {
+            let selection = reportSelection()
+            guard !ReportFromInspections.inspections(for: selection, format: .pdf).isEmpty else {
                 showAlert(message: "No inspection selected. Please select an inspection from the list.")
                 return
             }
-            
-            // UPDATED: Always pass the current sort criteria since entry order is now a valid item-level sort
-            let reportData = reportGenerator.generatePDFReport(inspection: inspection, sortCriteria: selectedSortCriteria)
-            saveAndShareReport(data: reportData, fileName: "RackInspector_Report.pdf", mimeType: "application/pdf")
+            guard ReportFromInspections.canJoin(selection) else {
+                showAlert(message: CombinedPDFJoinRule.mixedSelectionMessage)
+                return
+            }
+            let optionsVC = ReportPDFLayoutOptionsViewController()
+            optionsVC.delegate = self
+            let nav = UINavigationController(rootViewController: optionsVC)
+            if let sheet = nav.sheetPresentationController {
+                sheet.detents = [.medium(), .large()]
+                sheet.prefersGrabberVisible = true
+            }
+            present(nav, animated: true)
+        }
+
+        private func generatePDFWithLayoutOptions(_ layoutOptions: PDFLayoutOptions) {
+            let selection = reportSelection()
+            guard !ReportFromInspections.inspections(for: selection, format: .pdf).isEmpty else {
+                showAlert(message: "No inspection selected. Please select an inspection from the list.")
+                return
+            }
+            progressOverlay.show(in: self, message: "Generating PDF…")
+            generatePDFButton.isEnabled = false
+            generateCSVButton.isEnabled = false
+            ReportFromInspections.run(
+                selection,
+                format: .pdf,
+                sortCriteria: selectedSortCriteria,
+                layoutOptions: layoutOptions,
+                dateRangeDescription: dateRangeDescriptionFromFilters(),
+                header: ReportHeader.fromUserDefaults(),
+                generator: reportGenerator
+            ) { [weak self] result in
+                guard let self else { return }
+                self.finishExport(result: result) { package in
+                    self.saveAndSharePDFReport(package)
+                }
+            }
         }
 
         @objc private func generateCSVReport() {
-            guard !inspections.isEmpty else {
+            let selection = reportSelection()
+            let toExport = ReportFromInspections.inspections(for: selection, format: .csv)
+            guard !toExport.isEmpty else {
                 showAlert(message: "No inspections available to generate a report.")
                 return
             }
-            
-            // UPDATED: Always pass the current sort criteria
-            guard let reportPackage = reportGenerator.generateCSVReportWithPhotos(inspections: inspections, sortCriteria: selectedSortCriteria) else {
-                showAlert(message: "Failed to generate CSV report.")
-                return
+            progressOverlay.show(in: self, message: "Generating CSV…")
+            generatePDFButton.isEnabled = false
+            generateCSVButton.isEnabled = false
+            ReportFromInspections.run(
+                selection,
+                format: .csv,
+                sortCriteria: selectedSortCriteria,
+                dateRangeDescription: dateRangeDescriptionFromFilters(),
+                header: ReportHeader.fromUserDefaults(),
+                generator: reportGenerator
+            ) { [weak self] result in
+                guard let self else { return }
+                self.finishExport(result: result) { package in
+                    self.saveAndShareReportPackage(package, inspectionCount: toExport.count)
+                }
             }
-            
-            saveAndShareReportPackage(reportPackage)
         }
     
+    private func finishExport(result: ReportExportResult, onPackage: ((ReportPackage) -> Void)? = nil) {
+        progressOverlay.hide()
+        generatePDFButton.isEnabled = true
+        generateCSVButton.isEnabled = true
+        switch result {
+        case .package(let package):
+            onPackage?(package)
+        case .joinFailed:
+            showAlert(message: CombinedPDFJoinRule.mixedSelectionMessage)
+        case .empty, .failed:
+            showAlert(message: "We couldn't generate the report. Please try again.")
+        }
+    }
+    
     // New method to handle report package sharing
-    private func saveAndShareReportPackage(_ reportPackage: ReportPackage) {
+    private func saveAndShareReportPackage(_ reportPackage: ReportPackage, inspectionCount: Int = 0) {
         let tempDirectory = FileManager.default.temporaryDirectory
-        let csvURL = tempDirectory.appendingPathComponent(reportPackage.csvFileName)
+        let csvURL = tempDirectory.appendingPathComponent(reportPackage.fileName)
         
-        var itemsToShare: [URL] = []
+        var itemsToShare: [Any] = []
         
         do {
-            // Save CSV file
-            try reportPackage.csvData.write(to: csvURL)
+            try reportPackage.data.write(to: csvURL)
             itemsToShare.append(csvURL)
             
-            // Save zip file if photos exist
-            if let zipData = reportPackage.zipData {
-                let zipURL = tempDirectory.appendingPathComponent(reportPackage.zipFileName)
+            if let zipData = reportPackage.companionData, let zipName = reportPackage.companionFileName {
+                let zipURL = tempDirectory.appendingPathComponent(zipName)
                 try zipData.write(to: zipURL)
                 itemsToShare.append(zipURL)
             }
             
+            let summary = "Systems Inspector Report – \(inspectionCount) inspection\(inspectionCount == 1 ? "" : "s"). Generated \(DateFormatters.format(Date(), using: DateFormatters.mediumDateTime))."
+            itemsToShare.append(summary)
+            
+            let customActivities: [UIActivity] = [
+                CopySummaryActivity(),
+                EmailReportActivity(presenter: self)
+            ]
+            
+            HapticManager.success()
+            ToastView.show(on: self, message: "Report ready", duration: 2.0)
+            
             // Present activity controller with both files
             let activityViewController = UIActivityViewController(
                 activityItems: itemsToShare,
-                applicationActivities: nil
+                applicationActivities: customActivities
             )
             
             // Customize the activity controller
-            activityViewController.setValue("Rack Inspector Report", forKey: "subject")
+            activityViewController.setValue("Systems Inspector Report", forKey: "subject")
             
             // For iPad support
             if let popoverController = activityViewController.popoverPresentationController {
@@ -483,34 +641,28 @@ class ReportViewController: UIViewController {
             present(activityViewController, animated: true)
             
         } catch {
+            #if DEBUG
             print("Error saving report package: \(error)")
-            showAlert(message: "Failed to save the report files.")
+            #endif
+            showAlert(message: "We couldn't save the report files. Please try again.")
         }
     }
 
-    // Keep the existing saveAndShareReport method for PDF reports
-    private func saveAndShareReport(data: Data, fileName: String, mimeType: String) {
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-        
+    private func saveAndSharePDFReport(_ package: ReportPackage) {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(package.fileName)
         do {
-            try data.write(to: fileURL)
-            
-            let activityViewController = UIActivityViewController(
-                activityItems: [fileURL],
-                applicationActivities: nil
-            )
-            
-            // For iPad support
-            if let popoverController = activityViewController.popoverPresentationController {
-                popoverController.sourceView = view
-                popoverController.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
-                popoverController.permittedArrowDirections = []
-            }
-            
-            present(activityViewController, animated: true)
+            try package.data.write(to: fileURL)
+            currentPreviewURL = fileURL
+            HapticManager.success()
+            ToastView.show(on: self, message: "Report ready", duration: 2.0)
+            let ql = QLPreviewController()
+            ql.dataSource = self
+            present(ql, animated: true)
         } catch {
+            #if DEBUG
             print("Error saving report: \(error)")
-            showAlert(message: "Failed to save the report.")
+            #endif
+            showAlert(message: "We couldn't save the report. Please try again.")
         }
     }
 
@@ -536,6 +688,7 @@ class ReportViewController: UIViewController {
             
             // Add the new filter
             self?.activeFilters.append(Filter(key: "customer", value: customerName))
+            self?.rebuildFilterChips()
             self?.fetchInspections()
         })
         
@@ -545,44 +698,94 @@ class ReportViewController: UIViewController {
     }
     
     private func showDateFilterInput() {
-        let alertController = UIAlertController(title: "Filter by Date", message: "Enter date (YYYY-MM-DD)", preferredStyle: .alert)
+        let alert = UIAlertController(title: "Filter by Date", message: "Choose date range", preferredStyle: .actionSheet)
         
-        alertController.addTextField { textField in
-            textField.placeholder = "YYYY-MM-DD"
-            
-            // Pre-fill with existing filter value if any
-            if let existingFilter = self.activeFilters.first(where: { $0.key == "date" }) {
-                textField.text = existingFilter.value
-            } else {
-                // Default to today's date
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "yyyy-MM-dd"
-                textField.text = dateFormatter.string(from: Date())
+        alert.addAction(UIAlertAction(title: "Last 7 days", style: .default) { [weak self] _ in
+            self?.applyDateFilter(value: "7days")
+        })
+        alert.addAction(UIAlertAction(title: "Last 30 days", style: .default) { [weak self] _ in
+            self?.applyDateFilter(value: "30days")
+        })
+        alert.addAction(UIAlertAction(title: "Custom range…", style: .default) { [weak self] _ in
+            self?.showCustomDateRangeInput()
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = filterButton
+            popover.sourceRect = filterButton.bounds
+        }
+        present(alert, animated: true)
+    }
+    
+    private func showCustomDateRangeInput() {
+        let alert = UIAlertController(title: "Custom Date Range", message: "Enter start and end dates (YYYY-MM-DD)", preferredStyle: .alert)
+        
+        alert.addTextField { field in
+            field.placeholder = "Start date (YYYY-MM-DD)"
+            if let existing = self.activeFilters.first(where: { $0.key == "date" && $0.value.hasPrefix("custom:") }) {
+                let parts = existing.value.split(separator: ":")
+                if parts.count >= 2 { field.text = String(parts[1]) }
+            }
+        }
+        alert.addTextField { field in
+            field.placeholder = "End date (YYYY-MM-DD)"
+            if let existing = self.activeFilters.first(where: { $0.key == "date" && $0.value.hasPrefix("custom:") }) {
+                let parts = existing.value.split(separator: ":")
+                if parts.count >= 3 { field.text = String(parts[2]) }
             }
         }
         
-        alertController.addAction(UIAlertAction(title: "Apply Filter", style: .default) { [weak self] _ in
-            guard let dateString = alertController.textFields?.first?.text, !dateString.isEmpty else { return }
-            
-            // Validate date format
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            guard dateFormatter.date(from: dateString) != nil else {
-                self?.showAlert(message: "Invalid date format. Please use YYYY-MM-DD.")
+        alert.addAction(UIAlertAction(title: "Apply", style: .default) { [weak self] _ in
+            guard let startStr = alert.textFields?[0].text, !startStr.isEmpty,
+                  let endStr = alert.textFields?[1].text, !endStr.isEmpty else { return }
+            guard let start = DateFormatters.date(from: startStr, using: DateFormatters.isoDate),
+                  let end = DateFormatters.date(from: endStr, using: DateFormatters.isoDate),
+                  start <= end else {
+                self?.showAlert(message: "Invalid dates. Use YYYY-MM-DD and ensure start ≤ end.")
                 return
             }
-            
-            // Remove any existing date filters
-            self?.activeFilters.removeAll { $0.key == "date" }
-            
-            // Add the new filter
-            self?.activeFilters.append(Filter(key: "date", value: dateString))
-            self?.fetchInspections()
+            let value = "custom:\(startStr):\(endStr)"
+            self?.applyDateFilter(value: value)
         })
-        
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        present(alertController, animated: true)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+    }
+    
+    private func showSavePresetPrompt() {
+        let alert = UIAlertController(title: "Save Filter Preset", message: "Enter a name for this filter", preferredStyle: .alert)
+        alert.addTextField { $0.placeholder = "e.g. Monthly Acme" }
+        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+            guard let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else { return }
+            let preset = FilterPreset(name: name, filters: self?.activeFilters ?? [])
+            FilterPresetStorage.add(preset)
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+    }
+    
+    private func showPresetPicker(presets: [FilterPreset]) {
+        let alert = UIAlertController(title: "Load Preset", message: nil, preferredStyle: .actionSheet)
+        for preset in presets {
+            alert.addAction(UIAlertAction(title: preset.name, style: .default) { [weak self] _ in
+                self?.activeFilters = preset.filters
+                self?.rebuildFilterChips()
+                self?.fetchInspections()
+            })
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = filterButton
+            popover.sourceRect = filterButton.bounds
+        }
+        present(alert, animated: true)
+    }
+    
+    private func applyDateFilter(value: String) {
+        activeFilters.removeAll { $0.key == "date" }
+        activeFilters.append(Filter(key: "date", value: value))
+        rebuildFilterChips()
+        fetchInspections()
     }
     
     private func showInspectorFilterInput() {
@@ -605,6 +808,7 @@ class ReportViewController: UIViewController {
             
             // Add the new filter
             self?.activeFilters.append(Filter(key: "inspector", value: inspectorName))
+            self?.rebuildFilterChips()
             self?.fetchInspections()
         })
         
@@ -624,44 +828,87 @@ class ReportViewController: UIViewController {
 // MARK: - UITableViewDataSource
 extension ReportViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if isLoadingInspections && inspections.isEmpty { return Self.skeletonRowCount }
         return inspections.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        if isLoadingInspections && inspections.isEmpty {
+            return tableView.dequeueReusableCell(withIdentifier: SkeletonCell.reuseId, for: indexPath)
+        }
         let cell = tableView.dequeueReusableCell(withIdentifier: "InspectionCell", for: indexPath)
         let inspection = inspections[indexPath.row]
         
         // Configure cell
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .short
-        
-        let dateString = inspection.date.map { dateFormatter.string(from: $0) } ?? "Unknown Date"
+        let dateString = inspection.date.map { DateFormatters.format($0, using: DateFormatters.mediumDateTime) } ?? "Unknown Date"
                 cell.textLabel?.text = "Inspection on \(dateString)"
 
         let customerName = inspection.customer?.name ?? "Unknown Customer"
                 cell.detailTextLabel?.text = "Customer: \(customerName)"
         
-        // Show selection state
-        if let selectedInspection = selectedInspection, selectedInspection == inspection {
-            cell.accessoryType = .checkmark
-        } else {
-            cell.accessoryType = .none
-        }
+        cell.accessoryType = selectedInspections.contains(where: { $0.objectID == inspection.objectID }) ? .checkmark : .none
         
         return cell
     }
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return "Select an inspection to generate a report"
+        return "Select inspection(s) for reports"
     }
 }
 
 // MARK: - UITableViewDelegate
 extension ReportViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        selectedInspection = inspections[indexPath.row]
+        guard !isLoadingInspections, indexPath.row < inspections.count else {
+            tableView.deselectRow(at: indexPath, animated: true)
+            return
+        }
+        let inspection = inspections[indexPath.row]
+        selectedInspection = inspection
+        if let idx = selectedInspections.firstIndex(where: { $0.objectID == inspection.objectID }) {
+            selectedInspections.remove(at: idx)
+        } else {
+            selectedInspections.append(inspection)
+        }
+        reloadAndRestoreSelection()
+    }
+    
+    func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+        guard !isLoadingInspections, indexPath.row < inspections.count else { return }
+        let inspection = inspections[indexPath.row]
+        selectedInspections.removeAll { $0.objectID == inspection.objectID }
+        reloadAndRestoreSelection()
+    }
+    
+    private func reloadAndRestoreSelection() {
         tableView.reloadData()
-        tableView.deselectRow(at: indexPath, animated: true)
+        restoreTableSelection()
+    }
+    
+    private func restoreTableSelection() {
+        let selectedIDs = Set(selectedInspections.map(\.objectID))
+        for (index, inspection) in inspections.enumerated() {
+            if selectedIDs.contains(inspection.objectID) {
+                tableView.selectRow(at: IndexPath(row: index, section: 0), animated: false, scrollPosition: .none)
+            }
+        }
+    }
+}
+
+// MARK: - ReportPDFLayoutOptionsDelegate
+extension ReportViewController: ReportPDFLayoutOptionsDelegate {
+    func reportPDFLayoutOptions(_ controller: ReportPDFLayoutOptionsViewController, didChoose options: PDFLayoutOptions) {
+        generatePDFWithLayoutOptions(options)
+    }
+}
+
+// MARK: - QLPreviewControllerDataSource
+extension ReportViewController: QLPreviewControllerDataSource {
+    func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
+        currentPreviewURL != nil ? 1 : 0
+    }
+    
+    func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+        (currentPreviewURL ?? URL(fileURLWithPath: "")) as QLPreviewItem
     }
 }

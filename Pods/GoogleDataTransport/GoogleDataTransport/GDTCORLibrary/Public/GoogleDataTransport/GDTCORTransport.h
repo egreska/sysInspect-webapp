@@ -16,8 +16,8 @@
 
 #import <Foundation/Foundation.h>
 
-#import "GDTCOREventTransformer.h"
-#import "GDTCORTargets.h"
+#import <GoogleDataTransport/GDTCOREventTransformer.h>
+#import <GoogleDataTransport/GDTCORTargets.h>
 
 @class GDTCOREvent;
 @class GDTCORProductData;

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#import "GDTCORClock.h"
-#import "GDTCORConsoleLogger.h"
-#import "GDTCOREndpoints.h"
-#import "GDTCOREvent.h"
-#import "GDTCOREventDataObject.h"
-#import "GDTCOREventTransformer.h"
-#import "GDTCORProductData.h"
-#import "GDTCORTargets.h"
-#import "GDTCORTransport.h"
+#import <GoogleDataTransport/GDTCORClock.h>
+#import <GoogleDataTransport/GDTCORConsoleLogger.h>
+#import <GoogleDataTransport/GDTCOREndpoints.h>
+#import <GoogleDataTransport/GDTCOREvent.h>
+#import <GoogleDataTransport/GDTCOREventDataObject.h>
+#import <GoogleDataTransport/GDTCOREventTransformer.h>
+#import <GoogleDataTransport/GDTCORProductData.h>
+#import <GoogleDataTransport/GDTCORTargets.h>
+#import <GoogleDataTransport/GDTCORTransport.h>

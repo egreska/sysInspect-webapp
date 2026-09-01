@@ -17,7 +17,8 @@ class ForgotPasswordViewController: UIViewController {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "Reset Password"
-        label.font = UIFont.boldSystemFont(ofSize: 24)
+        label.font = .preferredFont(forTextStyle: .title1)
+        label.adjustsFontForContentSizeCategory = true
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -26,7 +27,8 @@ class ForgotPasswordViewController: UIViewController {
     private let instructionLabel: UILabel = {
         let label = UILabel()
         label.text = "Enter your email and answer your security question to reset your password."
-        label.font = UIFont.systemFont(ofSize: 14)
+        label.font = .preferredFont(forTextStyle: .subheadline)
+        label.adjustsFontForContentSizeCategory = true
         label.textAlignment = .center
         label.numberOfLines = 0
         label.textColor = .secondaryLabel
@@ -47,8 +49,8 @@ class ForgotPasswordViewController: UIViewController {
     private let checkEmailButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Check Email", for: .normal)
-        button.backgroundColor = UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
-        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = AppTheme.primary
+        button.setTitleColor(AppTheme.primaryContrast, for: .normal)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -59,7 +61,8 @@ class ForgotPasswordViewController: UIViewController {
     
     private let securityQuestionLabel: UILabel = {
         let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        label.font = .preferredFont(forTextStyle: .subheadline)
+        label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -95,7 +98,8 @@ class ForgotPasswordViewController: UIViewController {
     private let passwordRequirementsLabel: UILabel = {
         let label = UILabel()
         label.text = "Password must be at least 8 characters with uppercase, lowercase, and numbers."
-        label.font = UIFont.systemFont(ofSize: 12)
+        label.font = .preferredFont(forTextStyle: .caption1)
+        label.adjustsFontForContentSizeCategory = true
         label.textColor = .secondaryLabel
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -106,7 +110,7 @@ class ForgotPasswordViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Reset Password", for: .normal)
         button.backgroundColor = UIColor.systemGreen
-        button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(AppTheme.primaryContrast, for: .normal)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -115,7 +119,7 @@ class ForgotPasswordViewController: UIViewController {
     private let cancelButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Cancel", for: .normal)
-        button.setTitleColor(UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0), for: .normal)
+        button.setTitleColor(AppTheme.secondary, for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()

@@ -1,15 +1,19 @@
 # CloudKit Setup Guide - Systems Inspector
 
-Complete guide for configuring CloudKit Web Services API to access data from your iOS app.
+Complete guide for configuring CloudKit to access data from your iOS app.
 
 ## 🎯 Overview
 
-This guide covers:
-- CloudKit Web Services setup
-- Generating server-to-server keys
-- Configuring authentication
-- Testing the connection
-- Troubleshooting
+The web app uses **CloudKit JS** (browser SDK) with Sign in with Apple. The backend uses **CloudKit Web Services** (Server-to-Server) for optional server-side operations.
+
+### Web App (CloudKit JS)
+- **Auth:** Sign in with Apple (same Apple ID as iOS app)
+- **Data:** Fetched directly from CloudKit in the browser
+- **Config:** API Token from CloudKit Dashboard → API Access → API Tokens
+
+### Backend (optional)
+- **Auth:** Server-to-Server key
+- **Config:** See Step 3–5 below
 
 ---
 
@@ -30,7 +34,7 @@ This guide covers:
 2. Select your iOS project
 3. Go to **Signing & Capabilities** tab
 4. Find **iCloud** capability
-5. Note your Container ID (e.g., `iCloud.com.yourcompany.SystemsInspector`)
+5. Note your Container ID (e.g., `iCloud.SysInspectDB` – must match webapp)
 
 **Or from Apple Developer Portal:**
 
@@ -50,12 +54,24 @@ This guide covers:
 4. Verify your data is there:
    - Click **Data** in the sidebar
    - Select **Production** or **Development**
-   - Browse **Record Types**: Customer, Inspection, InspectionItem, User
+   - Browse **Record Types**: CD_Customer, CD_Inspection, CD_InspectionItem (Core Data + CloudKit prefix)
    - Verify you see your data
 
 ---
 
-### Step 3: Generate API Token
+### Step 3a: API Token (for Web App / CloudKit JS)
+
+1. In CloudKit Dashboard
+2. Go to **API Access** → **API Tokens**
+3. Click **"+"** to add a new token
+4. Enter a name (e.g., `Systems Inspector Web`)
+5. **Restrict Allowed Origins** to your real HTTPS site(s) (staging + production). The token is still present in the built JS, but origin limits reduce misuse from other sites.
+6. Copy the generated token
+7. Add to frontend `.env`: `VITE_CLOUDKIT_API_TOKEN=your-token`
+
+See [SECURITY.md](./SECURITY.md) for rotation, CSP, and incident response.
+
+### Step 3b: Server-to-Server Key (for Backend)
 
 1. In CloudKit Dashboard
 2. Go to **API Access** → **Server-to-Server Keys**
@@ -96,7 +112,7 @@ Create or update `backend/.env`:
 
 ```bash
 # CloudKit Configuration
-CLOUDKIT_CONTAINER_ID=iCloud.com.yourcompany.SystemsInspector
+CLOUDKIT_CONTAINER_ID=iCloud.SysInspectDB
 CLOUDKIT_ENVIRONMENT=production
 CLOUDKIT_SERVER_KEY_ID=a1b2c3d4e5f6g7h8i9j0
 CLOUDKIT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour\nPrivate\nKey\nHere\n-----END PRIVATE KEY-----"
@@ -110,81 +126,14 @@ CLOUDKIT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour\nPrivate\nKey\nHere\n---
 
 ### Step 6: Test CloudKit Connection
 
-Create a test script `backend/test-cloudkit.js`:
+This repository ships a **frontend-only** web app (CloudKit JS in the browser). There is no `backend/` test harness here.
 
-```javascript
-import cloudkit from './src/services/cloudkit.js';
-import dotenv from 'dotenv';
+**Verify connectivity:**
 
-dotenv.config();
+1. **CloudKit Dashboard** — Open [CloudKit Dashboard](https://icloud.developer.apple.com/) → your container → **Data** → confirm `CD_Customer` / `CD_Inspection` records in the correct environment (Development vs Production).
+2. **Web app** — Build with `VITE_CLOUDKIT_*` set, deploy or run `npm run dev`, sign in with Apple, and open Customers / Dashboard.
 
-async function testConnection() {
-  try {
-    console.log('Testing CloudKit connection...');
-    console.log('Container:', process.env.CLOUDKIT_CONTAINER_ID);
-    console.log('Environment:', process.env.CLOUDKIT_ENVIRONMENT);
-    
-    // Test fetching a user
-    const testEmail = 'your-test-email@example.com';
-    console.log(`\nFetching user: ${testEmail}`);
-    
-    const user = await cloudkit.fetchUserByEmail(testEmail);
-    
-    if (user) {
-      console.log('✅ SUCCESS! User found:', {
-        email: user.fields.email?.value,
-        userId: user.fields.userId?.value
-      });
-    } else {
-      console.log('⚠️  No user found with that email');
-    }
-    
-    // Test fetching customers
-    if (user) {
-      console.log('\nFetching customers...');
-      const customers = await cloudkit.fetchCustomers(user.fields.userId?.value);
-      console.log(`✅ Found ${customers.length} customers`);
-      
-      if (customers.length > 0) {
-        console.log('First customer:', {
-          name: customers[0].fields.name?.value,
-          id: customers[0].recordName
-        });
-      }
-    }
-    
-    console.log('\n✅ CloudKit connection successful!');
-  } catch (error) {
-    console.error('❌ CloudKit connection failed:', error.message);
-    process.exit(1);
-  }
-}
-
-testConnection();
-```
-
-Run the test:
-
-```bash
-cd backend
-node test-cloudkit.js
-```
-
-**Expected Output:**
-```
-Testing CloudKit connection...
-Container: iCloud.com.yourcompany.SystemsInspector
-Environment: production
-
-Fetching user: your-test-email@example.com
-✅ SUCCESS! User found: { email: 'your-test-email@example.com', userId: '...' }
-
-Fetching customers...
-✅ Found 5 customers
-First customer: { name: 'ACME Corp', id: '...' }
-
-✅ CloudKit connection successful!
-```
+If you add a separate Node or server-side CloudKit client later, use Apple’s server-to-server APIs and your own test script.
 
 ---
 
@@ -352,8 +301,8 @@ node -e "require('dotenv').config(); console.log('Container:', process.env.CLOUD
   fields: {
     location: { value: 'Warehouse A, Row 5' },
     bayNumber: { value: '10' },
-    importance: { value: 'Critical' },
-    comments: { value: 'Needs immediate attention' },
+    importance: { value: 'Needs immediate attention' },
+    comments: { value: 'Column dented at base' },
     sequenceNumber: { value: 1 },
     upright: { value: true },
     uprightFrontDamage: { value: true },

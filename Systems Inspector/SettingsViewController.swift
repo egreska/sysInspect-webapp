@@ -14,13 +14,16 @@ class SettingsViewController: UIViewController {
     // MARK: - Properties
     private let tableView = UITableView(frame: .zero, style: .grouped)
 
-    private let sections = ["Inspector Settings", "Application", "Data Management", "Performance"]
+    private let sections = ["Sync", "Inspector Settings", "Application", "Data Management", "Performance"]
     private let sectionItems: [[String]] = [
+        ["iCloud Sync"],
         ["Inspector Name", "Company Information"],
         ["About", "Privacy Policy", "Help & Support"],
         ["Backup Data", "Restore Data", "Clear All Data", "Logout"],
         ["Clear Image Cache", "Performance Stats", "Release Memory"]
     ]
+    
+    private var cloudKitSyncObserver: NSObjectProtocol?
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -29,6 +32,19 @@ class SettingsViewController: UIViewController {
         view.backgroundColor = .systemBackground
 
         setupTableView()
+        cloudKitSyncObserver = NotificationCenter.default.addObserver(
+            forName: .cloudKitSyncStatusChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.tableView.reloadData()
+        }
+    }
+    
+    deinit {
+        if let observer = cloudKitSyncObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: - Setup
@@ -49,6 +65,21 @@ class SettingsViewController: UIViewController {
     }
 
     // MARK: - Settings Actions
+    private func showSyncErrorAlert() {
+        let alert = UIAlertController(
+            title: "Sync Paused",
+            message: "Couldn't sync. Check iCloud in Settings to sign in or fix sync issues.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+    }
+    
     private func showInspectorNameSetting() {
         let alert = UIAlertController(
             title: "Inspector Name",
@@ -161,7 +192,7 @@ class SettingsViewController: UIViewController {
 
     private func showAboutScreen() {
         let aboutVC = UIViewController()
-        aboutVC.title = "About Rack Inspector"
+        aboutVC.title = "About Systems Inspector"
         aboutVC.view.backgroundColor = .systemBackground
 
         let scrollView = UIScrollView()
@@ -181,7 +212,8 @@ class SettingsViewController: UIViewController {
         // App title label
         let titleLabel = UILabel()
         titleLabel.text = "Systems Inspector"
-        titleLabel.font = UIFont.boldSystemFont(ofSize: 24)
+        titleLabel.font = .preferredFont(forTextStyle: .title1)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(titleLabel)
@@ -189,7 +221,8 @@ class SettingsViewController: UIViewController {
         // Version label
         let versionLabel = UILabel()
         versionLabel.text = "Version 1.0"
-        versionLabel.font = UIFont.systemFont(ofSize: 16)
+        versionLabel.font = .preferredFont(forTextStyle: .body)
+        versionLabel.adjustsFontForContentSizeCategory = true
         versionLabel.textAlignment = .center
         versionLabel.textColor = .secondaryLabel
         versionLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -260,13 +293,13 @@ class SettingsViewController: UIViewController {
         let privacyTextView = UITextView()
         privacyTextView.isEditable = false
         privacyTextView.text = """
-        Privacy Policy for Rack Inspector
+        Privacy Policy for Systems Inspector
 
         Last Updated: May 22, 2025
 
         1. Introduction
 
-        This Privacy Policy describes how Rack Inspector collects, uses, and discloses your information when you use our mobile application.
+        This Privacy Policy describes how Systems Inspector collects, uses, and discloses your information when you use our mobile application.
 
         2. Information We Collect
 
@@ -298,7 +331,8 @@ class SettingsViewController: UIViewController {
 
         Email: support@rackinspector.com
         """
-        privacyTextView.font = UIFont.systemFont(ofSize: 16)
+        privacyTextView.font = .preferredFont(forTextStyle: .body)
+        privacyTextView.adjustsFontForContentSizeCategory = true
         privacyTextView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(privacyTextView)
 
@@ -331,7 +365,7 @@ class SettingsViewController: UIViewController {
             let mail = MFMailComposeViewController()
             mail.mailComposeDelegate = self
             mail.setToRecipients(["support@rackinspector.com"])
-            mail.setSubject("Rack Inspector Support Request")
+            mail.setSubject("Systems Inspector Support Request")
             mail.setMessageBody("Please describe your issue or question:", isHTML: false)
             present(mail, animated: true)
         } else {
@@ -351,7 +385,7 @@ class SettingsViewController: UIViewController {
             let mail = MFMailComposeViewController()
             mail.mailComposeDelegate = self
             mail.setToRecipients(["bugs@rackinspector.com"])
-            mail.setSubject("Rack Inspector Bug Report")
+            mail.setSubject("Systems Inspector Bug Report")
 
             // Include device info and app version
             let deviceInfo = """
@@ -387,19 +421,10 @@ class SettingsViewController: UIViewController {
     }
 
     private func restoreData() {
-        let alert = UIAlertController(
+        showAlert(
             title: "Restore Data",
-            message: "To restore from a backup, you'll need to select a backup file. This will replace all current data and cannot be undone.",
-            preferredStyle: .alert
+            message: "Restore from backup is not available in this version."
         )
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        alert.addAction(UIAlertAction(title: "Select Backup File", style: .default) { [weak self] _ in
-            self?.showDocumentPicker()
-        })
-
-        present(alert, animated: true)
     }
 
     private func showDocumentPicker() {
@@ -571,20 +596,12 @@ class SettingsViewController: UIViewController {
                 return
             }
             
-            // Get current user email
-            guard let email = UserDefaults.standard.string(forKey: "currentUserEmail") else {
-                self?.showAlert(title: "Error", message: "No user is currently logged in.")
-                return
-            }
-            
-            // Verify password
             Task {
-                let isValid = await UserManager.shared.authenticateUser(email: email, password: password)
+                let isValid = await UserManager.shared.verifyCurrentUserPassword(password)
                 
                 await MainActor.run {
                     if isValid {
                         print("✅ Password verified for data deletion")
-                        // Password verified, proceed to final confirmation
                         self?.confirmClearAllData()
                     } else {
                         print("❌ Invalid password for data deletion")
@@ -623,6 +640,8 @@ class SettingsViewController: UIViewController {
             }
 
             print("🗑️ Performing data deletion...")
+
+            UserManager.shared.wipeSession()
             
             // Perform the actual data deletion
             #if DEBUG
@@ -676,10 +695,12 @@ extension SettingsViewController: UITableViewDataSource {
         cell.accessoryType = .disclosureIndicator
 
         // Add detail text for certain settings
-        if settingName == "Inspector Name" {
+        if settingName == "iCloud Sync" {
+            cell.detailTextLabel?.text = CoreDataManager.shared.currentCloudKitSyncStatus.displayString
+            cell.accessoryType = .none
+        } else if settingName == "Inspector Name" {
             let inspectorName = UserDefaults.standard.string(forKey: "inspectorName") ?? "Not Set"
             cell.detailTextLabel?.text = inspectorName
-            // FIXED: Show the actual saved name, not just "Not Set"
         } else if settingName == "Company Information" {
             cell.detailTextLabel?.text = UserDefaults.standard.string(forKey: "companyName") ?? "Not Set"
         }
@@ -703,6 +724,10 @@ extension SettingsViewController: UITableViewDataSource {
             let memory = PerformanceOptimizer.shared.getMemoryUsage()
             cell.detailTextLabel?.text = "\(String(format: "%.1f", memory.used))MB"
         }
+        
+        if settingName != "iCloud Sync" {
+            cell.accessoryType = .disclosureIndicator
+        }
 
         return cell
     }
@@ -720,6 +745,11 @@ extension SettingsViewController: UITableViewDelegate {
         let settingName = sectionItems[indexPath.section][indexPath.row]
 
         switch settingName {
+        case "iCloud Sync":
+            if case .failed = CoreDataManager.shared.currentCloudKitSyncStatus {
+                showSyncErrorAlert()
+            }
+            break
         case "Inspector Name":
             showInspectorNameSetting()
         case "Company Information":
@@ -754,22 +784,10 @@ extension SettingsViewController: UITableViewDelegate {
 extension SettingsViewController: UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard urls.first != nil else { return }
-
-        // Attempt to restore from the selected backup file
-        let alert = UIAlertController(
-            title: "Confirm Restore",
-            message: "Are you sure you want to restore from this backup? All current data will be replaced.",
-            preferredStyle: .alert
+        showAlert(
+            title: "Restore Data",
+            message: "Restore from backup is not available in this version."
         )
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        alert.addAction(UIAlertAction(title: "Restore", style: .destructive) { [weak self] _ in
-            // Placeholder for restore functionality
-            self?.showAlert(title: "Not Implemented", message: "Data restoration is not yet implemented.")
-        })
-
-        present(alert, animated: true)
     }
 }
 

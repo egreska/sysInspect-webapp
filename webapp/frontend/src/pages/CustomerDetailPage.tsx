@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { customersAPI } from '../services/api';
+import { load } from '../services/appLoad';
 import { ArrowLeft, MapPin, Phone, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -9,13 +9,13 @@ export default function CustomerDetailPage() {
   
   const { data: customer, isLoading: loadingCustomer } = useQuery({
     queryKey: ['customer', id],
-    queryFn: () => customersAPI.getById(id!),
+    queryFn: () => load.customerById(id!),
     enabled: !!id,
   });
 
   const { data: inspectionsData, isLoading: loadingInspections } = useQuery({
     queryKey: ['customer-inspections', id],
-    queryFn: () => customersAPI.getInspections(id!),
+    queryFn: () => load.inspectionsForCustomer(id!),
     enabled: !!id,
   });
   // Ensure we always have an array (handles wrong routing / API returning HTML)

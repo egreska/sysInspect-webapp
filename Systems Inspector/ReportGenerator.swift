@@ -6,21 +6,110 @@
 //
 import UIKit
 import PDFKit
-import CoreData
-import Compression // This import is likely only needed if you're using ZIPFoundation or similar, which was noted as a placeholder. You might be able to remove it if not actively zipping.
+
+// MARK: - PDF Layout Options
+/// Options for PDF report table: include Secondary Location column and density preset.
+public struct PDFLayoutOptions {
+    public var includeSecondaryLocation: Bool
+    /// Compact / Standard / Wide density for content-driven column sizing.
+    public var preset: ColumnPreset
+    
+    public static let tableContentWidth: CGFloat = 11.0 * 72.0 - 36.0 * 2  // 720
+    
+    public enum ColumnPreset: String, CaseIterable {
+        case compact = "Compact"
+        case standard = "Standard"
+        case wide = "Wide"
+    }
+    
+    public init(includeSecondaryLocation: Bool = false, preset: ColumnPreset = .standard) {
+        self.includeSecondaryLocation = includeSecondaryLocation
+        self.preset = preset
+    }
+}
 
 // MARK: - Public Report Data Structure (Move this outside the class)
-public struct ReportPackage {
-    public let csvData: Data
-    public let zipData: Data?
-    public let csvFileName: String
-    public let zipFileName: String
-    
-    public init(csvData: Data, zipData: Data?, csvFileName: String, zipFileName: String) {
-        self.csvData = csvData
-        self.zipData = zipData
-        self.csvFileName = csvFileName
-        self.zipFileName = zipFileName
+public struct ReportHeader {
+    public var companyName: String
+    public var companyAddress: String
+    public var companyPhone: String
+    public var companyCity: String
+    public var companyState: String
+    public var companyZipCode: String
+    public var inspectorName: String
+
+    public init(
+        companyName: String = "",
+        companyAddress: String = "",
+        companyPhone: String = "",
+        companyCity: String = "",
+        companyState: String = "",
+        companyZipCode: String = "",
+        inspectorName: String = "Inspector Name"
+    ) {
+        self.companyName = companyName
+        self.companyAddress = companyAddress
+        self.companyPhone = companyPhone
+        self.companyCity = companyCity
+        self.companyState = companyState
+        self.companyZipCode = companyZipCode
+        self.inspectorName = inspectorName
+    }
+
+    public static func fromUserDefaults(_ defaults: UserDefaults = .standard) -> ReportHeader {
+        ReportHeader(
+            companyName: defaults.string(forKey: "companyName") ?? "",
+            companyAddress: defaults.string(forKey: "companyAddress") ?? "",
+            companyPhone: defaults.string(forKey: "companyPhone") ?? "",
+            companyCity: defaults.string(forKey: "companyCity") ?? "",
+            companyState: defaults.string(forKey: "companyState") ?? "",
+            companyZipCode: defaults.string(forKey: "companyZipCode") ?? "",
+            inspectorName: defaults.string(forKey: "inspectorName") ?? "Inspector Name"
+        )
+    }
+}
+
+struct ReportRequest {
+    enum Format {
+        case pdf
+        case csv
+    }
+
+    var inspections: [ReportInspectionSnapshot]
+    var format: Format
+    var sortCriteria: SortCriteria?
+    var layoutOptions: PDFLayoutOptions
+    var dateRangeDescription: String?
+    var header: ReportHeader
+
+    init(
+        inspections: [ReportInspectionSnapshot],
+        format: Format,
+        sortCriteria: SortCriteria? = nil,
+        layoutOptions: PDFLayoutOptions = PDFLayoutOptions(),
+        dateRangeDescription: String? = nil,
+        header: ReportHeader
+    ) {
+        self.inspections = inspections
+        self.format = format
+        self.sortCriteria = sortCriteria
+        self.layoutOptions = layoutOptions
+        self.dateRangeDescription = dateRangeDescription
+        self.header = header
+    }
+}
+
+public struct ReportPackage: Equatable {
+    public let data: Data
+    public let fileName: String
+    public let companionData: Data?
+    public let companionFileName: String?
+
+    public init(data: Data, fileName: String, companionData: Data? = nil, companionFileName: String? = nil) {
+        self.data = data
+        self.fileName = fileName
+        self.companionData = companionData
+        self.companionFileName = companionFileName
     }
 }
 
@@ -31,111 +120,204 @@ class ReportGenerator {
         static let pageWidth: CGFloat = 11.0 * 72.0  // 11 inches in points (landscape)
         static let pageHeight: CGFloat = 8.5 * 72.0  // 8.5 inches in points (landscape)
         static let margin: CGFloat = 36.0  // 0.5 inch margins
-        static let headerHeight: CGFloat = 100.0  // Increased to accommodate logo
-        static let inlinePhotoSize: CGFloat = 60.0  // Smaller photos for inline display
-        static let lineSpacing: CGFloat = 20.0
-        static let rowHeight: CGFloat = 90.0  // Increased from 70 to 90 to accommodate multiple issue lines
         static let triangleIconSize: CGFloat = 12.0  // Size for triangle icon
-        static let footerHeight: CGFloat = 40.0  // NEW: Footer height
+        static let footerHeight: CGFloat = 40.0
+        static let customerBlockHeight: CGFloat = 65.0
+        static let missingCustomerGap: CGFloat = 50.0
+    }
+
+    func export(_ request: ReportRequest) -> ReportExportResult {
+        switch request.format {
+        case .pdf:
+            if request.inspections.isEmpty { return .empty }
+            guard CombinedPDFJoinRule.canJoin(request.inspections) else { return .joinFailed }
+            let data = generatePDFReport(
+                inspections: request.inspections,
+                sortCriteria: request.sortCriteria,
+                layoutOptions: request.layoutOptions,
+                dateRangeDescription: request.dateRangeDescription,
+                header: request.header
+            )
+            return .package(ReportPackage(
+                data: data,
+                fileName: Self.pdfFileName(for: request.inspections),
+                companionData: nil,
+                companionFileName: nil
+            ))
+        case .csv:
+            guard !request.inspections.isEmpty else { return .empty }
+            guard let package = generateCSVReportWithPhotos(
+                inspections: request.inspections,
+                sortCriteria: request.sortCriteria,
+                dateRangeDescription: request.dateRangeDescription,
+                header: request.header
+            ) else { return .failed }
+            return .package(package)
+        }
+    }
+
+    private static func pdfFileName(for inspections: [ReportInspectionSnapshot]) -> String {
+        let inspection = inspections.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }.first
+        let dateStr = inspection?.date.map { DateFormatters.format($0, using: DateFormatters.filename) } ?? DateFormatters.format(Date(), using: DateFormatters.filename)
+        let sanitized = Self.sanitizedFileNamePart(inspection?.customer?.name ?? "Report")
+        return "Inspection_Report_\(sanitized)_\(dateStr).pdf"
+    }
+
+    private static func sanitizedFileNamePart(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            .filter { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" }
     }
     
-    // MARK: - Report Format Options
-    enum ReportFormat {
-        case pdf
-        case csv
-        case print
-    }
-    
-    // Updated main report generation method with proper page tracking
-    func generatePDFReport(inspection: Inspection, sortCriteria: SortCriteria? = nil, format: ReportFormat = .pdf) -> Data {
+    private func generatePDFReport(inspections: [ReportInspectionSnapshot], sortCriteria: SortCriteria? = nil, layoutOptions: PDFLayoutOptions = PDFLayoutOptions(), dateRangeDescription: String? = nil, header: ReportHeader) -> Data {
         let pageRect = CGRect(x: 0, y: 0, width: Layout.pageWidth, height: Layout.pageHeight)
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+        let includeDate = inspections.count > 1
+        let items = sortedItems(from: inspections, sortCriteria: sortCriteria)
+        let inputs = layoutInputs(for: items, includeDate: includeDate)
+        let tableLayout = PDFResolvedTableLayout.resolve(
+            items: inputs,
+            preset: layoutOptions.preset,
+            forceSecondaryLocation: layoutOptions.includeSecondaryLocation,
+            includeInspectionDate: includeDate
+        )
+        let representative = inspections.sorted { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }.first
         
         return renderer.pdfData { context in
-            // Calculate total pages upfront
-            let totalPages = calculateTotalPages(for: inspection)
+            let contentPages = contentPageCount(
+                inputs: inputs,
+                tableLayout: tableLayout,
+                inspections: inspections,
+                dateRangeDescription: dateRangeDescription,
+                header: header
+            )
+            let hasTOC = contentPages > 1
+            let totalPages = hasTOC ? contentPages + 1 : contentPages
             var currentPage = 1
             var currentY: CGFloat = Layout.margin
             
-            // First Page
+            if hasTOC, let representative {
+                context.beginPage()
+                currentY = renderTableOfContents(context: context, inspection: representative, inspectionCount: inspections.count, totalContentPages: contentPages, at: currentY)
+                currentPage += 1
+            }
+            
             context.beginPage()
-            currentY = renderHeader(context: context, at: currentY)
-            if inspection.customer != nil {
-                currentY = renderCustomerInfo(context: context, inspection: inspection, at: currentY)
+            currentY = Layout.margin
+            currentY = renderHeader(context: context, at: currentY, dateRangeDescription: dateRangeDescription, header: header)
+            if representative?.customer != nil {
+                currentY = renderCustomerInfo(context: context, inspections: inspections, at: currentY, header: header)
             } else {
-                currentY += 50
+                currentY += Layout.missingCustomerGap
                 print("Warning: Inspection has no associated customer for PDF report.")
             }
-            currentY = renderInspectionTableHeader(context: context, at: currentY)
+            currentY = renderInspectionTableHeader(context: context, at: currentY, tableLayout: tableLayout)
             
-            // Get sorted inspection items
-            let items = getSortedInspectionItems(from: inspection, sortCriteria: sortCriteria)
-            
-            // Render each inspection item with inline photos
-            for item in items {
-                // Calculate if this item would fit on current page
-                let spaceNeeded = Layout.rowHeight
-                let spaceAvailable = Layout.pageHeight - Layout.margin - Layout.footerHeight - currentY // Adjusted for footer height
+            for (row, input) in zip(items, inputs) {
+                let rowHeight = tableLayout.rowHeight(for: input)
+                let spaceAvailable = Layout.pageHeight - Layout.margin - Layout.footerHeight - currentY
                 
-                // If item won't fit, start new page
-                if spaceAvailable < spaceNeeded {
-                    // Render footer before new page
-                    _ = renderFooter(context: context, currentPage: currentPage, totalPages: totalPages)
-                    
-                    // Start new page
+                if spaceAvailable < rowHeight {
+                    _ = renderFooter(context: context, currentPage: currentPage, totalPages: totalPages, dateRangeDescription: dateRangeDescription)
                     context.beginPage()
                     currentPage += 1
                     currentY = Layout.margin
-                    currentY = renderInspectionTableHeader(context: context, at: currentY)
+                    currentY = renderInspectionTableHeader(context: context, at: currentY, tableLayout: tableLayout)
                 }
                 
-                currentY = renderInspectionItemWithInlinePhoto(context: context, item: item, at: currentY)
+                currentY = renderInspectionItemWithInlinePhoto(context: context, item: row.item, input: input, at: currentY, tableLayout: tableLayout)
             }
             
-            // Render footer on the last page
-            _ = renderFooter(context: context, currentPage: currentPage, totalPages: totalPages)
+            _ = renderFooter(context: context, currentPage: currentPage, totalPages: totalPages, dateRangeDescription: dateRangeDescription)
         }
     }
     
-    // MARK: - Rendering Components (Updated with no timestamps and better spacing)
-    private func renderHeader(context: UIGraphicsPDFRendererContext, at yPosition: CGFloat) -> CGFloat {
-        // Company logo - positioned on the left (50% larger)
-        var logoHeight: CGFloat = 0
-        if let logoImage = UIImage(named: "company_logo") {
-            let imageWidth = logoImage.size.width
-            let imageHeight = logoImage.size.height
-
-            // IMPORTANT FIX: Ensure image dimensions are valid and non-zero to prevent NaN/Infinity
-            if imageWidth.isNormal && imageHeight.isNormal && imageWidth > 0 && imageHeight > 0 {
-                let maxLogoWidth: CGFloat = 210  // Increased from 120 (50% larger)
-                let maxLogoHeight: CGFloat = 105   // Increased from 60 (50% larger)
-                
-                let logoAspectRatio = imageWidth / imageHeight
-                var logoWidth = maxLogoWidth
-                var calculatedLogoHeight = logoWidth / logoAspectRatio
-                
-                // If height is too large, constrain by height instead
-                if calculatedLogoHeight > maxLogoHeight {
-                    calculatedLogoHeight = maxLogoHeight
-                    logoWidth = calculatedLogoHeight * logoAspectRatio
-                }
-                
-                let logoRect = CGRect(
-                    x: Layout.margin,
-                    y: yPosition,
-                    width: logoWidth,
-                    height: calculatedLogoHeight
-                )
-                
-                logoImage.draw(in: logoRect)
-                logoHeight = calculatedLogoHeight
-            } else {
-                print("Warning: 'company_logo' dimensions are zero, non-finite, or NaN. Skipping logo drawing in header.")
-                // logoHeight remains 0, which is safe.
-            }
+    private func renderTableOfContents(context: UIGraphicsPDFRendererContext, inspection: ReportInspectionSnapshot, inspectionCount: Int = 1, totalContentPages: Int, at yPosition: CGFloat) -> CGFloat {
+        let titleAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont(name: "Arial-BoldMT", size: 18) ?? UIFont.boldSystemFont(ofSize: 18),
+            .foregroundColor: UIColor.black
+        ]
+        let rowAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont(name: "ArialMT", size: 12) ?? UIFont.systemFont(ofSize: 12),
+            .foregroundColor: UIColor.black
+        ]
+        let dateStr = inspection.date.map { DateFormatters.format($0, using: DateFormatters.long) } ?? "—"
+        let customerName = inspection.customer?.name ?? "Inspection"
+        
+        "Table of Contents".draw(at: CGPoint(x: Layout.margin, y: yPosition), withAttributes: titleAttrs)
+        var y = yPosition + 30
+        if inspectionCount > 1 {
+            "Combined inspection: \(customerName) (\(inspectionCount) visits)".draw(at: CGPoint(x: Layout.margin, y: y), withAttributes: rowAttrs)
         } else {
-            print("Warning: 'company_logo' asset not found. Skipping logo drawing in header.")
-            // logoHeight remains 0, which is safe.
+            "Inspection: \(customerName) – \(dateStr)".draw(at: CGPoint(x: Layout.margin, y: y), withAttributes: rowAttrs)
+        }
+        y += 22
+        for p in 1...totalContentPages {
+            let label = p == 1 ? "Page \(p + 1): Overview and items" : "Page \(p + 1): Items (continued)"
+            "\(label)".draw(at: CGPoint(x: Layout.margin, y: y), withAttributes: rowAttrs)
+            y += 18
+        }
+        return y + 20
+    }
+    
+    // MARK: - Rendering Components (Updated with no timestamps and better spacing)
+    private func companyLogoLayout(at yPosition: CGFloat) -> (image: UIImage, rect: CGRect)? {
+        guard let logoImage = UIImage(named: "company_logo") else { return nil }
+        let imageWidth = logoImage.size.width
+        let imageHeight = logoImage.size.height
+        guard imageWidth.isNormal && imageHeight.isNormal && imageWidth > 0 && imageHeight > 0 else { return nil }
+        let maxLogoWidth: CGFloat = 210
+        let maxLogoHeight: CGFloat = 105
+        let logoAspectRatio = imageWidth / imageHeight
+        var logoWidth = maxLogoWidth
+        var calculatedLogoHeight = logoWidth / logoAspectRatio
+        if calculatedLogoHeight > maxLogoHeight {
+            calculatedLogoHeight = maxLogoHeight
+            logoWidth = calculatedLogoHeight * logoAspectRatio
+        }
+        let logoRect = CGRect(x: Layout.margin, y: yPosition, width: logoWidth, height: calculatedLogoHeight)
+        return (logoImage, logoRect)
+    }
+
+    private func headerBottomY(at yPosition: CGFloat, dateRangeDescription: String?, header: ReportHeader) -> CGFloat {
+        let logoHeight = companyLogoLayout(at: yPosition)?.rect.height ?? 0
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont(name: "Arial-BoldMT", size: 24) ?? UIFont.boldSystemFont(ofSize: 24),
+            .foregroundColor: UIColor.black
+        ]
+        let titleSize = "Inspection Report".size(withAttributes: titleAttributes)
+        let titleY = yPosition + max(0, (logoHeight - titleSize.height) / 2)
+        let hasRange = !(dateRangeDescription ?? "").isEmpty
+        let titleBottom = titleY + titleSize.height + (hasRange ? 20 : 0)
+
+        var rightSideY = yPosition
+        if !header.companyName.isEmpty {
+            rightSideY += 18
+        }
+        if !header.companyAddress.isEmpty {
+            rightSideY += 15
+            let city = header.companyCity
+            let state = header.companyState
+            let zipCode = header.companyZipCode
+            if !city.isEmpty || !state.isEmpty || !zipCode.isEmpty {
+                rightSideY += 15
+            }
+        }
+        if !header.companyPhone.isEmpty {
+            rightSideY += 15
+        }
+        let logoBottom = yPosition + logoHeight
+        let rightSideBottom = rightSideY + 5
+        return max(titleBottom, logoBottom, rightSideBottom) + 20
+    }
+
+    private func renderHeader(context: UIGraphicsPDFRendererContext, at yPosition: CGFloat, dateRangeDescription: String? = nil, header: ReportHeader) -> CGFloat {
+        var logoHeight: CGFloat = 0
+        if let layout = companyLogoLayout(at: yPosition) {
+            layout.image.draw(in: layout.rect)
+            logoHeight = layout.rect.height
         }
         
         // Title - centered
@@ -147,10 +329,18 @@ class ReportGenerator {
         let title = "Inspection Report"
         let titleSize = title.size(withAttributes: titleAttributes)
         let titleX = (Layout.pageWidth - titleSize.width) / 2
-        // Ensure titleY calculation is robust (logoHeight is guaranteed to be a valid number here)
-        let titleY = yPosition + max(0, (logoHeight - titleSize.height) / 2) // Center vertically with logo
-        
+        let titleY = yPosition + max(0, (logoHeight - titleSize.height) / 2)
         title.draw(at: CGPoint(x: titleX, y: titleY), withAttributes: titleAttributes)
+        
+        if let range = dateRangeDescription, !range.isEmpty {
+            let rangeAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont(name: "ArialMT", size: 11) ?? UIFont.systemFont(ofSize: 11),
+                .foregroundColor: UIColor.darkGray
+            ]
+            let rangeSize = range.size(withAttributes: rangeAttrs)
+            let rangeX = (Layout.pageWidth - rangeSize.width) / 2
+            range.draw(at: CGPoint(x: rangeX, y: titleY + titleSize.height + 4), withAttributes: rangeAttrs)
+        }
         
         // Company info positioned much further right and removed generated timestamp
         let dateAttributes: [NSAttributedString.Key: Any] = [
@@ -158,15 +348,14 @@ class ReportGenerator {
             .foregroundColor: UIColor.darkGray
         ]
         
-        // Company information from UserDefaults
-        let companyName = UserDefaults.standard.string(forKey: "companyName") ?? ""
-        let companyAddress = UserDefaults.standard.string(forKey: "companyAddress") ?? ""
-        let companyPhone = UserDefaults.standard.string(forKey: "companyPhone") ?? ""
+        // Company information from the request header snapshot
+        let companyName = header.companyName
+        let companyAddress = header.companyAddress
+        let companyPhone = header.companyPhone
         
-        // Parse address components for proper formatting
-        let city = UserDefaults.standard.string(forKey: "companyCity") ?? ""
-        let state = UserDefaults.standard.string(forKey: "companyState") ?? ""
-        let zipCode = UserDefaults.standard.string(forKey: "companyZipCode") ?? ""
+        let city = header.companyCity
+        let state = header.companyState
+        let zipCode = header.companyZipCode
         
         let rightSideX = Layout.pageWidth - Layout.margin - 150
         var rightSideY = yPosition
@@ -219,52 +408,46 @@ class ReportGenerator {
             rightSideY += 15
         }
         
-        // Return the maximum height used
-        let titleBottom = titleY + titleSize.height
-        let logoBottom = yPosition + logoHeight
-        let rightSideBottom = rightSideY + 5 // Reduced padding since no timestamp
-        
-        return max(titleBottom, logoBottom, rightSideBottom) + 20
+        return headerBottomY(at: yPosition, dateRangeDescription: dateRangeDescription, header: header)
     }
 
     // MARK: - Page Calculation and Numbering
 
-    private func calculateTotalPages(for inspection: Inspection) -> Int {
-        // Calculate available space per page
-        let headerHeight = Layout.headerHeight + 65 + 25 // Header + customer info + table header
-        let footerHeight: CGFloat = Layout.footerHeight // Space reserved for footer
-        let availableHeight = Layout.pageHeight - (Layout.margin * 2) - headerHeight - footerHeight
-        _ = Int(availableHeight / Layout.rowHeight) // Use _ for unused variable
-        
-        // Get total number of inspection items
-        let totalItems = (inspection.items?.count ?? 0)
-        
-        if totalItems == 0 {
-            return 1 // At least one page even if no items
+    /// Same Y-advance as the draw loop. TOC/footer totals come from this walk.
+    private func contentPageCount(
+        inputs: [PDFItemLayoutInput],
+        tableLayout: PDFResolvedTableLayout,
+        inspections: [ReportInspectionSnapshot],
+        dateRangeDescription: String?,
+        header: ReportHeader
+    ) -> Int {
+        let representative = inspections.sorted { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }.first
+        var currentY = Layout.margin
+        currentY = headerBottomY(at: currentY, dateRangeDescription: dateRangeDescription, header: header)
+        if representative?.customer != nil {
+            currentY += Layout.customerBlockHeight
+        } else {
+            currentY += Layout.missingCustomerGap
         }
-        
-        // First page can fit items after header
-        let firstPageRows = Int((Layout.pageHeight - Layout.margin - headerHeight - footerHeight) / Layout.rowHeight)
-        
-        if totalItems <= firstPageRows {
-            return 1
+        currentY += Self.headerRowHeight
+
+        var pages = 1
+        let contentBottom = Layout.pageHeight - Layout.margin - Layout.footerHeight
+        for input in inputs {
+            let rowHeight = tableLayout.rowHeight(for: input)
+            if contentBottom - currentY < rowHeight {
+                pages += 1
+                currentY = Layout.margin + Self.headerRowHeight
+            }
+            currentY += rowHeight
         }
-        
-        // Additional pages (no header, just table header)
-        let additionalItems = totalItems - firstPageRows
-        let tableHeaderHeight: CGFloat = 25
-        let additionalPageAvailableHeight = Layout.pageHeight - (Layout.margin * 2) - tableHeaderHeight - footerHeight
-        let additionalPageRows = Int(additionalPageAvailableHeight / Layout.rowHeight)
-        
-        let additionalPages = (additionalItems + additionalPageRows - 1) / additionalPageRows // Ceiling division
-        
-        return 1 + additionalPages
+        return pages
     }
 
-    private func renderFooter(context: UIGraphicsPDFRendererContext, currentPage: Int, totalPages: Int) -> CGFloat {
+    private func renderFooter(context: UIGraphicsPDFRendererContext, currentPage: Int, totalPages: Int, dateRangeDescription: String? = nil) -> CGFloat {
         let footerY = Layout.pageHeight - Layout.margin - 30
         
-        // Small company logo in footer
+        // Small company logo
         if let logoImage = UIImage(named: "company_logo") {
             let imageWidth = logoImage.size.width
             let imageHeight = logoImage.size.height
@@ -288,13 +471,22 @@ class ReportGenerator {
             }
         }
         
-        // Page number with total count on the right
+        // Optional date range in center
+        if let range = dateRangeDescription, !range.isEmpty {
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont(name: "ArialMT", size: 9) ?? UIFont.systemFont(ofSize: 9),
+                .foregroundColor: UIColor.gray
+            ]
+            let sz = range.size(withAttributes: attrs)
+            range.draw(at: CGPoint(x: (Layout.pageWidth - sz.width) / 2, y: footerY + 5), withAttributes: attrs)
+        }
+        
+        // Page number on the right
         let pageText = "Page \(currentPage) of \(totalPages)"
         let pageAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont(name: "ArialMT", size: 10) ?? UIFont.systemFont(ofSize: 10),
             .foregroundColor: UIColor.gray
         ]
-        
         let pageSize = pageText.size(withAttributes: pageAttributes)
         pageText.draw(at: CGPoint(x: Layout.pageWidth - Layout.margin - pageSize.width, y: footerY + 5), withAttributes: pageAttributes)
         
@@ -302,7 +494,7 @@ class ReportGenerator {
     }
 
 
-    private func renderCustomerInfo(context: UIGraphicsPDFRendererContext, inspection: Inspection, at yPosition: CGFloat) -> CGFloat {
+    private func renderCustomerInfo(context: UIGraphicsPDFRendererContext, inspections: [ReportInspectionSnapshot], at yPosition: CGFloat, header: ReportHeader) -> CGFloat {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont(name: "ArialMT", size: 12) ?? UIFont.systemFont(ofSize: 12),
             .foregroundColor: UIColor.black
@@ -312,9 +504,6 @@ class ReportGenerator {
             .font: UIFont(name: "Arial-BoldMT", size: 16) ?? UIFont.boldSystemFont(ofSize: 16),
             .foregroundColor: UIColor.black
         ]
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .long
         
         // Draw section header
         let sectionHeader = "Customer Information"
@@ -328,12 +517,19 @@ class ReportGenerator {
         linePath.stroke()
         
         // Customer info in a more compact horizontal layout
-        let customerName = "Customer: \(inspection.customer?.name ?? "N/A")"
-        let address = "Address: \(inspection.customer?.address ?? "N/A")"
-        let inspectionDate = "Date: \(dateFormatter.string(from: inspection.date ?? Date()))"
+        let inspection = inspections.sorted { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }.first
+        let customerName = "Customer: \(inspection?.customer?.name ?? "N/A")"
+        let trimmedSite = inspection?.customer?.site?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let address: String
+        if inspections.count > 1, !trimmedSite.isEmpty {
+            address = "Site: \(trimmedSite)"
+        } else {
+            address = "Address: \(inspection?.customer?.address ?? "N/A")"
+        }
+        let inspectionDate = Self.customerDateLabel(for: inspections)
         
         // Get current inspector name from settings, not from saved inspection
-        let currentInspectorName = UserDefaults.standard.string(forKey: "inspectorName") ?? "Inspector Name"
+        let currentInspectorName = header.inspectorName
         let inspector = "Inspector: \(currentInspectorName)"
         
         let infoY = yPosition + 25
@@ -343,46 +539,51 @@ class ReportGenerator {
         inspectionDate.draw(at: CGPoint(x: Layout.margin, y: infoY + 15), withAttributes: attributes)
         inspector.draw(at: CGPoint(x: Layout.margin + 250, y: infoY + 15), withAttributes: attributes)
         
-        return yPosition + 65
+        return yPosition + Layout.customerBlockHeight
     }
     
-    // Updated table header for landscape with Arial font - REMOVED "Secondary Location"
-    private func renderInspectionTableHeader(context: UIGraphicsPDFRendererContext, at yPosition: CGFloat) -> CGFloat {
+    private static let headerRowHeight: CGFloat = 36
+    
+    private func renderInspectionTableHeader(context: UIGraphicsPDFRendererContext, at yPosition: CGFloat, tableLayout: PDFResolvedTableLayout) -> CGFloat {
         let headerAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont(name: "Arial-BoldMT", size: 10) ?? UIFont.boldSystemFont(ofSize: 10),
             .foregroundColor: UIColor.black
         ]
         
-        // Updated headers - REMOVED "Secondary Location"
-        let headers = ["Image", "Primary Location", "Importance", "Issue", "Comments"]
-        let columnWidths: [CGFloat] = [70, 140, 80, 220, 280] // Redistributed widths, removed secondary location column
         var xPosition = Layout.margin
         
-        // Draw gray background for header
         let headerRect = CGRect(x: Layout.margin,
                                y: yPosition - 5,
                                width: Layout.pageWidth - (Layout.margin * 2),
-                               height: 25)
+                               height: Self.headerRowHeight)
         UIColor(white: 0.9, alpha: 1.0).setFill()
         context.cgContext.fill(headerRect)
         
-        // Draw header text
-        for (index, header) in headers.enumerated() {
-            let columnWidth = columnWidths[index]
-            let headerSize = header.size(withAttributes: headerAttributes)
-            header.draw(at: CGPoint(x: xPosition + (columnWidth - headerSize.width) / 2, y: yPosition),
-                      withAttributes: headerAttributes)
-            xPosition += columnWidth
+        for column in tableLayout.columns {
+            let cellRect = CGRect(x: xPosition + 4, y: yPosition - 2, width: column.width - 8, height: Self.headerRowHeight - 6)
+            drawCenteredMultiLineText(column.kind.headerTitle, in: cellRect, attributes: headerAttributes)
+            xPosition += column.width
         }
         
-        // Draw separator line
         let path = UIBezierPath()
-        path.move(to: CGPoint(x: Layout.margin, y: yPosition + 20))
-        path.addLine(to: CGPoint(x: Layout.pageWidth - Layout.margin, y: yPosition + 20))
+        path.move(to: CGPoint(x: Layout.margin, y: yPosition + Self.headerRowHeight - 5))
+        path.addLine(to: CGPoint(x: Layout.pageWidth - Layout.margin, y: yPosition + Self.headerRowHeight - 5))
         UIColor.black.setStroke()
         path.stroke()
         
-        return yPosition + 25
+        return yPosition + Self.headerRowHeight
+    }
+    
+    private func drawCenteredMultiLineText(_ text: String, in rect: CGRect, attributes: [NSAttributedString.Key: Any]) {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        paragraphStyle.alignment = .center
+        
+        var modifiedAttributes = attributes
+        modifiedAttributes[.paragraphStyle] = paragraphStyle
+        
+        let attributedString = NSAttributedString(string: text, attributes: modifiedAttributes)
+        attributedString.draw(in: rect)
     }
 
     // Updated method to draw triangle icon with Arial font
@@ -420,138 +621,86 @@ class ReportGenerator {
         exclamationMark.draw(at: exclamationPoint, withAttributes: exclamationAttributes)
     }
 
-    // Updated method to render inspection item with aspect ratio preserved images
-    private func renderInspectionItemWithInlinePhoto(context: UIGraphicsPDFRendererContext, item: InspectionItem, at yPosition: CGFloat) -> CGFloat {
+    private func renderInspectionItemWithInlinePhoto(context: UIGraphicsPDFRendererContext, item: ReportItemSnapshot, input: PDFItemLayoutInput, at yPosition: CGFloat, tableLayout: PDFResolvedTableLayout) -> CGFloat {
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont(name: "ArialMT", size: 9) ?? UIFont.systemFont(ofSize: 9),
+            .font: PDFResolvedTableLayout.bodyFont,
             .foregroundColor: UIColor.black
         ]
-        
         let smallAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont(name: "ArialMT", size: 8) ?? UIFont.systemFont(ofSize: 8),
+            .font: PDFResolvedTableLayout.smallFont,
             .foregroundColor: UIColor.black
         ]
-        
-        // Updated column widths - REMOVED secondary location column
-        let columnWidths: [CGFloat] = [70, 140, 80, 220, 280]
+        let rowHeight = tableLayout.rowHeight(for: input)
         var xPosition = Layout.margin
         
-        // Photo column with JPEG compression and ASPECT RATIO PRESERVATION
-        if item.hasPhoto {
-            if let originalImage = item.getPhotoSync() {
-                // COMPRESS IMAGE TO HIGH QUALITY JPEG
-                let compressedImage: UIImage
-                if let jpegData = originalImage.jpegData(compressionQuality: 0.2),
-                   let compressed = UIImage(data: jpegData) {
-                    compressedImage = compressed
-                    print("📸 Compressed image for PDF (quality: 0.2)")
+        for column in tableLayout.columns {
+            let textRect = CGRect(x: xPosition + 5, y: yPosition + 5, width: column.width - 10, height: rowHeight - 10)
+            switch column.kind {
+            case .image:
+                drawPhotoGrid(photos: item.photos, in: textRect, attributes: smallAttributes)
+            case .date:
+                drawMultiLineText(input.inspectionDateText ?? "—", in: textRect, attributes: attributes)
+            case .primaryLocation:
+                drawMultiLineText(input.primaryLocation, in: textRect, attributes: attributes)
+            case .secondaryLocation:
+                drawMultiLineText(input.trimmedSecondary ?? "N/A", in: textRect, attributes: attributes)
+            case .importance:
+                if input.importance == "Needs immediate attention" {
+                    let trianglePoint = CGPoint(x: xPosition + 8, y: yPosition + 8)
+                    drawTriangleIcon(at: trianglePoint, color: UIColor.red, size: Layout.triangleIconSize)
+                    let remaining = CGRect(
+                        x: xPosition + 8 + Layout.triangleIconSize + 4,
+                        y: yPosition + 5,
+                        width: max(column.width - 10 - Layout.triangleIconSize - 8, 12),
+                        height: rowHeight - 10
+                    )
+                    drawMultiLineText(input.importance, in: remaining, attributes: attributes)
                 } else {
-                    compressedImage = originalImage
-                    print("📸 Using original image (compression failed)")
+                    drawMultiLineText(input.importance, in: textRect, attributes: attributes)
                 }
-                
-                // Calculate available space for the photo
-                let availableWidth = columnWidths[0] - 10 // 5px padding on each side
-                let availableHeight = Layout.rowHeight - 10 // 5px padding top and bottom
-                
-                // Calculate the proper rect maintaining aspect ratio
-                let photoRect = calculateAspectFitRect(
-                    for: compressedImage,
-                    in: CGRect(x: xPosition + 5, y: yPosition + 5, width: availableWidth, height: availableHeight)
-                )
-                
-                // Draw photo border around the actual image size
-                let borderRect = CGRect(x: photoRect.minX - 1,
-                                  y: photoRect.minY - 1,
-                                  width: photoRect.width + 2,
-                                  height: photoRect.height + 2)
-                UIColor.lightGray.setStroke()
-                UIBezierPath(rect: borderRect).stroke()
-                
-                // Draw compressed photo with preserved aspect ratio
-                compressedImage.draw(in: photoRect)
-                print("📸 Rendered compressed photo in PDF with preserved aspect ratio")
-            } else {
-                // Draw placeholder if photo not found
-                let placeholderText = "No Photo"
-                let placeholderRect = CGRect(x: xPosition + 5,
-                                           y: yPosition + 25,
-                                           width: columnWidths[0] - 10,
-                                           height: 20)
-                placeholderText.draw(in: placeholderRect, withAttributes: smallAttributes)
+            case .issue:
+                drawMultiLineText(input.issueText, in: textRect, attributes: smallAttributes)
+            case .comments:
+                drawWrappedCommentsText(input.trimmedComments, in: textRect, attributes: smallAttributes)
             }
-        } else {
-            // Draw "No Photo" text
-            let placeholderText = "No Photo"
-            let placeholderRect = CGRect(x: xPosition + 5,
-                                   y: yPosition + 25,
-                                   width: columnWidths[0] - 10,
-                                   height: 20)
-            placeholderText.draw(in: placeholderRect, withAttributes: smallAttributes)
+            xPosition += column.width
         }
-        xPosition += columnWidths[0]
         
-        // Primary Location column (expanded width since secondary location removed)
-        let primaryLocationString = item.location ?? "N/A"
-        let primaryLocationRect = CGRect(x: xPosition + 5, y: yPosition + 10, width: columnWidths[1] - 10, height: Layout.rowHeight - 20)
-        drawMultiLineText(primaryLocationString, in: primaryLocationRect, attributes: attributes)
-        xPosition += columnWidths[1]
-        
-        // REMOVED Secondary Location column entirely
-        
-        // Importance column with triangle icon
-        let importanceString = item.importance ?? "Monitor"
-        let importanceRect = CGRect(x: xPosition + 5, y: yPosition + 10, width: columnWidths[2] - 10, height: Layout.rowHeight - 20)
-        
-        if importanceString == "Needs immediate attention" {
-            // Draw red triangle icon
-            let trianglePoint = CGPoint(x: xPosition + 8, y: yPosition + 12)
-            drawTriangleIcon(at: trianglePoint, color: UIColor.red, size: Layout.triangleIconSize)
-            
-            // Draw text with offset to account for triangle
-            let textRect = CGRect(x: xPosition + 8 + Layout.triangleIconSize + 4,
-                                y: yPosition + 10,
-                                width: columnWidths[2] - 10 - Layout.triangleIconSize - 4,
-                                height: Layout.rowHeight - 20)
-            drawMultiLineText(importanceString, in: textRect, attributes: attributes)
-        } else {
-            // Draw text normally for "Monitor"
-            drawMultiLineText(importanceString, in: importanceRect, attributes: attributes)
-        }
-        xPosition += columnWidths[2]
-        
-        // Issue column with hierarchical bulleted strings
-        let issueStrings = getHierarchicalIssueStrings(for: item)
-        let issueText = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "\n")
-        let issueRect = CGRect(x: xPosition + 5, y: yPosition + 5, width: columnWidths[3] - 10, height: Layout.rowHeight - 10)
-        drawMultiLineText(issueText, in: issueRect, attributes: smallAttributes)
-        xPosition += columnWidths[3]
-        
-        // Comments column with improved text wrapping
-        let commentsText = item.comments ?? ""
-        let commentsRect = CGRect(x: xPosition + 5, y: yPosition + 5, width: columnWidths[4] - 10, height: Layout.rowHeight - 10)
-        drawWrappedCommentsText(commentsText, in: commentsRect, attributes: smallAttributes)
-        
-        // Draw vertical separators between columns
         context.cgContext.setStrokeColor(UIColor.lightGray.cgColor)
         context.cgContext.setLineWidth(0.5)
-        
         var separatorX = Layout.margin
-        for columnWidth in columnWidths.dropLast() {
-            separatorX += columnWidth
+        for column in tableLayout.columns.dropLast() {
+            separatorX += column.width
             context.cgContext.move(to: CGPoint(x: separatorX, y: yPosition))
-            context.cgContext.addLine(to: CGPoint(x: separatorX, y: yPosition + Layout.rowHeight))
+            context.cgContext.addLine(to: CGPoint(x: separatorX, y: yPosition + rowHeight))
             context.cgContext.strokePath()
         }
-        
-        // Draw horizontal separator line
-        context.cgContext.setStrokeColor(UIColor.lightGray.cgColor)
-        context.cgContext.setLineWidth(0.5)
-        context.cgContext.move(to: CGPoint(x: Layout.margin, y: yPosition + Layout.rowHeight))
-        context.cgContext.addLine(to: CGPoint(x: Layout.pageWidth - Layout.margin, y: yPosition + Layout.rowHeight))
+        context.cgContext.move(to: CGPoint(x: Layout.margin, y: yPosition + rowHeight))
+        context.cgContext.addLine(to: CGPoint(x: Layout.pageWidth - Layout.margin, y: yPosition + rowHeight))
         context.cgContext.strokePath()
-        
-        return yPosition + Layout.rowHeight
+
+        return yPosition + rowHeight
+    }
+
+    private func drawPhotoGrid(photos: [Data], in bounds: CGRect, attributes: [NSAttributedString.Key: Any]) {
+        let images = photos.compactMap { UIImage(data: $0) }
+        guard !images.isEmpty else {
+            "No Photo".draw(in: bounds, withAttributes: attributes)
+            return
+        }
+        let rects = PDFResolvedTableLayout.photoRects(count: images.count, in: bounds)
+        for (image, slot) in zip(images, rects) {
+            let compressed: UIImage
+            if let jpegData = image.jpegData(compressionQuality: 0.2), let downsampled = UIImage(data: jpegData) {
+                compressed = downsampled
+            } else {
+                compressed = image
+            }
+            let photoRect = calculateAspectFitRect(for: compressed, in: slot)
+            UIColor.lightGray.setStroke()
+            UIBezierPath(rect: photoRect.insetBy(dx: -1, dy: -1)).stroke()
+            compressed.draw(in: photoRect)
+        }
     }
         
     /// Calculate a rectangle that fits the image within the available bounds while preserving aspect ratio
@@ -648,455 +797,175 @@ class ReportGenerator {
     
     // Updated CSV generation with metadata
     // MARK: - Updated CSV Report Generation with Photos
-    func generateCSVReportWithPhotos(inspections: [Inspection], sortCriteria: SortCriteria? = nil) -> ReportPackage? {
-        let timestamp = DateFormatter()
-        timestamp.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-        let timeString = timestamp.string(from: Date())
+    private func generateCSVReportWithPhotos(inspections: [ReportInspectionSnapshot], sortCriteria: SortCriteria? = nil, dateRangeDescription: String? = nil, header: ReportHeader) -> ReportPackage? {
+        let timeString = DateFormatters.format(Date(), using: DateFormatters.timestamp)
         
         var csvString = "# Systems Inspector Report\n"
         csvString += "# Generated: \(timeString.replacingOccurrences(of: "_", with: " ").replacingOccurrences(of: "-", with: ":"))\n"
         csvString += "# Total Inspections: \(inspections.count)\n"
+        if !header.companyName.isEmpty {
+            csvString += "# Company: \(header.companyName)\n"
+        }
+        if !header.inspectorName.isEmpty {
+            csvString += "# Inspector: \(header.inspectorName)\n"
+        }
+        if let rangeDesc = dateRangeDescription {
+            csvString += "# Date range: \(rangeDesc)\n"
+        }
         csvString += "#\n"
         csvString += "Customer Name,Address,Date,Inspector,Primary Location (Area/Aisle),Secondary Location (Bay/Level),Importance,Issues,Comments,Photo File\n"
 
-        var photoFiles: [String: URL] = [:]
+        var zipEntries: [(name: String, contents: Data)] = []
             
         for inspection in inspections {
             let customerName = inspection.customer?.name ?? "N/A"
             let customerAddress = inspection.customer?.address ?? "N/A"
             let inspectionDate = inspection.date ?? Date()
             let inspectorName = inspection.inspectorName ?? "N/A"
-            
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
-            let dateString = dateFormatter.string(from: inspectionDate)
-
-            let items = getSortedInspectionItems(from: inspection, sortCriteria: sortCriteria)
+            let dateString = DateFormatters.format(inspectionDate, using: DateFormatters.dateTime)
+            let items = sortedItems(from: [inspection], sortCriteria: sortCriteria).map(\.item)
 
             for item in items {
-                let primaryLocation = item.location ?? "N/A"
+                let primaryLocation = item.location.isEmpty ? "N/A" : item.location
                 let secondaryLocation = item.bayNumber ?? "N/A"
-                
-                let rawImportance = item.importance ?? "Monitor"
+                let rawImportance = item.importance.isEmpty ? "Monitor" : item.importance
                 let importance = rawImportance == "Needs immediate attention" ? "▲ \(rawImportance)" : rawImportance
-                
-                let issueStrings = getHierarchicalIssueStrings(for: item)
+                let issueStrings = Issue.labels(from: Issue.flags(from: item.issues))
                 let issues = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "; ")
-                
                 let comments = item.comments ?? ""
-                
-                // FIXED: Handle photo with correct variable name 'item'
-                var photoFileName = ""
-                if item.hasPhoto {
-                    // Try to get photo from CloudKit data first
-                    if let photoData = item.photoData {
-                        // Create a temporary file for the photo data
-                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_\(item.id?.uuidString ?? UUID().uuidString).jpg")
-                        do {
-                            try photoData.write(to: tempURL)
-                            let uniquePhotoName = "photo_\(item.id?.uuidString ?? UUID().uuidString).jpg"
-                            photoFileName = uniquePhotoName
-                            photoFiles[photoFileName] = tempURL
-                            print("📸 Added CloudKit photo to CSV export: \(uniquePhotoName)")
-                        } catch {
-                            print("❌ Failed to create temp file for CloudKit photo: \(error)")
-                        }
-                    } else if let photoPath = item.photoURL, FileManager.default.fileExists(atPath: photoPath) {
-                        // Fallback to local file
-                        let photoURL = URL(fileURLWithPath: photoPath)
-                        let fileExtension = photoURL.pathExtension
-                        let uniquePhotoName = "photo_\(item.id?.uuidString ?? UUID().uuidString).\(fileExtension)"
-                        photoFileName = uniquePhotoName
-                        photoFiles[photoFileName] = photoURL
-                        print("📸 Added local photo to CSV export: \(uniquePhotoName)")
-                    }
+                var photoNames: [String] = []
+                let itemID = item.id.uuidString
+                for (index, photoData) in item.photos.enumerated() {
+                    let uniquePhotoName = "photo_\(itemID)_\(index + 1).jpg"
+                    zipEntries.append((uniquePhotoName, photoData))
+                    photoNames.append(uniquePhotoName)
                 }
-
-                csvString += "\"\(customerName)\",\"\(customerAddress)\",\"\(dateString)\",\"\(inspectorName)\",\"\(primaryLocation)\",\"\(secondaryLocation)\",\"\(importance)\",\"\(issues)\",\"\(comments)\",\"\(photoFileName)\"\n"
+                let photoFileName = photoNames.joined(separator: "; ")
+                let row = [customerName, customerAddress, dateString, inspectorName, primaryLocation, secondaryLocation, importance, issues, comments, photoFileName]
+                    .map { Self.escapeCSVField($0) }
+                    .joined(separator: ",")
+                csvString += row + "\n"
             }
         }
 
-        guard let csvData = csvString.data(using: .utf8) else {
+        guard var csvData = csvString.data(using: .utf8) else {
             return nil
         }
+        let bom: [UInt8] = [0xEF, 0xBB, 0xBF]
+        csvData = Data(bom) + csvData
         
-        let zipData = createPhotoZip(photoFiles: photoFiles, timestamp: timeString)
-        
-        let csvFileName = "SystemsInspector_Report_\(timeString).csv"
-        let zipFileName = "SystemsInspector_Photos_\(timeString).zip"
+        let zipData = zipEntries.isEmpty ? nil : StoredZipArchive.data(entries: zipEntries)
+        let dateStr = inspections.first?.date.map { DateFormatters.format($0, using: DateFormatters.filename) } ?? DateFormatters.format(Date(), using: DateFormatters.filename)
+        let customerPart: String
+        if inspections.count == 1, let name = inspections.first?.customer?.name, !name.isEmpty {
+            let sanitized = Self.sanitizedFileNamePart(name)
+            customerPart = sanitized.isEmpty ? "" : "\(sanitized)_"
+        } else {
+            customerPart = ""
+        }
+        let csvFileName = "Inspection_Report_\(customerPart)\(dateStr).csv"
+        let zipFileName = "Inspection_Photos_\(customerPart)\(dateStr).zip"
         
         return ReportPackage(
-            csvData: csvData,
-            zipData: zipData,
-            csvFileName: csvFileName,
-            zipFileName: zipFileName
+            data: csvData,
+            fileName: csvFileName,
+            companionData: zipData,
+            companionFileName: zipData == nil ? nil : zipFileName
         )
     }
-        
-        // MARK: - Photo Zip Creation
-        private func createPhotoZip(photoFiles: [String: URL], timestamp: String) -> Data? {
-            guard !photoFiles.isEmpty else { return nil }
-            
-            // Create temporary directory for zip creation
-            let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("photo_export_\(timestamp)")
-            
-            do {
-                // Create temp directory
-                try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
-                
-                // Copy all photos to temp directory with new names
-                for (newFileName, originalURL) in photoFiles {
-                    let destinationURL = tempDirectory.appendingPathComponent(newFileName)
-                    // Check if the original file exists before copying
-                    guard FileManager.default.fileExists(atPath: originalURL.path) else {
-                        print("Skipping missing local photo file: \(originalURL.lastPathComponent)")
-                        continue
-                    }
-                    try FileManager.default.copyItem(at: originalURL, to: destinationURL)
-                }
-                
-                // --- IMPORTANT: ZIPFoundation (or another zipping library) is REQUIRED here ---
-                // The following code is a placeholder. For actual ZIP file creation,
-                // you would need to integrate a third-party library like 'ZIPFoundation'.
-                //
-                // To add ZIPFoundation:
-                // File -> Add Packages... -> Search for "https://github.com/weichsel/ZIPFoundation"
-                // Then, you can use it like this (uncomment and replace the placeholder):
-                /*
-                import ZIPFoundation // Add this import at the top of the file
 
-                let zipOutputURL = FileManager.default.temporaryDirectory.appendingPathComponent("exported_photos_\(timestamp).zip")
-                let archive = try Archive(url: zipOutputURL, accessMode: .create)
-                
-                for (newFileName, _) in photoFiles {
-                    let sourceURL = tempDirectory.appendingPathComponent(newFileName)
-                    // Add entry to archive. Relative path is important for correct zip structure.
-                    // The 'relativeTo' argument should be the directory that contains the files you're zipping.
-                    // If files are directly in tempDirectory, then relativeTo: tempDirectory
-                    try archive.addEntry(with: sourceURL, relativeTo: tempDirectory) // Corrected from newFileName to sourceURL
-                }
-                let zippedData = try Data(contentsOf: zipOutputURL)
-                // Remove the temporary directory after zipping
-                try? FileManager.default.removeItem(at: tempDirectory)
-                return zippedData
-                */
-                
-                // --- Placeholder for demonstration without ZIPFoundation ---
-                let zipOutputURL = FileManager.default.temporaryDirectory.appendingPathComponent("exported_photos_\(timestamp).zip")
-                let dummyZipData = "This is a dummy zip file. Please integrate a proper zipping library like ZIPFoundation for actual zipping.".data(using: .utf8)
-                try dummyZipData?.write(to: zipOutputURL)
-                
-                let zippedData = try Data(contentsOf: zipOutputURL)
-                print("ReportGenerator: Dummy zip file created. Integrate ZIPFoundation for real zipping.")
-                // --- End Placeholder ---
-                
-                // Cleanup temp directory (only if not handled by ZIPFoundation or similar within its block)
-                try? FileManager.default.removeItem(at: tempDirectory)
-                
-                return zippedData
-                
-            } catch {
-                print("Error creating photo zip: \(error)")
-                // Cleanup on error
-                try? FileManager.default.removeItem(at: tempDirectory)
-                return nil
+    private struct SortedItem {
+        let inspection: ReportInspectionSnapshot
+        let item: ReportItemSnapshot
+    }
+
+    private func sortedItems(from inspections: [ReportInspectionSnapshot], sortCriteria: SortCriteria? = nil) -> [SortedItem] {
+        let criteria = sortCriteria ?? .entryOrder
+        let ordered = inspections.sorted { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
+        switch criteria {
+        case .importance, .primaryLocation, .issue:
+            let items = ordered.flatMap { inspection in
+                inspection.items.map { SortedItem(inspection: inspection, item: $0) }
+            }
+            return sortItems(items, sortCriteria: criteria)
+        case .entryOrder, .date, .customer, .inspectionStatus:
+            return ordered.flatMap { inspection in
+                sortItems(inspection.items.map { SortedItem(inspection: inspection, item: $0) }, sortCriteria: .entryOrder)
             }
         }
-        
-        // MARK: - Legacy CSV method (keep for backward compatibility)
-        func generateCSVReport(inspections: [Inspection], sortCriteria: SortCriteria? = nil) -> Data? {
-            // Keep the original method for backward compatibility
-            let reportPackage = generateCSVReportWithPhotos(inspections: inspections, sortCriteria: sortCriteria)
-            return reportPackage?.csvData
+    }
+
+    private func layoutInputs(for items: [SortedItem], includeDate: Bool) -> [PDFItemLayoutInput] {
+        items.map { row in
+            let dateText: String?
+            if includeDate {
+                dateText = row.inspection.date.map { DateFormatters.format($0, using: DateFormatters.medium) } ?? "—"
+            } else {
+                dateText = nil
+            }
+            let issueStrings = Issue.labels(from: Issue.flags(from: row.item.issues))
+            return PDFItemLayoutInput(
+                photoCount: row.item.photos.count,
+                primaryLocation: row.item.location.isEmpty ? "N/A" : row.item.location,
+                secondaryLocation: row.item.bayNumber,
+                importance: row.item.importance.isEmpty ? "Monitor" : row.item.importance,
+                issueText: issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "\n"),
+                comments: row.item.comments ?? "",
+                inspectionDateText: dateText
+            )
         }
-    
-    // UPDATED: Better handling of entry order and default sorting
-    private func getSortedInspectionItems(from inspection: Inspection, sortCriteria: SortCriteria? = nil) -> [InspectionItem] {
-        let items: [InspectionItem] = (inspection.items)?.allObjects as? [InspectionItem] ?? []
-        
-        // Default to entry order if no criteria specified
-        let criteria = sortCriteria ?? .entryOrder
-        
-        switch criteria {
+    }
+
+    private static func customerDateLabel(for inspections: [ReportInspectionSnapshot]) -> String {
+        let dates = inspections.compactMap(\.date).sorted()
+        guard let first = dates.first else { return "Date: —" }
+        if let last = dates.last, !Calendar.current.isDate(first, inSameDayAs: last) {
+            return "Dates: \(DateFormatters.format(first, using: DateFormatters.long)) – \(DateFormatters.format(last, using: DateFormatters.long))"
+        }
+        return "Date: \(DateFormatters.format(first, using: DateFormatters.long))"
+    }
+
+    private func sortItems(_ items: [SortedItem], sortCriteria: SortCriteria) -> [SortedItem] {
+        switch sortCriteria {
         case .importance:
-            return items.sorted { item1, item2 in
-                let importance1 = item1.importance ?? "Monitor"
-                let importance2 = item2.importance ?? "Monitor"
-                
+            return items.sorted { lhs, rhs in
+                let importance1 = lhs.item.importance.isEmpty ? "Monitor" : lhs.item.importance
+                let importance2 = rhs.item.importance.isEmpty ? "Monitor" : rhs.item.importance
                 if importance1 == "Needs immediate attention" && importance2 == "Monitor" {
                     return true
                 } else if importance1 == "Monitor" && importance2 == "Needs immediate attention" {
                     return false
                 }
-                
-                return (item1.location ?? "") < (item2.location ?? "")
+                return lhs.item.location < rhs.item.location
             }
-            
         case .primaryLocation:
-            return items.sorted { item1, item2 in
-                let location1 = item1.location ?? ""
-                let location2 = item2.location ?? ""
-                
-                // Use natural sorting with numeric option
-                let result = location1.compare(location2, options: [.numeric, .caseInsensitive])
-                
+            return items.sorted { lhs, rhs in
+                let result = lhs.item.location.compare(rhs.item.location, options: [.numeric, .caseInsensitive])
                 if result == .orderedSame {
-                    let bay1 = item1.bayNumber ?? ""
-                    let bay2 = item2.bayNumber ?? ""
+                    let bay1 = lhs.item.bayNumber ?? ""
+                    let bay2 = rhs.item.bayNumber ?? ""
                     return bay1.compare(bay2, options: [.numeric, .caseInsensitive]) == .orderedAscending
                 }
-                
                 return result == .orderedAscending
             }
-            
         case .issue:
-            return items.sorted { item1, item2 in
-                let issue1 = getPrimaryIssueType(for: item1)
-                let issue2 = getPrimaryIssueType(for: item2)
-                
+            return items.sorted { lhs, rhs in
+                let issue1 = Issue.primaryParentLabel(from: Issue.flags(from: lhs.item.issues))
+                let issue2 = Issue.primaryParentLabel(from: Issue.flags(from: rhs.item.issues))
                 if issue1 == issue2 {
-                    return (item1.location ?? "") < (item2.location ?? "")
+                    return lhs.item.location < rhs.item.location
                 }
-                
                 return issue1 < issue2
             }
-            
-        case .entryOrder:
-            // BEST: Use sequence numbers for reliable entry order
-            return items.sorted { item1, item2 in
-                return item1.sequenceNumber < item2.sequenceNumber
-            }
-            
-        case .date, .customer, .inspectionStatus:
-            // For inspection-level sorting, return items in entry order
-            return items.sorted { item1, item2 in
-                return item1.sequenceNumber < item2.sequenceNumber
-            }
+        case .entryOrder, .date, .customer, .inspectionStatus:
+            return items.sorted { $0.item.sequenceNumber < $1.item.sequenceNumber }
         }
     }
 
-    private func getPrimaryIssueType(for item: InspectionItem) -> String {
-        if item.upright { return "Upright" }
-        if item.beam { return "Beam" }
-        if item.wireDeck { return "Wire Deck" }
-        if item.basePlate { return "Base Plate" }
-        if item.anchors { return "Anchors" }
-        if item.bracingDamage { return "Bracing" }
-        if item.postProtector { return "Post Protector" }
-        if item.aisleGuarding { return "Aisle Guarding" }
-        return "No Issues"
+    /// Escapes a CSV field: wraps in quotes and doubles internal quotes (RFC 4180).
+    private static func escapeCSVField(_ value: String) -> String {
+        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+        return "\"\(escaped)\""
     }
     
-    private func getHierarchicalIssueStrings(for item: InspectionItem) -> [String] {
-        var issueStrings: [String] = []
-        
-        func addIssueString(_ parentName: String, _ childName: String? = nil, _ grandchildName: String? = nil) {
-            var issueString = "• \(parentName)"
-            if let child = childName {
-                issueString += " > \(child)"
-                if let grandchild = grandchildName {
-                    issueString += " > \(grandchild)"
-                }
-            }
-            issueStrings.append(issueString)
-        }
-        
-        if item.upright {
-            if item.uprightFrontDamage { addIssueString("Upright", "Front", "Damage") }
-            if item.uprightFrontTwisted { addIssueString("Upright", "Front", "Twisted") }
-            if item.uprightRearDamage { addIssueString("Upright", "Rear", "Damage") }
-            if item.uprightRearTwisted { addIssueString("Upright", "Rear", "Twisted") }
-            if item.uprightAlignmentOutOfAlignment { addIssueString("Upright", "Alignment", "Out of alignment") }
-            if item.uprightAlignmentOutOfVerticalPlumb { addIssueString("Upright", "Alignment", "Out of vertical plumb") }
-            
-            if !item.uprightFrontDamage && !item.uprightFrontTwisted &&
-               !item.uprightRearDamage && !item.uprightRearTwisted &&
-               !item.uprightAlignmentOutOfAlignment && !item.uprightAlignmentOutOfVerticalPlumb {
-                addIssueString("Upright")
-            }
-        }
-        
-        if item.beam {
-            if item.beamFrontDamage { addIssueString("Beam", "Front damage") }
-            if item.beamRearDamage { addIssueString("Beam", "Rear damage") }
-            if item.beamFrontBowed { addIssueString("Beam", "Front bowed") }
-            if item.beamRearBowed { addIssueString("Beam", "Rear bowed") }
-            if !item.beamFrontDamage && !item.beamRearDamage && !item.beamFrontBowed && !item.beamRearBowed {
-                addIssueString("Beam")
-            }
-        }
-        
-        if item.wireDeck {
-            if item.wireDeckMissing { addIssueString("Wire Deck", "Missing") }
-            if item.wireDeckDamaged { addIssueString("Wire Deck", "Damaged") }
-            if item.wireDeckOutOfPosition { addIssueString("Wire Deck", "Out of position") }
-            if !item.wireDeckMissing && !item.wireDeckDamaged && !item.wireDeckOutOfPosition {
-                addIssueString("Wire Deck")
-            }
-        }
-        
-        if item.basePlate {
-            if item.basePlateFloorDamaged { addIssueString("Base Plate", "Floor damaged") }
-            if item.basePlateTwisted { addIssueString("Base Plate", "Twisted") }
-            if item.basePlateDamaged { addIssueString("Base Plate", "Damaged") }
-            if !item.basePlateFloorDamaged && !item.basePlateTwisted && !item.basePlateDamaged {
-                addIssueString("Base Plate")
-            }
-        }
-        
-        if item.anchors {
-            if item.anchorsMissing { addIssueString("Anchors", "Missing anchors or bolts") }
-            if item.anchorsDamaged { addIssueString("Anchors", "Damaged or bent") }
-            if item.anchorsTorqued { addIssueString("Anchors", "Torqued to 35lbs") }
-            if !item.anchorsMissing && !item.anchorsDamaged && !item.anchorsTorqued {
-                addIssueString("Anchors")
-            }
-        }
-        
-        if item.bracingDamage {
-            if item.bracingHorizontal { addIssueString("Bracing Damage", "Horizontal") }
-            if item.bracingDiagonal { addIssueString("Bracing Damage", "Diagonal") }
-            if !item.bracingHorizontal && !item.bracingDiagonal {
-                addIssueString("Bracing Damage")
-            }
-        }
-        
-        if item.postProtector {
-            if item.postProtectorMissing { addIssueString("Post Protector", "Missing") }
-            if item.postProtectorDamaged { addIssueString("Post Protector", "Damaged") }
-            if item.postProtectorRepairRequired { addIssueString("Post Protector", "Repair required") }
-            if !item.postProtectorMissing && !item.postProtectorDamaged && !item.postProtectorRepairRequired {
-                addIssueString("Post Protector")
-            }
-        }
-        
-        if item.aisleGuarding {
-            if item.aisleGuardingMissing { addIssueString("Aisle Guarding", "Missing") }
-            if item.aisleGuardingDamaged { addIssueString("Aisle Guarding", "Damaged") }
-            if item.aisleGuardingRepairRequired { addIssueString("Aisle Guarding", "Repair required") }
-            if !item.aisleGuardingMissing && !item.aisleGuardingDamaged && !item.aisleGuardingRepairRequired {
-                addIssueString("Aisle Guarding")
-            }
-        }
-        
-        return issueStrings
-    }
-    
-    // MARK: - Helper Methods (Update existing method)
-    func getFilteredInspections(sortBy: SortCriteria, filters: [Filter]) -> [Inspection] {
-        guard let currentUserID = CoreDataManager.shared.currentUserID else {
-            print("ReportGenerator: No current user ID. Not fetching filtered inspections.")
-            return []
-        }
-
-        let context = CoreDataManager.shared.context
-        let fetchRequest: NSFetchRequest<Inspection> = Inspection.fetchRequest()
-        
-        var predicates: [NSPredicate] = []
-        
-        // Always filter by current user ID
-        predicates.append(NSPredicate(format: "userId == %@", currentUserID as CVarArg))
-        
-        // Apply additional filters
-        if !filters.isEmpty {
-            for filter in filters {
-                switch filter.key {
-                case "customer":
-                    predicates.append(NSPredicate(format: "customer.name CONTAINS[cd] %@", filter.value))
-                case "date":
-                    let dateFormatter = DateFormatter()
-                    dateFormatter.dateFormat = "yyyy-MM-dd"
-                    if let date = dateFormatter.date(from: filter.value) {
-                        predicates.append(NSPredicate(format: "date >= %@ AND date < %@",
-                                                    date as NSDate,
-                                                    date.addingTimeInterval(86400) as NSDate))
-                    }
-                case "inspector":
-                    predicates.append(NSPredicate(format: "inspectorName CONTAINS[cd] %@", filter.value))
-                default:
-                    break
-                }
-            }
-        }
-        
-        // Combine all predicates
-        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
-        
-        // Apply sorting
-        switch sortBy {
-        case .date:
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-        case .customer:
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "customer.name", ascending: true)]
-        case .inspectionStatus:
-            // Assuming inspectionStatus is handled by additional filtering or a specific Core Data attribute
-            // For now, default to sorting by date if not explicitly defined
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-        case .importance, .primaryLocation, .issue, .entryOrder:
-            // For item-level sorting, sort inspections by date first
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-        }
-        
-        do {
-            let inspections = try context.fetch(fetchRequest)
-            return inspections
-        } catch {
-            print("Error fetching filtered inspections: \(error)")
-            return []
-        }
-    }
-    
-    private func getIssueDescription(for item: InspectionItem) -> String {
-        var issues: [String] = []
-        
-        if item.upright { issues.append("Upright") }
-        if item.beam { issues.append("Beam") }
-        if item.wireDeck { issues.append("Wire Deck") }
-        if item.basePlate { issues.append("Base Plate") }
-        if item.anchors { issues.append("Anchors") }
-        if item.bracingDamage { issues.append("Bracing") }
-        if item.postProtector { issues.append("Post Protector") }
-        if item.aisleGuarding { issues.append("Aisle Guarding") }
-        
-        return issues.isEmpty ? "None" : issues.joined(separator: ", ")
-    }
-    
-}
-// MARK: - Enhanced Photo Collection Helper
-extension ReportGenerator {
-    
-    /// Collect all unique photos from inspections
-    private func collectPhotosFromInspections(_ inspections: [Inspection]) -> [URL] {
-        var photoURLs: Set<String> = []
-        var photos: [URL] = []
-        
-        for inspection in inspections {
-            // The 'items' property of 'Inspection' is a relationship, and Core Data handles
-            // fetching related objects. Assuming these 'items' already belong to the user.
-            let items = getSortedInspectionItems(from: inspection, sortCriteria: nil)
-            
-            for item in items {
-                if let photoPath = item.photoURL {
-                    // Check if the photo is locally available
-                    if FileManager.default.fileExists(atPath: photoPath) {
-                        // Only add if not already added to avoid duplicates if multiple items share a photo
-                        if !photoURLs.contains(photoPath) {
-                            photoURLs.insert(photoPath)
-                            photos.append(URL(fileURLWithPath: photoPath))
-                        }
-                    } else {
-                        print("ReportGenerator: Photo file not found locally for path: \(photoPath). Will not be included in zip.")
-                    }
-                }
-            }
-        }
-        
-        return photos
-    }
-    
-    /// Generate photo summary for CSV header
-    private func generatePhotoSummary(for inspections: [Inspection]) -> String {
-        let photos = collectPhotosFromInspections(inspections)
-        return "# Total Photos: \(photos.count)\n"
-    }
 }

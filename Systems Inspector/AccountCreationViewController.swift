@@ -46,7 +46,8 @@ class AccountCreationViewController: UIViewController {
     private let securityQuestionLabel: UILabel = {
         let label = UILabel()
         label.text = "Security Question (for password recovery):"
-        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        label.font = .preferredFont(forTextStyle: .subheadline)
+        label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -89,8 +90,8 @@ class AccountCreationViewController: UIViewController {
     private let createAccountButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Create Account", for: .normal)
-        button.backgroundColor = UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
-        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = AppTheme.primary
+        button.setTitleColor(AppTheme.primaryContrast, for: .normal)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -107,7 +108,7 @@ class AccountCreationViewController: UIViewController {
     // Overlay view to block interaction during account creation
     private let overlayView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        view.backgroundColor = AppTheme.overlay
         view.translatesAutoresizingMaskIntoConstraints = false
         view.isHidden = true
         return view

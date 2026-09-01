@@ -1,0 +1,9 @@
+# Netlify (and compatible static hosts): https://docs.netlify.com/routing/headers/
+# CSP is intentionally omitted: CloudKit JS + Sign in with Apple use many Apple endpoints
+# and dynamic flows; a tight CSP on static `serve` broke the login screen. Add CSP at
+# your reverse proxy after testing with Content-Security-Policy-Report-Only if needed.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY

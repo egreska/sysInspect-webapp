@@ -9,10 +9,12 @@
         <attribute name="name" optional="YES" attributeType="String"/>
         <attribute name="phone" optional="YES" attributeType="String"/>
         <attribute name="site" optional="YES" attributeType="String"/>
+        <attribute name="siteRackingJSON" optional="YES" attributeType="Binary"/>
         <attribute name="state" optional="YES" attributeType="String"/>
         <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="zipCode" optional="YES" attributeType="String"/>
         <relationship name="inspections" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Inspection" inverseName="customer" inverseEntity="Inspection"/>
+        <relationship name="siteDocuments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="SiteDocument" inverseName="customer" inverseEntity="SiteDocument"/>
         <fetchIndex name="byUserIdIndex">
             <fetchIndexElement property="userId" type="Binary" order="ascending"/>
         </fetchIndex>
@@ -23,6 +25,25 @@
             <fetchIndexElement property="userId" type="Binary" order="ascending"/>
             <fetchIndexElement property="name" type="Binary" order="ascending"/>
         </fetchIndex>
+    </entity>
+    <entity name="CatalogName" representedClassName=".CatalogName" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="kind" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <fetchIndex name="byUserIdKindIndex">
+            <fetchIndexElement property="userId" type="Binary" order="ascending"/>
+            <fetchIndexElement property="kind" type="Binary" order="ascending"/>
+        </fetchIndex>
+    </entity>
+    <entity name="SiteDocument" representedClassName=".SiteDocument" syncable="YES" codeGenerationType="class">
+        <attribute name="contentType" optional="YES" attributeType="String"/>
+        <attribute name="data" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="filename" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="sortIndex" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="customer" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Customer" inverseName="siteDocuments" inverseEntity="Customer"/>
     </entity>
     <entity name="Inspection" representedClassName=".Inspection" syncable="YES" codeGenerationType="class">
         <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -68,7 +89,15 @@
         <attribute name="importance" optional="YES" attributeType="String" defaultValueString="Monitor"/>
         <attribute name="location" optional="YES" attributeType="String"/>
         <attribute name="photoData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
-        <attribute name="photoURL" optional="YES" attributeType="String" valueTransformerName="NSSecureUnarchiveFromDataTransformer" customClassName="URL"/>
+        <attribute name="photoData2" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="photoData3" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="photoData4" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="photoData5" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="photoURL" optional="YES" attributeType="String"/>
+        <attribute name="photoURL2" optional="YES" attributeType="String"/>
+        <attribute name="photoURL3" optional="YES" attributeType="String"/>
+        <attribute name="photoURL4" optional="YES" attributeType="String"/>
+        <attribute name="photoURL5" optional="YES" attributeType="String"/>
         <attribute name="postProtector" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="postProtectorDamaged" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="postProtectorMissing" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>

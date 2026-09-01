@@ -111,55 +111,19 @@ class PasswordRecoveryManager {
     ) async -> (success: Bool, message: String) {
         // Verify security answer first
         guard verifySecurityAnswer(for: email, answer: securityAnswer) else {
-            // Log failed reset
             AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
             return (false, "Security answer is incorrect.")
         }
-        
-        // Update password using UserManager
-        let context = CoreDataManager.shared.context
-        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "email == %@", email.lowercased())
-        
-        do {
-            let users = try context.fetch(fetchRequest)
-            guard let user = users.first else {
-                return (false, "User not found.")
-            }
-            
-            // Generate new secure password hash
-            let passwordData = Data(newPassword.utf8)
-            var saltBytes = [UInt8](repeating: 0, count: 32)
-            _ = SecRandomCopyBytes(kSecRandomDefault, saltBytes.count, &saltBytes)
-            let salt = Data(saltBytes)
-            
-            guard let derivedKey = try? PBKDF2.deriveKey(
-                password: passwordData,
-                salt: salt,
-                iterations: 100_000,
-                keyLength: 32
-            ) else {
-                return (false, "Failed to hash password.")
-            }
-            
-            user.passwordHash = derivedKey.base64EncodedString()
-            user.passwordSalt = salt
-            
-            try context.save()
-            
-            // Clear any account lockout
-            AccountLockoutManager.shared.manuallyUnlock(email: email)
-            
-            // Log password reset
-            AnalyticsManager.shared.logPasswordReset(method: "security_question", success: true)
-            
-            print("✅ Password reset successful for \(email)")
-            return (true, "Password has been reset successfully!")
-            
-        } catch {
-            print("❌ Error resetting password: \(error)")
-            return (false, "Failed to reset password: \(error.localizedDescription)")
+
+        let replaced = await UserManager.shared.replacePassword(email: email, newPassword: newPassword)
+        guard replaced else {
+            return (false, "Failed to reset password.")
         }
+
+        AccountLockoutManager.shared.manuallyUnlock(email: email)
+        AnalyticsManager.shared.logPasswordReset(method: "security_question", success: true)
+        print("✅ Password reset successful for \(email)")
+        return (true, "Password has been reset successfully!")
     }
     
     // MARK: - Helper Methods

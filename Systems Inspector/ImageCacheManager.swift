@@ -30,8 +30,7 @@ class ImageCacheManager {
     // Cache limits
     private let maxMemoryCacheSize = 50 // 50 images in memory
     private let maxDiskCacheSize: Int64 = 100 * 1024 * 1024 // 100 MB
-    private let cacheExpiration: TimeInterval = 7 * 24 * 60 * 60 // 7 days
-    
+
     private init() {
         configureMemoryCache()
         setupMemoryWarningObserver()
@@ -61,6 +60,8 @@ class ImageCacheManager {
         return memoryCache.object(forKey: cacheKey)
     }
     
+    private let diskLoadQueue = DispatchQueue(label: "com.systemsinspector.imagecache.disk", qos: .userInitiated)
+    
     /// Get image from cache or load from disk/data
     func getImage(
         forKey key: String,
@@ -69,52 +70,58 @@ class ImageCacheManager {
     ) {
         let cacheKey = key as NSString
         
-        // 1. Check memory cache
+        // 1. Check memory cache (synchronous, fast)
         if let cachedImage = memoryCache.object(forKey: cacheKey) {
+            #if DEBUG
             print("📸 Image loaded from memory cache: \(key)")
+            #endif
             AnalyticsManager.shared.logCacheHit(cacheType: "memory")
             completion(cachedImage)
             return
         }
         
-        // 2. Check disk cache
-        if let diskImage = loadImageFromDisk(key: key) {
-            // Store in memory for faster access next time
-            memoryCache.setObject(diskImage, forKey: cacheKey)
-            print("📸 Image loaded from disk cache: \(key)")
-            AnalyticsManager.shared.logCacheHit(cacheType: "disk")
-            completion(diskImage)
-            return
-        }
-        
-        // 3. Load from data if provided
+        // 2. Check disk cache (off main thread)
         if let data = data {
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self = self else { return }
+                if let diskImage = self.loadImageFromDisk(key: key) {
+                    self.memoryCache.setObject(diskImage, forKey: cacheKey, cost: self.imageCost(diskImage))
+                    AnalyticsManager.shared.logCacheHit(cacheType: "disk")
+                    DispatchQueue.main.async { completion(diskImage) }
+                    return
+                }
                 if let image = UIImage(data: data) {
-                    // Cache the image
-                    self?.cacheImage(image, forKey: key)
-                    DispatchQueue.main.async {
-                        print("📸 Image loaded from data: \(key)")
-                        completion(image)
-                    }
+                    self.cacheImage(image, forKey: key)
+                    DispatchQueue.main.async { completion(image) }
                 } else {
-                    DispatchQueue.main.async {
-                        completion(nil)
-                    }
+                    DispatchQueue.main.async { completion(nil) }
                 }
             }
         } else {
-            AnalyticsManager.shared.logCacheMiss(cacheType: "image")
-            completion(nil)
+            diskLoadQueue.async { [weak self] in
+                guard let self = self else { return }
+                if let diskImage = self.loadImageFromDisk(key: key) {
+                    self.memoryCache.setObject(diskImage, forKey: cacheKey, cost: self.imageCost(diskImage))
+                    AnalyticsManager.shared.logCacheHit(cacheType: "disk")
+                    DispatchQueue.main.async { completion(diskImage) }
+                } else {
+                    AnalyticsManager.shared.logCacheMiss(cacheType: "image")
+                    DispatchQueue.main.async { completion(nil) }
+                }
+            }
         }
+    }
+    
+    private func imageCost(_ image: UIImage) -> Int {
+        let scale = image.scale
+        let size = image.size
+        return Int(size.width * scale * size.height * scale * 4)
     }
     
     /// Cache an image (both memory and disk)
     func cacheImage(_ image: UIImage, forKey key: String) {
         let cacheKey = key as NSString
-        
-        // Store in memory cache
-        memoryCache.setObject(image, forKey: cacheKey)
+        memoryCache.setObject(image, forKey: cacheKey, cost: imageCost(image))
         
         // Store in disk cache (background thread)
         DispatchQueue.global(qos: .utility).async { [weak self] in
@@ -135,7 +142,9 @@ class ImageCacheManager {
     /// Clear all memory cache
     @objc func clearMemoryCache() {
         memoryCache.removeAllObjects()
+        #if DEBUG
         print("🗑️ Memory cache cleared")
+        #endif
     }
     
     /// Clear all disk cache
@@ -152,44 +161,19 @@ class ImageCacheManager {
                 for fileURL in contents {
                     try? self.fileManager.removeItem(at: fileURL)
                 }
-                
+                #if DEBUG
                 print("🗑️ Disk cache cleared")
-                
+                #endif
                 DispatchQueue.main.async {
                     completion?()
                 }
             } catch {
+                #if DEBUG
                 print("❌ Error clearing disk cache: \(error)")
+                #endif
                 DispatchQueue.main.async {
                     completion?()
                 }
-            }
-        }
-    }
-    
-    /// Clear expired cache entries
-    func clearExpiredCache() {
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self else { return }
-            
-            do {
-                let contents = try self.fileManager.contentsOfDirectory(
-                    at: self.cacheDirectory,
-                    includingPropertiesForKeys: [.contentModificationDateKey]
-                )
-                
-                let expirationDate = Date().addingTimeInterval(-self.cacheExpiration)
-                
-                for fileURL in contents {
-                    if let attributes = try? self.fileManager.attributesOfItem(atPath: fileURL.path),
-                       let modificationDate = attributes[.modificationDate] as? Date,
-                       modificationDate < expirationDate {
-                        try? self.fileManager.removeItem(at: fileURL)
-                        print("🗑️ Expired cache file removed: \(fileURL.lastPathComponent)")
-                    }
-                }
-            } catch {
-                print("❌ Error clearing expired cache: \(error)")
             }
         }
     }
@@ -217,7 +201,9 @@ class ImageCacheManager {
                     }
                 }
             } catch {
+                #if DEBUG
                 print("❌ Error calculating cache size: \(error)")
+                #endif
             }
             
             DispatchQueue.main.async {
@@ -233,6 +219,46 @@ class ImageCacheManager {
         return formatter.string(fromByteCount: bytes)
     }
     
+    /// Get image as thumbnail (max dimension) for list cells. Uses separate cache key.
+    func getThumbnail(
+        forKey key: String,
+        maxDimension: CGFloat = 300,
+        data: Data? = nil,
+        completion: @escaping (UIImage?) -> Void
+    ) {
+        let thumbKey = "thumb_\(Int(maxDimension))_\(key)"
+        getImage(forKey: thumbKey, data: nil) { [weak self] cached in
+            if let cached = cached {
+                completion(cached)
+                return
+            }
+            self?.getImage(forKey: key, data: data) { fullImage in
+                guard let full = fullImage else {
+                    completion(nil)
+                    return
+                }
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let thumb = Self.downscale(image: full, maxDimension: maxDimension)
+                    self?.cacheImage(thumb, forKey: thumbKey)
+                    DispatchQueue.main.async { completion(thumb) }
+                }
+            }
+        }
+    }
+    
+    private static func downscale(image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        let scale = image.scale
+        let maxSize = max(size.width * scale, size.height * scale)
+        guard maxSize > maxDimension else { return image }
+        let ratio = maxDimension / maxSize
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+    
     // MARK: - Private Methods
     
     private func saveImageToDisk(_ image: UIImage, key: String) {
@@ -242,12 +268,15 @@ class ImageCacheManager {
         
         do {
             try data.write(to: fileURL)
+            #if DEBUG
             print("💾 Image saved to disk cache: \(key)")
-            
+            #endif
             // Check if cache size exceeds limit
             checkAndTrimCache()
         } catch {
+            #if DEBUG
             print("❌ Error saving image to disk: \(error)")
+            #endif
         }
     }
     
@@ -320,13 +349,18 @@ class ImageCacheManager {
                        let fileSize = attributes[.size] as? Int64 {
                         try? self.fileManager.removeItem(at: fileURL)
                         currentSize -= fileSize
+                        #if DEBUG
                         print("🗑️ Cache trimmed: \(fileURL.lastPathComponent)")
+                        #endif
                     }
                 }
-                
+                #if DEBUG
                 print("✅ Disk cache trimmed to \(self.formatCacheSize(currentSize))")
+                #endif
             } catch {
+                #if DEBUG
                 print("❌ Error trimming disk cache: \(error)")
+                #endif
             }
         }
     }

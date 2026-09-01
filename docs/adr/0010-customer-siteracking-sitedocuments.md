@@ -1,0 +1,7 @@
+# SiteRacking JSON and SiteDocument records on Customer, not Inspection or Issues
+
+Optional warehouse profile (installed uprights/beams/decks plus blueprints) lives on Customer — one Customer is one site. It is not an Inspection snapshot, not Issue damage, and not InspectionItem pre-fill. Persist is a hybrid: SiteRacking encodes as one optional JSON blob on Customer; SiteDocuments are a to-many entity with bytes and filename (cap five); Manufacturer and DeckType names are CatalogName rows scoped to the Session user. We considered five binary slots on Customer (like InspectionItem photos) or a full spec-row entity graph. Slots bloat the Customer CloudKit record when one PDF changes; spec rows are never queried across customers. JSON for the small profile and separate records for files match how callers already treat photos: bytes in, bytes out, no slot keys. Catalogs are this inspector’s list, not a public CloudKit catalog.
+
+**Considered options:** Inspection snapshot per visit; Site child entity under Customer; five `documentData` slots plus JSON on Customer; full Core Data graph for spec rows; JSON catalogs on User; hybrid JSON + SiteDocument + CatalogName (chosen).
+
+**Consequences:** Callers use `CustomerFormState` / `CustomerIntake` and `documentFiles()` / `replaceDocuments`. Keep-by-id must not rewrite `data` on a name-only save. Do not add SiteRacking fields to ReportSnapshot or the web customer codec this pass. Do not reuse Issue upright/beam/deck flags for catalog specs. Empty profile is `nil` JSON, not `{}`.
