@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { customersAPI, inspectionsAPI } from '../services/api';
+import { load } from '../services/appLoad';
 import { BarChart, Users, FileText, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, isThisMonth } from 'date-fns';
@@ -7,7 +7,7 @@ import { format, isThisMonth } from 'date-fns';
 export default function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['customers'],
-    queryFn: customersAPI.getAll,
+    queryFn: load.listCustomers,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -21,7 +21,7 @@ export default function DashboardPage() {
     refetch: refetchInspections,
   } = useQuery({
     queryKey: ['all-inspections'],
-    queryFn: inspectionsAPI.getAll,
+    queryFn: load.listInspections,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,

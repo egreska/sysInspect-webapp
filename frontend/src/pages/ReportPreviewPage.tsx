@@ -1,42 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { inspectionsAPI } from '../services/api';
+import { load } from '../services/appLoad';
 import { generatePDF } from '../services/pdfGenerator';
 import { ArrowLeft, Download, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState, useEffect, useCallback } from 'react';
 import type { Inspection, InspectionItem } from '../types';
-
-function getDamagesList(item: InspectionItem): string[] {
-  const damages: string[] = [];
-  if (item.uprightFrontDamage) damages.push('Upright Front Damage');
-  if (item.uprightFrontTwisted) damages.push('Upright Front Twisted');
-  if (item.uprightRearDamage) damages.push('Upright Rear Damage');
-  if (item.uprightRearTwisted) damages.push('Upright Rear Twisted');
-  if (item.uprightAlignmentOutOfAlignment) damages.push('Out of Alignment');
-  if (item.uprightAlignmentOutOfVerticalPlumb) damages.push('Out of Vertical Plumb');
-  if (item.beamFrontDamage) damages.push('Beam Front Damage');
-  if (item.beamFrontBowed) damages.push('Beam Front Bowed');
-  if (item.beamRearDamage) damages.push('Beam Rear Damage');
-  if (item.beamRearBowed) damages.push('Beam Rear Bowed');
-  if (item.bracingDamage) damages.push('Bracing Damage');
-  if (item.basePlateDamaged) damages.push('Base Plate Damaged');
-  if (item.basePlateTwisted) damages.push('Base Plate Twisted');
-  if (item.basePlateFloorDamaged) damages.push('Floor Damaged');
-  if (item.anchorsDamaged) damages.push('Anchors Damaged');
-  if (item.anchorsMissing) damages.push('Anchors Missing');
-  if (item.anchors && !item.anchorsTorqued) damages.push('Anchors Not Torqued');
-  if (item.wireDeckDamaged) damages.push('Wire Deck Damaged');
-  if (item.wireDeckMissing) damages.push('Wire Deck Missing');
-  if (item.wireDeckOutOfPosition) damages.push('Wire Deck Out of Position');
-  if (item.postProtectorDamaged) damages.push('Post Protector Damaged');
-  if (item.postProtectorMissing) damages.push('Post Protector Missing');
-  if (item.postProtectorRepairRequired) damages.push('Post Protector Repair Required');
-  if (item.aisleGuardingDamaged) damages.push('Aisle Guarding Damaged');
-  if (item.aisleGuardingMissing) damages.push('Aisle Guarding Missing');
-  if (item.aisleGuardingRepairRequired) damages.push('Aisle Guarding Repair Required');
-  return damages;
-}
+import { Issue } from '../issue';
 
 export default function ReportPreviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,7 +15,7 @@ export default function ReportPreviewPage() {
 
   const { data: inspection, isLoading } = useQuery({
     queryKey: ['inspection', id],
-    queryFn: () => inspectionsAPI.getById(id!),
+    queryFn: () => load.inspectionById(id!),
     enabled: !!id,
   });
 
@@ -179,19 +149,39 @@ export default function ReportPreviewPage() {
         <div className="divide-y">
           {items.length > 0 ? (
             items.map((item, index) => {
-              const damages = getDamagesList(item);
+              const issueLabels = Issue.labels(item.issues);
               return (
                 <div key={item.id} className="p-6">
                   <div className="flex flex-col md:flex-row gap-6">
                     {/* Photo thumbnail (read-only) */}
                     <div className="flex-shrink-0 w-full md:w-48">
-                      {(item.photoUrl || item.photoData) ? (
-                        <img
-                          src={item.photoUrl || `data:image/jpeg;base64,${item.photoData}`}
-                          alt={`Item ${index + 1}`}
-                          className="w-full h-36 object-cover rounded-lg border"
-                          crossOrigin="anonymous"
-                        />
+                      {item.photoUrls[0] ? (
+                        <div className="relative">
+                          <img
+                            src={item.photoUrls[0]}
+                            alt={`Item ${index + 1}`}
+                            className="w-full h-36 object-cover rounded-lg border"
+                            crossOrigin="anonymous"
+                          />
+                          {item.photoUrls.length > 1 && (
+                            <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-xs text-white">
+                              {item.photoUrls.length}
+                            </span>
+                          )}
+                          {item.photoUrls.length > 1 && (
+                            <div className="mt-2 flex gap-1 overflow-x-auto">
+                              {item.photoUrls.slice(1).map((url) => (
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt=""
+                                  className="h-12 w-12 object-cover rounded border"
+                                  crossOrigin="anonymous"
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="w-full h-36 bg-gray-100 rounded-lg border flex items-center justify-center text-sm text-gray-400">
                           No Photo
@@ -258,16 +248,15 @@ export default function ReportPreviewPage() {
                   </div>
 
                   {/* Damage list (read-only reference) */}
-                  {damages.length > 0 && (
+                  {issueLabels.length > 0 && (
                     <div className="mt-4 pt-3 border-t border-gray-100">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                        Reported Damages
+                        Issues
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-sm">
-                        {damages.map((damage, i) => (
-                          <div key={i} className="flex items-center text-gray-600">
-                            <span className="text-red-400 mr-2">•</span>
-                            {damage}
+                        {issueLabels.map((label) => (
+                          <div key={label} className="flex items-center text-gray-600">
+                            {label}
                           </div>
                         ))}
                       </div>

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { customersAPI } from '../services/api';
+import { load } from '../services/appLoad';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Phone } from 'lucide-react';
 import { useState } from 'react';
@@ -8,7 +8,7 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['customers'],
-    queryFn: customersAPI.getAll,
+    queryFn: load.listCustomers,
   });
 
   // Ensure we always have an array (handles wrong routing / API returning HTML)
