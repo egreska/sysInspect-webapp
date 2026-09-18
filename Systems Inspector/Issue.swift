@@ -142,11 +142,12 @@ enum Issue {
         return result
     }
 
-    static func labels(from flags: [Flag: Bool]) -> [String] {
-        catalog.flatMap { labels(from: $0, flags: flags, ancestorsRecorded: true) }
+    static func labels(from selected: Set<Path>) -> [String] {
+        labels(fromFlags: flags(from: selected))
     }
 
-    static func primaryParentLabel(from flags: [Flag: Bool]) -> String {
+    static func primaryParentLabel(from selected: Set<Path>) -> String {
+        let flags = flags(from: selected)
         for node in catalog {
             if let flag = node.flag, flags[flag] == true {
                 return node.path.name
@@ -171,6 +172,10 @@ enum Issue {
             return selected.filter { $0 != path && !path.isAncestor(of: $0) }
         }
         return selected.union([path])
+    }
+
+    private static func labels(fromFlags flags: [Flag: Bool]) -> [String] {
+        catalog.flatMap { labels(from: $0, flags: flags, ancestorsRecorded: true) }
     }
 
     private static func labels(from node: Node, flags: [Flag: Bool], ancestorsRecorded: Bool) -> [String] {

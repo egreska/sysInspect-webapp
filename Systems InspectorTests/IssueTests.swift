@@ -38,51 +38,45 @@ final class IssueTests: XCTestCase {
         XCTAssertTrue(Issue.Flag.allCases.allSatisfy { flags[$0] == false })
     }
 
-    func testLabelsEmptyWhenNoFlags() {
-        XCTAssertEqual(Issue.labels(from: Issue.flags(from: [])), [])
+    func testLabelsEmptyWhenNoPaths() {
+        XCTAssertEqual(Issue.labels(from: []), [])
     }
 
     func testLabelsParentOnly() {
-        XCTAssertEqual(Issue.labels(from: Issue.flags(from: [upright])), ["• Upright"])
+        XCTAssertEqual(Issue.labels(from: [upright]), ["• Upright"])
     }
 
     func testLabelsHierarchicalLeaf() {
         XCTAssertEqual(
-            Issue.labels(from: Issue.flags(from: [damage])),
+            Issue.labels(from: [damage]),
             ["• Upright > Front > Damage"]
         )
     }
 
-    func testLabelsOmitLeafWhenParentFlagOff() {
-        var flags = Issue.flags(from: [])
-        flags[.uprightFrontDamage] = true
-        XCTAssertEqual(Issue.labels(from: flags), [])
-    }
-
     func testLabelsBracingChildAndParentOnly() {
         XCTAssertEqual(
-            Issue.labels(from: Issue.flags(from: [bracingHorizontal])),
+            Issue.labels(from: [bracingHorizontal]),
             ["• Bracing Damage > Horizontal"]
         )
         XCTAssertEqual(
-            Issue.labels(from: Issue.flags(from: [bracing])),
+            Issue.labels(from: [bracing]),
             ["• Bracing Damage"]
         )
     }
 
     func testPrimaryParentLabelUsesCatalogName() {
-        XCTAssertEqual(Issue.primaryParentLabel(from: Issue.flags(from: [bracing])), "Bracing Damage")
-        XCTAssertEqual(Issue.primaryParentLabel(from: Issue.flags(from: [])), "No Issues")
-        XCTAssertEqual(Issue.primaryParentLabel(from: Issue.flags(from: [damage])), "Upright")
+        XCTAssertEqual(Issue.primaryParentLabel(from: [bracing]), "Bracing Damage")
+        XCTAssertEqual(Issue.primaryParentLabel(from: []), "No Issues")
+        XCTAssertEqual(Issue.primaryParentLabel(from: [damage]), "Upright")
     }
 
     func testRoundTripSelectionToFlagsToLabels() {
         let selected: Set<Issue.Path> = [damage, bracingHorizontal]
-        let flags = Issue.flags(from: selected)
         XCTAssertEqual(
-            Issue.labels(from: flags),
+            Issue.labels(from: selected),
             ["• Upright > Front > Damage", "• Bracing Damage > Horizontal"]
         )
+        let flags = Issue.flags(from: selected)
         let restored = Issue.selectedPaths(from: flags)
         XCTAssertEqual(Issue.flags(from: restored), flags)
     }

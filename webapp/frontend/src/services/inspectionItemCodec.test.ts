@@ -35,8 +35,10 @@ describe('decodeInspectionItem', () => {
     expect(item.importance).toBe('Needs immediate attention');
     expect(item.comments).toBe('Column dented');
     expect(item.sequenceNumber).toBe(4);
-    expect(item.upright).toBe(true);
-    expect(item.uprightFrontDamage).toBe(true);
+    expect(item.issues).toEqual([
+      { segments: ['Upright'] },
+      { segments: ['Upright', 'Front', 'Damage'] },
+    ]);
     expect(item.photoUrls).toEqual(['https://ck.example/photo.jpg']);
   });
 
@@ -46,9 +48,7 @@ describe('decodeInspectionItem', () => {
     expect(item.importance).toBe('Monitor');
     expect(item.location).toBe('');
     expect(item.sequenceNumber).toBe(0);
-    expect(item.upright).toBe(false);
-    expect(item.beam).toBe(false);
-    expect(item.uprightFrontDamage).toBe(false);
+    expect(item.issues).toEqual([]);
     expect(item.photoUrls).toEqual([]);
   });
 

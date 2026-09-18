@@ -84,6 +84,15 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         if racking.decks.rows.isEmpty {
             racking.decks.rows = [DeckSpec(manufacturer: "", type: "")]
         }
+        if racking.crossBars.rows.isEmpty {
+            racking.crossBars.rows = [CrossBarSpec(manufacturer: "")]
+        }
+        if racking.anchors.rows.isEmpty {
+            racking.anchors.rows = [AnchorSpec(manufacturer: "")]
+        }
+        if racking.rowSpacers.rows.isEmpty {
+            racking.rowSpacers.rows = [RowSpacerSpec(manufacturer: "")]
+        }
     }
 
     private func rebuild() {
@@ -91,10 +100,14 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             stackView.removeArrangedSubview($0)
             $0.removeFromSuperview()
         }
+        stackView.addArrangedSubview(sectionLabel("Site Information"))
+        stackView.addArrangedSubview(siteInformationCard())
+        stackView.addArrangedSubview(sectionLabel("Load Information"))
+        stackView.addArrangedSubview(loadInformationCard())
         stackView.addArrangedSubview(sectionLabel("Site documents"))
         stackView.addArrangedSubview(documentsView())
         stackView.addArrangedSubview(componentSection(
-            title: "Uprights",
+            title: "Upright Frames",
             mode: racking.uprights.mode,
             canStandardize: racking.canSetUprightsStandardized(),
             addEnabled: racking.uprights.mode == .mixed,
@@ -122,7 +135,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             stackView.addArrangedSubview(beamCard(index: index))
         }
         stackView.addArrangedSubview(componentSection(
-            title: "Decks",
+            title: "Wire Decks",
             mode: racking.decks.mode,
             canStandardize: racking.canSetDecksStandardized(),
             addEnabled: racking.decks.mode == .mixed,
@@ -134,6 +147,50 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         ))
         for index in racking.decks.rows.indices {
             stackView.addArrangedSubview(deckCard(index: index))
+        }
+        stackView.addArrangedSubview(componentSection(
+            title: "Cross Bars",
+            mode: racking.crossBars.mode,
+            canStandardize: racking.canSetCrossBarsStandardized(),
+            addEnabled: racking.crossBars.mode == .mixed,
+            onMode: { [weak self] mixed in self?.setCrossBarsMixed(mixed) },
+            onAdd: { [weak self] in
+                self?.racking.crossBars.rows.append(CrossBarSpec(manufacturer: ""))
+                self?.rebuild()
+            }
+        ))
+        for index in racking.crossBars.rows.indices {
+            stackView.addArrangedSubview(crossBarCard(index: index))
+        }
+        stackView.addArrangedSubview(sectionLabel("Safety Clips"))
+        stackView.addArrangedSubview(safetyClipsCard())
+        stackView.addArrangedSubview(componentSection(
+            title: "Anchors",
+            mode: racking.anchors.mode,
+            canStandardize: racking.canSetAnchorsStandardized(),
+            addEnabled: racking.anchors.mode == .mixed,
+            onMode: { [weak self] mixed in self?.setAnchorsMixed(mixed) },
+            onAdd: { [weak self] in
+                self?.racking.anchors.rows.append(AnchorSpec(manufacturer: ""))
+                self?.rebuild()
+            }
+        ))
+        for index in racking.anchors.rows.indices {
+            stackView.addArrangedSubview(anchorCard(index: index))
+        }
+        stackView.addArrangedSubview(componentSection(
+            title: "Row Spacers",
+            mode: racking.rowSpacers.mode,
+            canStandardize: racking.canSetRowSpacersStandardized(),
+            addEnabled: racking.rowSpacers.mode == .mixed,
+            onMode: { [weak self] mixed in self?.setRowSpacersMixed(mixed) },
+            onAdd: { [weak self] in
+                self?.racking.rowSpacers.rows.append(RowSpacerSpec(manufacturer: ""))
+                self?.rebuild()
+            }
+        ))
+        for index in racking.rowSpacers.rows.indices {
+            stackView.addArrangedSubview(rowSpacerCard(index: index))
         }
     }
 
@@ -152,6 +209,24 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     private func setDecksMixed(_ mixed: Bool) {
         if !mixed && !racking.canSetDecksStandardized() { rebuild(); return }
         racking.decks.mode = mixed ? .mixed : .standardized
+        rebuild()
+    }
+
+    private func setCrossBarsMixed(_ mixed: Bool) {
+        if !mixed && !racking.canSetCrossBarsStandardized() { rebuild(); return }
+        racking.crossBars.mode = mixed ? .mixed : .standardized
+        rebuild()
+    }
+
+    private func setAnchorsMixed(_ mixed: Bool) {
+        if !mixed && !racking.canSetAnchorsStandardized() { rebuild(); return }
+        racking.anchors.mode = mixed ? .mixed : .standardized
+        rebuild()
+    }
+
+    private func setRowSpacersMixed(_ mixed: Bool) {
+        if !mixed && !racking.canSetRowSpacersStandardized() { rebuild(); return }
+        racking.rowSpacers.mode = mixed ? .mixed : .standardized
         rebuild()
     }
 
@@ -246,24 +321,122 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         return column
     }
 
+    private func siteInformationCard() -> UIView {
+        let card = UIStackView()
+        card.axis = .vertical
+        card.spacing = 8
+        let fields: [(String, String?, (String) -> Void)] = [
+            ("Number of Bays", racking.siteInformation.numberOfBays, { [weak self] text in
+                self?.racking.siteInformation.numberOfBays = Self.optionalText(text)
+            }),
+            ("Number of Beam Levels", racking.siteInformation.numberOfBeamLevels, { [weak self] text in
+                self?.racking.siteInformation.numberOfBeamLevels = Self.optionalText(text)
+            }),
+            ("Beam Spacing", racking.siteInformation.beamSpacing, { [weak self] text in
+                self?.racking.siteInformation.beamSpacing = Self.optionalText(text)
+            })
+        ]
+        for field in fields {
+            card.addArrangedSubview(textField(placeholder: field.0, text: field.1, onChange: field.2))
+        }
+        return card
+    }
+
+    private func loadInformationCard() -> UIView {
+        let card = UIStackView()
+        card.axis = .vertical
+        card.spacing = 8
+        let fields: [(String, String?, (String) -> Void)] = [
+            ("Maximum Weight", racking.loadInformation.maximumWeight, { [weak self] text in
+                self?.racking.loadInformation.maximumWeight = Self.optionalText(text)
+            }),
+            ("Pallet Dimensions", racking.loadInformation.palletDimensions, { [weak self] text in
+                self?.racking.loadInformation.palletDimensions = Self.optionalText(text)
+            }),
+            ("Load Dimensions", racking.loadInformation.loadDimensions, { [weak self] text in
+                self?.racking.loadInformation.loadDimensions = Self.optionalText(text)
+            }),
+            ("What is being stored", racking.loadInformation.storedContents, { [weak self] text in
+                self?.racking.loadInformation.storedContents = Self.optionalText(text)
+            })
+        ]
+        for field in fields {
+            card.addArrangedSubview(textField(placeholder: field.0, text: field.1, onChange: field.2))
+        }
+        return card
+    }
+
+    private func safetyClipsCard() -> UIView {
+        let card = UIStackView()
+        card.axis = .vertical
+        card.spacing = 8
+        let header = UIStackView()
+        header.axis = .horizontal
+        header.spacing = 8
+        header.alignment = .center
+        let presentLabel = UILabel()
+        presentLabel.text = "Present"
+        presentLabel.font = AppTheme.font(.body)
+        presentLabel.textColor = AppTheme.textPrimary
+        let control = UISegmentedControl(items: ["No", "Yes"])
+        control.selectedSegmentIndex = racking.safetyClips.present ? 1 : 0
+        control.accessibilityLabel = "Present"
+        control.addAction(UIAction { [weak self] _ in
+            self?.racking.safetyClips.present = control.selectedSegmentIndex == 1
+            self?.rebuild()
+        }, for: .valueChanged)
+        header.addArrangedSubview(presentLabel)
+        header.addArrangedSubview(control)
+        card.addArrangedSubview(header)
+        let needed = textField(
+            placeholder: "# Needed",
+            text: racking.safetyClips.neededCount,
+            onChange: { [weak self] text in
+                self?.racking.safetyClips.neededCount = Self.optionalText(text)
+            }
+        )
+        needed.isEnabled = racking.safetyClips.present
+        needed.alpha = racking.safetyClips.present ? 1 : 0.4
+        needed.accessibilityLabel = "Number needed"
+        card.addArrangedSubview(needed)
+        return card
+    }
+
+    private func textField(placeholder: String, text: String?, onChange: @escaping (String) -> Void) -> UITextField {
+        let textField = UITextField()
+        textField.placeholder = placeholder
+        textField.text = text
+        textField.borderStyle = .roundedRect
+        textField.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        textField.addAction(UIAction { _ in
+            onChange(textField.text ?? "")
+        }, for: .editingChanged)
+        return textField
+    }
+
     private func uprightCard(index: Int) -> UIView {
         let spec = racking.uprights.rows[index]
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
+                ("Type", spec.type),
                 ("Height", spec.height),
                 ("Depth", spec.depth),
-                ("Color", spec.color)
+                ("Capacity", spec.capacity)
             ],
-            onManufacturer: { [weak self] in self?.pickManufacturer(current: spec.manufacturer) { name in
+            footerControl: constructionToggle(spec.construction) { [weak self] construction in
+                self?.racking.uprights.rows[index].construction = construction
+            },
+            onManufacturer: { [weak self] name in
                 self?.racking.uprights.rows[index].manufacturer = name
                 self?.rebuild()
-            }},
+            },
             onField: { [weak self] fieldIndex, text in
                 switch fieldIndex {
-                case 0: self?.racking.uprights.rows[index].height = Self.optionalText(text)
-                case 1: self?.racking.uprights.rows[index].depth = Self.optionalText(text)
-                default: self?.racking.uprights.rows[index].color = Self.optionalText(text)
+                case 0: self?.racking.uprights.rows[index].type = Self.optionalText(text)
+                case 1: self?.racking.uprights.rows[index].height = Self.optionalText(text)
+                case 2: self?.racking.uprights.rows[index].depth = Self.optionalText(text)
+                default: self?.racking.uprights.rows[index].capacity = Self.optionalText(text)
                 }
             }
         )
@@ -274,18 +447,23 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
+                ("Type", spec.type),
                 ("Length", spec.length),
-                ("Color", spec.color)
+                ("Face", spec.face),
+                ("Step Dimensions", spec.stepDimensions),
+                ("Capacity", spec.capacity)
             ],
-            onManufacturer: { [weak self] in self?.pickManufacturer(current: spec.manufacturer) { name in
+            onManufacturer: { [weak self] name in
                 self?.racking.beams.rows[index].manufacturer = name
                 self?.rebuild()
-            }},
+            },
             onField: { [weak self] fieldIndex, text in
-                if fieldIndex == 0 {
-                    self?.racking.beams.rows[index].length = Self.optionalText(text)
-                } else {
-                    self?.racking.beams.rows[index].color = Self.optionalText(text)
+                switch fieldIndex {
+                case 0: self?.racking.beams.rows[index].type = Self.optionalText(text)
+                case 1: self?.racking.beams.rows[index].length = Self.optionalText(text)
+                case 2: self?.racking.beams.rows[index].face = Self.optionalText(text)
+                case 3: self?.racking.beams.rows[index].stepDimensions = Self.optionalText(text)
+                default: self?.racking.beams.rows[index].capacity = Self.optionalText(text)
                 }
             }
         )
@@ -293,51 +471,138 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
 
     private func deckCard(index: Int) -> UIView {
         let spec = racking.decks.rows[index]
-        let card = specCard(
-            manufacturer: spec.manufacturer,
-            fields: [("Size", spec.size)],
-            extraControl: typeButton(spec.type) { [weak self] in
-                self?.pickDeckType(current: spec.type) { type in
-                    self?.racking.decks.rows[index].type = type
-                    self?.rebuild()
-                }
-            },
-            onManufacturer: { [weak self] in self?.pickManufacturer(current: spec.manufacturer) { name in
-                self?.racking.decks.rows[index].manufacturer = name
-                self?.rebuild()
-            }},
-            onField: { [weak self] _, text in
-                self?.racking.decks.rows[index].size = Self.optionalText(text)
-            }
-        )
+        let card = UIStackView()
+        card.axis = .vertical
+        card.spacing = 8
+        card.addArrangedSubview(catalogPullDown(
+            kind: .wireDeckManufacturer,
+            current: spec.manufacturer,
+            placeholder: "Manufacturer"
+        ) { [weak self] name in
+            self?.racking.decks.rows[index].manufacturer = name
+            self?.rebuild()
+        })
+        card.addArrangedSubview(textField(placeholder: "Capacity", text: spec.capacity) { [weak self] text in
+            self?.racking.decks.rows[index].capacity = Self.optionalText(text)
+        })
+        card.addArrangedSubview(catalogPullDown(
+            kind: .deckType,
+            current: spec.type,
+            placeholder: "Type"
+        ) { [weak self] type in
+            self?.racking.decks.rows[index].type = type
+            self?.rebuild()
+        })
+        card.addArrangedSubview(yesNoToggle(title: "UDL", isOn: spec.udl, accessibilityLabel: "UDL") { [weak self] isOn in
+            self?.racking.decks.rows[index].udl = isOn
+            self?.rebuild()
+        })
+        card.addArrangedSubview(textField(placeholder: "Number of Decks", text: spec.numberOfDecks) { [weak self] text in
+            self?.racking.decks.rows[index].numberOfDecks = Self.optionalText(text)
+        })
         return card
     }
 
-    private func typeButton(_ type: String, action: @escaping () -> Void) -> UIButton {
-        let button = UIButton(type: .system)
-        button.setTitle(type.isEmpty ? "Type" : type, for: .normal)
-        button.contentHorizontalAlignment = .left
-        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        button.addAction(UIAction { _ in action() }, for: .touchUpInside)
-        return button
+    private func crossBarCard(index: Int) -> UIView {
+        let spec = racking.crossBars.rows[index]
+        return specCard(
+            manufacturer: spec.manufacturer,
+            fields: [("Size", spec.size)],
+            onManufacturer: { [weak self] name in
+                self?.racking.crossBars.rows[index].manufacturer = name
+                self?.rebuild()
+            },
+            onField: { [weak self] _, text in
+                self?.racking.crossBars.rows[index].size = Self.optionalText(text)
+            }
+        )
+    }
+
+    private func anchorCard(index: Int) -> UIView {
+        let spec = racking.anchors.rows[index]
+        return specCard(
+            manufacturer: spec.manufacturer,
+            fields: [("Size", spec.size)],
+            onManufacturer: { [weak self] name in
+                self?.racking.anchors.rows[index].manufacturer = name
+                self?.rebuild()
+            },
+            onField: { [weak self] _, text in
+                self?.racking.anchors.rows[index].size = Self.optionalText(text)
+            }
+        )
+    }
+
+    private func rowSpacerCard(index: Int) -> UIView {
+        let spec = racking.rowSpacers.rows[index]
+        return specCard(
+            manufacturer: spec.manufacturer,
+            fields: [
+                ("Length", spec.length),
+                ("Width", spec.width)
+            ],
+            onManufacturer: { [weak self] name in
+                self?.racking.rowSpacers.rows[index].manufacturer = name
+                self?.rebuild()
+            },
+            onField: { [weak self] fieldIndex, text in
+                if fieldIndex == 0 {
+                    self?.racking.rowSpacers.rows[index].length = Self.optionalText(text)
+                } else {
+                    self?.racking.rowSpacers.rows[index].width = Self.optionalText(text)
+                }
+            }
+        )
+    }
+
+    private func yesNoToggle(title: String, isOn: Bool, accessibilityLabel: String, onChange: @escaping (Bool) -> Void) -> UIView {
+        let header = UIStackView()
+        header.axis = .horizontal
+        header.spacing = 8
+        header.alignment = .center
+        let label = UILabel()
+        label.text = title
+        label.font = AppTheme.font(.body)
+        label.textColor = AppTheme.textPrimary
+        let control = UISegmentedControl(items: ["No", "Yes"])
+        control.selectedSegmentIndex = isOn ? 1 : 0
+        control.accessibilityLabel = accessibilityLabel
+        control.addAction(UIAction { _ in
+            onChange(control.selectedSegmentIndex == 1)
+        }, for: .valueChanged)
+        header.addArrangedSubview(label)
+        header.addArrangedSubview(control)
+        return header
+    }
+
+    private func constructionToggle(_ construction: RackingConstruction, onChange: @escaping (RackingConstruction) -> Void) -> UIView {
+        let control = UISegmentedControl(items: ["Structural", "Roll Formed"])
+        control.selectedSegmentIndex = construction == .rollFormed ? 1 : 0
+        control.accessibilityLabel = "Construction"
+        control.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        control.addAction(UIAction { _ in
+            onChange(control.selectedSegmentIndex == 1 ? .rollFormed : .structural)
+        }, for: .valueChanged)
+        return control
     }
 
     private func specCard(
         manufacturer: String,
         fields: [(String, String?)],
         extraControl: UIView? = nil,
-        onManufacturer: @escaping () -> Void,
+        footerControl: UIView? = nil,
+        onManufacturer: @escaping (String) -> Void,
         onField: @escaping (Int, String) -> Void
     ) -> UIView {
         let card = UIStackView()
         card.axis = .vertical
         card.spacing = 8
-        let mfr = UIButton(type: .system)
-        mfr.setTitle(manufacturer.isEmpty ? "Manufacturer" : manufacturer, for: .normal)
-        mfr.contentHorizontalAlignment = .left
-        mfr.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        mfr.addAction(UIAction { _ in onManufacturer() }, for: .touchUpInside)
-        card.addArrangedSubview(mfr)
+        card.addArrangedSubview(catalogPullDown(
+            kind: .manufacturer,
+            current: manufacturer,
+            placeholder: "Manufacturer",
+            picked: onManufacturer
+        ))
         if let extraControl {
             card.addArrangedSubview(extraControl)
         }
@@ -352,6 +617,9 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             }, for: .editingChanged)
             card.addArrangedSubview(textField)
         }
+        if let footerControl {
+            card.addArrangedSubview(footerControl)
+        }
         return card
     }
 
@@ -364,38 +632,59 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         UserManager.shared.sessionUserId
     }
 
-    private func pickManufacturer(current: String, picked: @escaping (String) -> Void) {
-        guard let userId = userId() else { return }
-        presentCatalog(kind: .manufacturer, current: current, userId: userId, picked: picked)
-    }
-
-    private func pickDeckType(current: String, picked: @escaping (String) -> Void) {
-        guard let userId = userId() else { return }
-        presentCatalog(kind: .deckType, current: current, userId: userId, picked: picked)
-    }
-
-    private func presentCatalog(kind: CatalogKind, current: String, userId: UUID, picked: @escaping (String) -> Void) {
+    private func catalogPullDown(
+        kind: CatalogKind,
+        current: String,
+        placeholder: String,
+        picked: @escaping (String) -> Void
+    ) -> UIButton {
+        let title = current.isEmpty ? placeholder : current
+        var config = UIButton.Configuration.gray()
+        config.cornerStyle = .medium
+        config.title = title
+        config.baseForegroundColor = current.isEmpty ? AppTheme.placeholder : AppTheme.textPrimary
+        config.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12)
+        config.titleAlignment = .leading
+        config.titleLineBreakMode = .byTruncatingTail
+        if #available(iOS 16.0, *) {
+            config.indicator = .popup
+        } else {
+            config.image = UIImage(systemName: "chevron.up.chevron.down")
+            config.imagePlacement = .trailing
+            config.imagePadding = 8
+            config.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        }
+        let button = UIButton(configuration: config)
+        button.contentHorizontalAlignment = .leading
+        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        button.accessibilityLabel = placeholder
+        if !current.isEmpty {
+            button.accessibilityValue = current
+        }
+        guard let userId = userId() else {
+            button.isEnabled = false
+            return button
+        }
+        button.showsMenuAsPrimaryAction = true
+        if #available(iOS 16.0, *) {
+            button.preferredMenuElementOrder = .fixed
+        }
         let names = Catalog.names(kind: kind, userId: userId, in: context)
-        let addTitle = kind == .manufacturer ? "Add manufacturer…" : "Add type…"
-        let sheet = UIAlertController(title: kind == .manufacturer ? "Manufacturer" : "Deck type", message: nil, preferredStyle: .actionSheet)
-        for name in names {
-            sheet.addAction(UIAlertAction(title: name, style: .default) { _ in picked(name) })
+        let nameActions = names.map { name in
+            UIAction(title: name, state: name == current ? .on : .off) { _ in picked(name) }
         }
-        sheet.addAction(UIAlertAction(title: addTitle, style: .default) { [weak self] _ in
+        let addTitle = kind == .deckType ? "Add type…" : "Add manufacturer…"
+        let addAction = UIAction(title: addTitle) { [weak self] _ in
             self?.promptAddCatalog(kind: kind, userId: userId, picked: picked)
-        })
-        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        if let pop = sheet.popoverPresentationController {
-            pop.sourceView = view
-            pop.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
         }
-        present(sheet, animated: true)
-        _ = current
+        let selection = UIMenu(options: [.displayInline, .singleSelection], children: nameActions)
+        button.menu = UIMenu(children: [selection, addAction])
+        return button
     }
 
     private func promptAddCatalog(kind: CatalogKind, userId: UUID, picked: @escaping (String) -> Void) {
         let alert = UIAlertController(
-            title: kind == .manufacturer ? "Add manufacturer" : "Add type",
+            title: kind == .deckType ? "Add type" : "Add manufacturer",
             message: nil,
             preferredStyle: .alert
         )

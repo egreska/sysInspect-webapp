@@ -830,7 +830,7 @@ class ReportGenerator {
                 let secondaryLocation = item.bayNumber ?? "N/A"
                 let rawImportance = item.importance.isEmpty ? "Monitor" : item.importance
                 let importance = rawImportance == "Needs immediate attention" ? "▲ \(rawImportance)" : rawImportance
-                let issueStrings = Issue.labels(from: Issue.flags(from: item.issues))
+                let issueStrings = Issue.labels(from: item.issues)
                 let issues = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "; ")
                 let comments = item.comments ?? ""
                 var photoNames: [String] = []
@@ -903,7 +903,7 @@ class ReportGenerator {
             } else {
                 dateText = nil
             }
-            let issueStrings = Issue.labels(from: Issue.flags(from: row.item.issues))
+            let issueStrings = Issue.labels(from: row.item.issues)
             return PDFItemLayoutInput(
                 photoCount: row.item.photos.count,
                 primaryLocation: row.item.location.isEmpty ? "N/A" : row.item.location,
@@ -950,8 +950,8 @@ class ReportGenerator {
             }
         case .issue:
             return items.sorted { lhs, rhs in
-                let issue1 = Issue.primaryParentLabel(from: Issue.flags(from: lhs.item.issues))
-                let issue2 = Issue.primaryParentLabel(from: Issue.flags(from: rhs.item.issues))
+                let issue1 = Issue.primaryParentLabel(from: lhs.item.issues)
+                let issue2 = Issue.primaryParentLabel(from: rhs.item.issues)
                 if issue1 == issue2 {
                     return lhs.item.location < rhs.item.location
                 }

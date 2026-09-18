@@ -9,8 +9,8 @@ A single location on an Inspection (bay/position) where conditions are recorded.
 _Avoid_: line item, finding, row, mapper photos, photoDataList, photoURL, packed photo tuples, issueFlagMap, applyIssueFlags
 
 **Issue**:
-A condition from a fixed hierarchy (parent, optional child, optional grandchild), recorded on an InspectionItem. Display uses that hierarchy; a leaf is listed only when its parent is recorded.
-_Avoid_: damage, finding, defect, DamageComponent
+A condition from a fixed hierarchy (parent, optional child, optional grandchild), recorded on an InspectionItem as a Path. Display labels come from those Paths; a leaf is listed only when its parent is recorded.
+_Avoid_: damage, finding, defect, DamageComponent, Flag map
 
 **Report**:
 An exported PDF or CSV of one or more Inspections. Callers pick Inspections; ReportFromInspections turns that selection into Report. Report itself takes snapshots, not entities.
@@ -33,7 +33,7 @@ The in-memory form for one Customer (name, site, contact, address, SiteRacking, 
 _Avoid_: ViewModel, mapper, Add/Edit form
 
 **SiteRacking**:
-Optional installed-equipment profile on a Customer: Uprights, Beams, and Decks. Each type is standardized (one spec) or mixed (several specs). Not Issues and not an Inspection.
+Optional installed-equipment profile on a Customer: Site Information, Load Information, Upright Frames, Beams, Wire Decks, Cross Bars, Safety Clips, Anchors, and Row Spacers. Hardware types (except Site Information, Load Information, and Safety Clips) are standardized (one spec) or mixed (several specs). Not Issues and not an Inspection.
 _Avoid_: inventory, rack layout, Issue, Inspection snapshot, DamageComponent
 
 **SiteDocument**:
@@ -41,11 +41,15 @@ An optional photo or PDF on a Customer. At most five. Callers ask for bytes and 
 _Avoid_: attachment, blueprint entity, Customer photo, packed document tuples
 
 **Manufacturer**:
-A catalog name owned by this Session user, chosen on a SiteRacking spec. Shared across that user's Customers, not across inspectors.
+A catalog name owned by this Session user, chosen on Upright Frames, Beams, Cross Bars, Anchors, and Row Spacers. Shared across that user's Customers, not across inspectors. Not the Wire Decks manufacturer list.
 _Avoid_: brand, vendor, company-wide catalog
 
+**WireDeckManufacturer**:
+A catalog name for wire-deck makers (Nashville Wire, J&L Wire, ITC, Worldwide, Little Giant (Brennan), Hallowell, Husky, Interlake Mecalux, Steel King, Ridg-U-Rak, plus user additions), owned by this Session user.
+_Avoid_: Manufacturer catalog, brand, vendor
+
 **DeckType**:
-A catalog name for deck construction (wire, particle, bar grate, other, plus user additions), owned by this Session user.
+A catalog name for deck construction (Upturned WF, Inside WF, Flat Flush, Inverted Flare, Inverted U-Channel, Standard U-Channel, Flared Channel, Welded Wire Decking, plus user additions), owned by this Session user.
 _Avoid_: wireDeck Issue flag, deck material enum in Issues
 
 **CustomerIntake**:

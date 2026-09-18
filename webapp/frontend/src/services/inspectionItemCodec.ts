@@ -1,3 +1,4 @@
+import { Issue, ISSUE_FLAGS, type IssueFlagMap } from '../issue';
 import type { InspectionItem } from '../types';
 import { extractRecordName } from './cloudkit';
 
@@ -8,44 +9,6 @@ export type InspectionItemCloudKitRecord = {
 
 const NEEDS_IMMEDIATE_ATTENTION = 'Needs immediate attention';
 const MONITOR = 'Monitor';
-
-const BOOLEAN_FIELDS = [
-  'upright',
-  'uprightFrontDamage',
-  'uprightFrontTwisted',
-  'uprightRearDamage',
-  'uprightRearTwisted',
-  'uprightAlignmentOutOfAlignment',
-  'uprightAlignmentOutOfVerticalPlumb',
-  'beam',
-  'beamFrontDamage',
-  'beamFrontBowed',
-  'beamRearDamage',
-  'beamRearBowed',
-  'bracingDiagonal',
-  'bracingHorizontal',
-  'bracingDamage',
-  'basePlate',
-  'basePlateDamaged',
-  'basePlateTwisted',
-  'basePlateFloorDamaged',
-  'anchors',
-  'anchorsDamaged',
-  'anchorsMissing',
-  'anchorsTorqued',
-  'wireDeck',
-  'wireDeckDamaged',
-  'wireDeckMissing',
-  'wireDeckOutOfPosition',
-  'postProtector',
-  'postProtectorDamaged',
-  'postProtectorMissing',
-  'postProtectorRepairRequired',
-  'aisleGuarding',
-  'aisleGuardingDamaged',
-  'aisleGuardingMissing',
-  'aisleGuardingRepairRequired',
-] as const;
 
 function decodeImportance(raw: unknown): InspectionItem['importance'] {
   if (raw === NEEDS_IMMEDIATE_ATTENTION || raw === 'Critical') {
@@ -91,8 +54,8 @@ function extractPhotoUrls(fields: InspectionItemCloudKitRecord['fields']): strin
 export function decodeInspectionItem(record: InspectionItemCloudKitRecord): InspectionItem {
   const fields = record.fields;
   const flags = Object.fromEntries(
-    BOOLEAN_FIELDS.map((name) => [name, !!(fields[`CD_${name}`]?.value)])
-  ) as Pick<InspectionItem, (typeof BOOLEAN_FIELDS)[number]>;
+    ISSUE_FLAGS.map((name) => [name, !!(fields[`CD_${name}`]?.value)])
+  ) as IssueFlagMap;
 
   return {
     id: record.recordName,
@@ -103,6 +66,6 @@ export function decodeInspectionItem(record: InspectionItemCloudKitRecord): Insp
     comments: (fields.CD_comments?.value as string) || '',
     sequenceNumber: (fields.CD_sequenceNumber?.value as number) || 0,
     photoUrls: extractPhotoUrls(fields),
-    ...flags,
+    issues: Issue.selectedPaths(flags),
   };
 }

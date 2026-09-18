@@ -728,7 +728,7 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
         }
         cell.textLabel?.text = title
         
-        let issueStrings = Issue.labels(from: Issue.flags(from: item.recordedIssues()))
+        let issueStrings = Issue.labels(from: item.recordedIssues())
         cell.detailTextLabel?.text = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "\n")
         cell.detailTextLabel?.numberOfLines = 0
         
@@ -901,7 +901,7 @@ class InspectionItemDetailViewController: UIViewController {
         // Add each component group
         addSectionHeader(to: stackView, title: "Issues")
             
-        let issueStrings = Issue.labels(from: Issue.flags(from: inspectionItem.recordedIssues()))
+        let issueStrings = Issue.labels(from: inspectionItem.recordedIssues())
         if issueStrings.isEmpty {
             let noIssuesLabel = UILabel()
             noIssuesLabel.text = "No issues recorded"

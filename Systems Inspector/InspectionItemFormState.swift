@@ -45,7 +45,7 @@ struct InspectionItemFormState {
     }
 
     var issueDisplayLabels: [String] {
-        Issue.labels(from: Issue.flags(from: issues))
+        Issue.labels(from: issues)
     }
 
     var atPhotoCap: Bool {

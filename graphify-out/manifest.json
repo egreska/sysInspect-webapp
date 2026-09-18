@@ -4,230 +4,275 @@
     "ast_hash": "1a6618c9486afd375cdf1135b5b2acc4",
     "semantic_hash": "1a6618c9486afd375cdf1135b5b2acc4"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/AccountCreationViewController.swift": {
+  "AccountCreationViewController.swift": {
     "mtime": 1770771398.0,
+    "seen": 1789701607.296869,
     "ast_hash": "89f8badafbbf61d883f05e0a19dcf4f7",
     "semantic_hash": "89f8badafbbf61d883f05e0a19dcf4f7"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/AccountLockoutManager.swift": {
+  "AccountLockoutManager.swift": {
     "mtime": 1769784018.0,
+    "seen": 1789701607.296872,
     "ast_hash": "b42538f2b0953d7802c9090bcc51f9db",
     "semantic_hash": "b42538f2b0953d7802c9090bcc51f9db"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/AnalyticsManager.swift": {
+  "AnalyticsManager.swift": {
     "mtime": 1775139392.0,
+    "seen": 1789701607.2968729,
     "ast_hash": "2a539b69e1e816b6cb74a0dad00ffa1c",
     "semantic_hash": "2a539b69e1e816b6cb74a0dad00ffa1c"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/AppDelegate.swift": {
+  "AppDelegate.swift": {
     "mtime": 1787874019.0497599,
+    "seen": 1789701607.2968729,
     "ast_hash": "b093e3d41eecc81ab090bc4e561470ab",
-    "semantic_hash": ""
+    "semantic_hash": "b093e3d41eecc81ab090bc4e561470ab"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/AppTheme.swift": {
+  "AppTheme.swift": {
     "mtime": 1787874036.950391,
+    "seen": 1789701607.296874,
     "ast_hash": "0e5a8aa2021f016f4475b595832117a2",
-    "semantic_hash": ""
+    "semantic_hash": "0e5a8aa2021f016f4475b595832117a2"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/AccentColor.colorset/Contents.json": {
+  "Assets.xcassets/AccentColor.colorset/Contents.json": {
     "mtime": 1748026124.0,
+    "seen": 1789701607.296875,
     "ast_hash": "b65023890116005e852f5ec768f8efba",
     "semantic_hash": "b65023890116005e852f5ec768f8efba"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+  "Assets.xcassets/AppIcon.appiconset/Contents.json": {
     "mtime": 1748026124.0,
+    "seen": 1789701607.296875,
     "ast_hash": "2aac14197f03b74d16948e792102cbc8",
     "semantic_hash": "2aac14197f03b74d16948e792102cbc8"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/Contents.json": {
+  "Assets.xcassets/Contents.json": {
     "mtime": 1748373188.0,
+    "seen": 1789701607.296876,
     "ast_hash": "9deb2ada1cc834bbebf8bbad9c8978a1",
     "semantic_hash": "9deb2ada1cc834bbebf8bbad9c8978a1"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/LaunchBackground.colorset/Contents.json": {
+  "Assets.xcassets/LaunchBackground.colorset/Contents.json": {
     "mtime": 1770772281.0,
+    "seen": 1789701607.296876,
     "ast_hash": "0dcdcdcaf6137a1aefaf73886a51ecb9",
     "semantic_hash": "0dcdcdcaf6137a1aefaf73886a51ecb9"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/LaunchIcon.imageset/Contents.json": {
+  "Assets.xcassets/LaunchIcon.imageset/Contents.json": {
     "mtime": 1770772273.0,
+    "seen": 1789701607.296876,
     "ast_hash": "7b653bbe653a2490a87af20d9d007194",
     "semantic_hash": "7b653bbe653a2490a87af20d9d007194"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/LaunchText.colorset/Contents.json": {
+  "Assets.xcassets/LaunchText.colorset/Contents.json": {
     "mtime": 1770772283.0,
+    "seen": 1789701607.2968771,
     "ast_hash": "64d278cffe006d1129a6133bc7289380",
     "semantic_hash": "64d278cffe006d1129a6133bc7289380"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/company_logo.imageset/Contents.json": {
+  "Assets.xcassets/company_logo.imageset/Contents.json": {
     "mtime": 1748632784.0,
+    "seen": 1789701607.2968771,
     "ast_hash": "dbe1ff908033726e2d3d835be3ef157c",
     "semantic_hash": "dbe1ff908033726e2d3d835be3ef157c"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CameraViewController.swift": {
+  "CameraViewController.swift": {
     "mtime": 1769742594.0,
+    "seen": 1789701607.296878,
     "ast_hash": "94cbccaff70c1283ec3859e5d094e020",
     "semantic_hash": "94cbccaff70c1283ec3859e5d094e020"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CoreDataManager.swift": {
+  "CoreDataManager.swift": {
     "mtime": 1788129827.0112247,
+    "seen": 1789701607.296879,
     "ast_hash": "8be65d75f991901f166524e88e231657",
-    "semantic_hash": ""
+    "semantic_hash": "8be65d75f991901f166524e88e231657"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CustomerDetailsViewController.swift": {
-    "mtime": 1788277220.2665706,
-    "ast_hash": "0c33a05c49bd2c6fc28c356a81851726",
-    "semantic_hash": ""
+  "CustomerDetailsViewController.swift": {
+    "mtime": 1788286797.080108,
+    "seen": 1789701607.2968802,
+    "ast_hash": "4edb5e1b363b9faba95e1313272284c7",
+    "semantic_hash": "4edb5e1b363b9faba95e1313272284c7"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CustomerDirectoryViewController.swift": {
+  "CustomerDirectoryViewController.swift": {
     "mtime": 1787948766.0504112,
+    "seen": 1789701607.2968802,
     "ast_hash": "4432d2cc54b4623d9eb579f5069becc8",
-    "semantic_hash": ""
+    "semantic_hash": "4432d2cc54b4623d9eb579f5069becc8"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CustomerDirectoryViewModel.swift": {
+  "CustomerDirectoryViewModel.swift": {
     "mtime": 1787967543.1965806,
+    "seen": 1789701607.2968802,
     "ast_hash": "0a4487e7fc8357325237af5254468d55",
-    "semantic_hash": ""
+    "semantic_hash": "0a4487e7fc8357325237af5254468d55"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/DateFormatters.swift": {
+  "DateFormatters.swift": {
     "mtime": 1772119658.0,
+    "seen": 1789701607.296882,
     "ast_hash": "ab9eacae6f32d4826e2932f0f2cd5189",
     "semantic_hash": "ab9eacae6f32d4826e2932f0f2cd5189"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/EmptyStateView.swift": {
+  "EmptyStateView.swift": {
     "mtime": 1770771234.0,
+    "seen": 1789701607.2968829,
     "ast_hash": "a8f68cbb2b0b05a5f927dbcaea8f3b53",
     "semantic_hash": "a8f68cbb2b0b05a5f927dbcaea8f3b53"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/FilterChipView.swift": {
+  "FilterChipView.swift": {
     "mtime": 1770857878.0,
+    "seen": 1789701607.2968829,
     "ast_hash": "2c6db5eca395d5cace9567f27033f0c3",
     "semantic_hash": "2c6db5eca395d5cace9567f27033f0c3"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/FilterPresetStorage.swift": {
+  "FilterPresetStorage.swift": {
     "mtime": 1770857878.0,
+    "seen": 1789701607.2968829,
     "ast_hash": "ecc94576c0a87f87044e47046b833cf0",
     "semantic_hash": "ecc94576c0a87f87044e47046b833cf0"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ForgotPasswordViewController.swift": {
+  "ForgotPasswordViewController.swift": {
     "mtime": 1770771413.0,
+    "seen": 1789701607.296884,
     "ast_hash": "60a26aa72637df2335501e449d44b5e9",
     "semantic_hash": "60a26aa72637df2335501e449d44b5e9"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/HapticManager.swift": {
+  "HapticManager.swift": {
     "mtime": 1770757409.0,
+    "seen": 1789701607.296884,
     "ast_hash": "23fc55902bd11e63498edc312f56d407",
     "semantic_hash": "23fc55902bd11e63498edc312f56d407"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/HelpAndSupportTableViewController.swift": {
+  "HelpAndSupportTableViewController.swift": {
     "mtime": 1769792447.0,
+    "seen": 1789701607.296884,
     "ast_hash": "42461e9c136cea6cfe2d709121d16e58",
     "semantic_hash": "42461e9c136cea6cfe2d709121d16e58"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/HelpContentViewController.swift": {
+  "HelpContentViewController.swift": {
     "mtime": 1769865077.0,
+    "seen": 1789701607.296885,
     "ast_hash": "718a7ac33b4f43392869d8e023f87f5a",
     "semantic_hash": "718a7ac33b4f43392869d8e023f87f5a"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ImageCacheManager.swift": {
+  "ImageCacheManager.swift": {
     "mtime": 1775139831.0,
+    "seen": 1789701607.296885,
     "ast_hash": "28b2dcc1162af27b74b357f7c76313a9",
     "semantic_hash": "28b2dcc1162af27b74b357f7c76313a9"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/InspectionFormViewModel.swift": {
+  "InspectionFormViewModel.swift": {
     "mtime": 1788130895.6428423,
+    "seen": 1789701607.296886,
     "ast_hash": "836761b75be66f4ba2b1fa819bc55923",
-    "semantic_hash": ""
+    "semantic_hash": "836761b75be66f4ba2b1fa819bc55923"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/InspectionItem+PhotoExtension.swift": {
+  "InspectionItem+PhotoExtension.swift": {
     "mtime": 1788129609.862369,
+    "seen": 1789701607.296887,
     "ast_hash": "8d7eee0b1ecfb1efa66f641f90d9b3ad",
-    "semantic_hash": ""
+    "semantic_hash": "8d7eee0b1ecfb1efa66f641f90d9b3ad"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/LoginViewController.swift": {
+  "LoginViewController.swift": {
     "mtime": 1787967543.196863,
+    "seen": 1789701607.296891,
     "ast_hash": "1a704bf1b7d4f92bcafc93a7ad83dd09",
-    "semantic_hash": ""
+    "semantic_hash": "1a704bf1b7d4f92bcafc93a7ad83dd09"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/MainTabBarController.swift": {
+  "MainTabBarController.swift": {
     "mtime": 1788131029.564295,
+    "seen": 1789701607.296891,
     "ast_hash": "51a3e4fa2a0e28d727e30a48582cd0ad",
-    "semantic_hash": ""
+    "semantic_hash": "51a3e4fa2a0e28d727e30a48582cd0ad"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/PasswordRecoveryManager.swift": {
+  "PasswordRecoveryManager.swift": {
     "mtime": 1787963943.9252944,
+    "seen": 1789701607.296892,
     "ast_hash": "8e04df0fc80ec6020cc9de333327ef1d",
-    "semantic_hash": ""
+    "semantic_hash": "8e04df0fc80ec6020cc9de333327ef1d"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/PerformanceOptimizer.swift": {
+  "PerformanceOptimizer.swift": {
     "mtime": 1787874043.3407192,
+    "seen": 1789701607.296892,
     "ast_hash": "1b5c153fa2904ea7fe122a21b60c2688",
-    "semantic_hash": ""
+    "semantic_hash": "1b5c153fa2904ea7fe122a21b60c2688"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportCriteria.swift": {
+  "ReportCriteria.swift": {
     "mtime": 1787875721.425725,
+    "seen": 1789701607.296893,
     "ast_hash": "d3ba71f04bed761d80a4a26f7b1914cb",
-    "semantic_hash": ""
+    "semantic_hash": "d3ba71f04bed761d80a4a26f7b1914cb"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportGenerator.swift": {
-    "mtime": 1787875806.5605135,
-    "ast_hash": "4f7ab15d2ae97283b4518e218eb7919f",
-    "semantic_hash": ""
+  "ReportGenerator.swift": {
+    "mtime": 1788286789.9439335,
+    "seen": 1789701607.2968938,
+    "ast_hash": "ee11cea34eeb1728a2f47e7ca32321eb",
+    "semantic_hash": "ee11cea34eeb1728a2f47e7ca32321eb"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportPDFLayoutOptionsViewController.swift": {
+  "ReportPDFLayoutOptionsViewController.swift": {
     "mtime": 1787861146.3683724,
+    "seen": 1789701607.2968938,
     "ast_hash": "9c10e43c3e92d72f3b3689c58f613c1d",
-    "semantic_hash": ""
+    "semantic_hash": "9c10e43c3e92d72f3b3689c58f613c1d"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportProgressOverlay.swift": {
+  "ReportProgressOverlay.swift": {
     "mtime": 1770781509.0,
+    "seen": 1789701607.296895,
     "ast_hash": "a72a07c1086176889d2d27886e1ed4aa",
     "semantic_hash": "a72a07c1086176889d2d27886e1ed4aa"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportShareActivities.swift": {
+  "ReportShareActivities.swift": {
     "mtime": 1787754297.1109798,
+    "seen": 1789701607.296895,
     "ast_hash": "066a8a4281f86b8c24bbb5c219d9205f",
-    "semantic_hash": ""
+    "semantic_hash": "066a8a4281f86b8c24bbb5c219d9205f"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportViewController.swift": {
+  "ReportViewController.swift": {
     "mtime": 1788133955.0400403,
+    "seen": 1789701607.296896,
     "ast_hash": "a44dc296868542acf89374f7e008aabe",
-    "semantic_hash": ""
+    "semantic_hash": "a44dc296868542acf89374f7e008aabe"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/SceneDelegate.swift": {
+  "SceneDelegate.swift": {
     "mtime": 1787874035.442374,
+    "seen": 1789701607.296897,
     "ast_hash": "fceadd5b66d313d6748b0b5d516047fa",
-    "semantic_hash": ""
+    "semantic_hash": "fceadd5b66d313d6748b0b5d516047fa"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/SettingsViewController.swift": {
+  "SettingsViewController.swift": {
     "mtime": 1787967543.1971536,
+    "seen": 1789701607.296897,
     "ast_hash": "c4d89135331712dba094cd6551ae3278",
-    "semantic_hash": ""
+    "semantic_hash": "c4d89135331712dba094cd6551ae3278"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/SkeletonView.swift": {
+  "SkeletonView.swift": {
     "mtime": 1787849184.0123987,
+    "seen": 1789701607.296899,
     "ast_hash": "f0ffcdf13e54473ee773b80a4606de41",
-    "semantic_hash": ""
+    "semantic_hash": "f0ffcdf13e54473ee773b80a4606de41"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/SplashViewController.swift": {
+  "SplashViewController.swift": {
     "mtime": 1787874171.8877935,
+    "seen": 1789701607.296899,
     "ast_hash": "a3ec8f7f5055a49a8bf00482e4ddd125",
-    "semantic_hash": ""
+    "semantic_hash": "a3ec8f7f5055a49a8bf00482e4ddd125"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Systems-Inspector-Bridging-Header.h": {
+  "Systems-Inspector-Bridging-Header.h": {
     "mtime": 1769743236.0,
+    "seen": 1789701607.2969,
     "ast_hash": "180a3f2a5c874ddd00c9b5e558ae0a85",
     "semantic_hash": "180a3f2a5c874ddd00c9b5e558ae0a85"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ToastView.swift": {
+  "ToastView.swift": {
     "mtime": 1770781509.0,
+    "seen": 1789701607.2969012,
     "ast_hash": "f6dcd49d5b846ac72092e120dbdb7342",
     "semantic_hash": "f6dcd49d5b846ac72092e120dbdb7342"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/UserManager.swift": {
+  "UserManager.swift": {
     "mtime": 1787967457.7389894,
+    "seen": 1789701607.2969012,
     "ast_hash": "de29b3513745ec579adf49763bef9a9a",
-    "semantic_hash": ""
+    "semantic_hash": "de29b3513745ec579adf49763bef9a9a"
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/AccountLockoutManagerTests.swift": {
     "mtime": 1769783756.0,
@@ -335,8 +380,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/pages/InspectionDetailPage.tsx": {
-    "mtime": 1788138157.0452747,
-    "ast_hash": "ce6b3d28db8ccd53c442029a6593dd69",
+    "mtime": 1788289580.8168519,
+    "ast_hash": "75a40ecb36395cb201888c8a8344350c",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/pages/LoginPage.tsx": {
@@ -345,8 +390,8 @@
     "semantic_hash": "7dec366e6e37440dccc8275be9be5810"
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/pages/ReportPreviewPage.tsx": {
-    "mtime": 1788138157.045581,
-    "ast_hash": "6c87744039a2d5152f652d5ea9bd9014",
+    "mtime": 1788289545.0014985,
+    "ast_hash": "f646045b9a06926f2bf5889ab084a7d9",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/services/cloudkit.ts": {
@@ -355,8 +400,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/services/pdfGenerator.ts": {
-    "mtime": 1787836688.2554078,
-    "ast_hash": "71d5207513107b567ec155846491bda5",
+    "mtime": 1788289559.5113606,
+    "ast_hash": "df6158a094ba9ae7f6a67837c46f7cb8",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/store/authStore.ts": {
@@ -365,8 +410,8 @@
     "semantic_hash": "b198ebf3dd71207f899e14c97b3d2b0d"
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/types/index.ts": {
-    "mtime": 1788138157.04308,
-    "ast_hash": "27ee384fddae539fb1e799eec2dfacb2",
+    "mtime": 1788289494.7862504,
+    "ast_hash": "500c01fee4d3c7a13ce404d61babc72f",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/utils/logger.ts": {
@@ -489,18 +534,21 @@
     "ast_hash": "8f3b2824418d3fdbe908322684d29118",
     "semantic_hash": "8f3b2824418d3fdbe908322684d29118"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/AppIcon.appiconset/rackicon.png": {
+  "Assets.xcassets/AppIcon.appiconset/rackicon.png": {
     "mtime": 1748026124.0,
+    "seen": 1789701607.296902,
     "ast_hash": "f34aa10707ca18273580ef08635bd9d3",
     "semantic_hash": "f34aa10707ca18273580ef08635bd9d3"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/LaunchIcon.imageset/rackicon.png": {
+  "Assets.xcassets/LaunchIcon.imageset/rackicon.png": {
     "mtime": 1770772278.0,
+    "seen": 1789701607.296902,
     "ast_hash": "f34aa10707ca18273580ef08635bd9d3",
     "semantic_hash": "f34aa10707ca18273580ef08635bd9d3"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Assets.xcassets/company_logo.imageset/thumbnail_Outlook-b1qxddk4.png": {
+  "Assets.xcassets/company_logo.imageset/thumbnail_Outlook-b1qxddk4.png": {
     "mtime": 1748632784.0,
+    "seen": 1789701607.296902,
     "ast_hash": "8e8cb48e6858e8a8a26279560ef1bf8a",
     "semantic_hash": "8e8cb48e6858e8a8a26279560ef1bf8a"
   },
@@ -3719,15 +3767,17 @@
     "ast_hash": "c3f9dbecc75e9db37ca3c604547b6836",
     "semantic_hash": ""
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/InspectionItemIntake.swift": {
+  "InspectionItemIntake.swift": {
     "mtime": 1788135836.0694587,
+    "seen": 1789701607.296889,
     "ast_hash": "efbae1826bf4f8d8325432d76edc4a1a",
-    "semantic_hash": ""
+    "semantic_hash": "efbae1826bf4f8d8325432d76edc4a1a"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/InspectionPhotoStripView.swift": {
+  "InspectionPhotoStripView.swift": {
     "mtime": 1787837248.497723,
+    "seen": 1789701607.296889,
     "ast_hash": "4c504c27e0934d7e2f06979fafb1c459",
-    "semantic_hash": ""
+    "semantic_hash": "4c504c27e0934d7e2f06979fafb1c459"
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/InspectionItemIntakeTests.swift": {
     "mtime": 1788135916.5095859,
@@ -3765,18 +3815,18 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/services/inspectionItemCodec.test.ts": {
-    "mtime": 1788138224.8156996,
-    "ast_hash": "71f93d6be7e5f62f923450c93200d18f",
+    "mtime": 1788289506.5010948,
+    "ast_hash": "b033c83f1f5dc1b6a371ee5dbcfc212a",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/services/inspectionItemCodec.ts": {
-    "mtime": 1788138157.0437818,
-    "ast_hash": "2d649d3fd1372cffcdd9e0fc2bcb935c",
+    "mtime": 1788289504.066304,
+    "ast_hash": "fc6d04a94a7d5c9ae7c3b55d267ac4a8",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/CONTEXT.md": {
-    "mtime": 1788275756.6716058,
-    "ast_hash": "47d793919cc4f98db487e5e778d33973",
+    "mtime": 1789683987.2433074,
+    "ast_hash": "b6d913e2dae1818552a2c6edc8e67b9b",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Pods/Firebase/README.md": {
@@ -3864,24 +3914,27 @@
     "ast_hash": "170cac08053e28a99cb8f435cea857cb",
     "semantic_hash": ""
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Issue.swift": {
-    "mtime": 1787854020.2255564,
-    "ast_hash": "b6f560c34cabfc21ebb966cadb1b8969",
-    "semantic_hash": ""
+  "Issue.swift": {
+    "mtime": 1788286785.5146604,
+    "seen": 1789701607.29689,
+    "ast_hash": "59e913ffb677570a652e9c0a81764868",
+    "semantic_hash": "59e913ffb677570a652e9c0a81764868"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/IssueSelectionViewController.swift": {
+  "IssueSelectionViewController.swift": {
     "mtime": 1788280553.1783836,
+    "seen": 1789701607.29689,
     "ast_hash": "cf7c9393d5f015c22ce4ed09314b6f45",
-    "semantic_hash": ""
+    "semantic_hash": "cf7c9393d5f015c22ce4ed09314b6f45"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/PDFTableLayout.swift": {
+  "PDFTableLayout.swift": {
     "mtime": 1787875821.6871543,
+    "seen": 1789701607.296892,
     "ast_hash": "37f364ca26858130ba7a9e3bad210bf5",
-    "semantic_hash": ""
+    "semantic_hash": "37f364ca26858130ba7a9e3bad210bf5"
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/IssueTests.swift": {
-    "mtime": 1787854513.9285874,
-    "ast_hash": "e5f9cfcd11abc3ef62f9d6c68655a230",
+    "mtime": 1788286786.345093,
+    "ast_hash": "badb9c486cf08b7a75fc54d66b9a6483",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/PDFTableLayoutTests.swift": {
@@ -3894,25 +3947,29 @@
     "ast_hash": "6e59e451aa054dad554a6a12e00baee6",
     "semantic_hash": "6e59e451aa054dad554a6a12e00baee6"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/InspectionItemFormState.swift": {
-    "mtime": 1787944281.917691,
-    "ast_hash": "f937fafb97e8a0bbdb4d94a9564e6d4c",
-    "semantic_hash": ""
+  "InspectionItemFormState.swift": {
+    "mtime": 1788286787.108044,
+    "seen": 1789701607.296888,
+    "ast_hash": "6ce99d392468ae64f7e201e5f043e109",
+    "semantic_hash": "6ce99d392468ae64f7e201e5f043e109"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportSnapshot.swift": {
+  "ReportSnapshot.swift": {
     "mtime": 1787875718.3047361,
+    "seen": 1789701607.296895,
     "ast_hash": "e94075bd5c38067f8dbb157f9e35c84a",
-    "semantic_hash": ""
+    "semantic_hash": "e94075bd5c38067f8dbb157f9e35c84a"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportSnapshotMapper.swift": {
+  "ReportSnapshotMapper.swift": {
     "mtime": 1788135836.0699177,
+    "seen": 1789701607.296896,
     "ast_hash": "c82d562115d171490f262738f6004057",
-    "semantic_hash": ""
+    "semantic_hash": "c82d562115d171490f262738f6004057"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/StoredZipArchive.swift": {
+  "StoredZipArchive.swift": {
     "mtime": 1787861051.4123137,
+    "seen": 1789701607.2969,
     "ast_hash": "023c9648e702c2a1c15559954a6bd4fa",
-    "semantic_hash": ""
+    "semantic_hash": "023c9648e702c2a1c15559954a6bd4fa"
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/InspectionFormViewModelTests.swift": {
     "mtime": 1788131119.2645893,
@@ -3939,69 +3996,81 @@
     "ast_hash": "4134988401e10450bcb902b14c9a93af",
     "semantic_hash": "4134988401e10450bcb902b14c9a93af"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Catalog.swift": {
-    "mtime": 1788277017.0532365,
-    "ast_hash": "3f889632e2b6c3ef09e8bf3ac38f16c7",
-    "semantic_hash": ""
+  "Catalog.swift": {
+    "mtime": 1789683974.5749216,
+    "seen": 1789701607.296878,
+    "ast_hash": "9ba2faeda84d6e323f27840291f34307",
+    "semantic_hash": "9ba2faeda84d6e323f27840291f34307"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/Customer+SiteDocuments.swift": {
+  "Customer+SiteDocuments.swift": {
     "mtime": 1788277032.2477286,
+    "seen": 1789701607.296879,
     "ast_hash": "3a7cd2fede831d39ee3bf823845aee51",
-    "semantic_hash": ""
+    "semantic_hash": "3a7cd2fede831d39ee3bf823845aee51"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CustomerFormState.swift": {
+  "CustomerFormState.swift": {
     "mtime": 1788277081.1432464,
+    "seen": 1789701607.296881,
     "ast_hash": "516efc3f55858c5c38c4ed644ff16793",
-    "semantic_hash": ""
+    "semantic_hash": "516efc3f55858c5c38c4ed644ff16793"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CustomerFormViewController.swift": {
+  "CustomerFormViewController.swift": {
     "mtime": 1788277184.646658,
+    "seen": 1789701607.296881,
     "ast_hash": "cfc5ddc1b04ccaabe5693ea9056bba23",
-    "semantic_hash": ""
+    "semantic_hash": "cfc5ddc1b04ccaabe5693ea9056bba23"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/CustomerIntake.swift": {
+  "CustomerIntake.swift": {
     "mtime": 1788277068.2888706,
+    "seen": 1789701607.296882,
     "ast_hash": "508db0767148bf2412342b96def5b559",
-    "semantic_hash": ""
+    "semantic_hash": "508db0767148bf2412342b96def5b559"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/InspectionItem+Issues.swift": {
+  "InspectionItem+Issues.swift": {
     "mtime": 1788135836.0693717,
+    "seen": 1789701607.296886,
     "ast_hash": "0cd258665815cbfa39636015694ef118",
-    "semantic_hash": ""
+    "semantic_hash": "0cd258665815cbfa39636015694ef118"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/InspectionItemFormViewController.swift": {
-    "mtime": 1788130996.8440225,
-    "ast_hash": "20864f753d6685fe1275f8d561d71955",
-    "semantic_hash": ""
+  "InspectionItemFormViewController.swift": {
+    "mtime": 1788283246.6445954,
+    "seen": 1789701607.296888,
+    "ast_hash": "9267fe9fa9f7d62d3ee15e0381f41355",
+    "semantic_hash": "9267fe9fa9f7d62d3ee15e0381f41355"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ReportFromInspections.swift": {
+  "ReportFromInspections.swift": {
     "mtime": 1788133914.8226647,
+    "seen": 1789701607.296893,
     "ast_hash": "5ff925ca91d6187f5253329be9e98481",
-    "semantic_hash": ""
+    "semantic_hash": "5ff925ca91d6187f5253329be9e98481"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/SiteDocumentFile.swift": {
+  "SiteDocumentFile.swift": {
     "mtime": 1788277023.088403,
+    "seen": 1789701607.2968981,
     "ast_hash": "b72b88a4f3278eef58be239c88d4494e",
-    "semantic_hash": ""
+    "semantic_hash": "b72b88a4f3278eef58be239c88d4494e"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/SiteRacking.swift": {
-    "mtime": 1788277092.855272,
-    "ast_hash": "51ea3036f46320612523a9b5cff9273c",
-    "semantic_hash": ""
+  "SiteRacking.swift": {
+    "mtime": 1789682902.4092786,
+    "seen": 1789701607.2968981,
+    "ast_hash": "314aa322f1a7cd1561a31d3e916f612b",
+    "semantic_hash": "314aa322f1a7cd1561a31d3e916f612b"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/SiteRackingViewController.swift": {
-    "mtime": 1788280553.1783926,
-    "ast_hash": "015239d91e99d744b14f84202a0e9582",
-    "semantic_hash": ""
+  "SiteRackingViewController.swift": {
+    "mtime": 1789685193.4786015,
+    "seen": 1789701607.2968981,
+    "ast_hash": "3b2a56195853639ee0a01dd6be22311d",
+    "semantic_hash": "3b2a56195853639ee0a01dd6be22311d"
   },
-  "/Users/egreska/Systems Inspector/Systems Inspector/ZipCodeLookup.swift": {
+  "ZipCodeLookup.swift": {
     "mtime": 1787948701.3794892,
+    "seen": 1789701607.2969012,
     "ast_hash": "9350afe1e0593a3f6d33906a1e44a223",
-    "semantic_hash": ""
+    "semantic_hash": "9350afe1e0593a3f6d33906a1e44a223"
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/CatalogTests.swift": {
-    "mtime": 1788277040.4819605,
-    "ast_hash": "e50e06ae51a282ee00ec3f7560808d68",
+    "mtime": 1789683943.7343853,
+    "ast_hash": "0ef3f267080b1a86ab411a7aa6222bab",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/CustomerFormStateTests.swift": {
@@ -4040,8 +4109,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/SiteRackingTests.swift": {
-    "mtime": 1788276631.4430673,
-    "ast_hash": "062a23db535c38d36654ceed4defa88b",
+    "mtime": 1789682899.7836185,
+    "ast_hash": "7210429dc47096628faaff62379347f4",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/UserManagerPasswordTests.swift": {
@@ -4070,8 +4139,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/services/load.test.ts": {
-    "mtime": 1788138157.0434837,
-    "ast_hash": "569428cf4f89a1052f75db9770335f3c",
+    "mtime": 1788289506.6576574,
+    "ast_hash": "ad2f5580bc1b3db3a55d3c064433603c",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/webapp/frontend/src/services/load.ts": {
@@ -4105,9 +4174,9 @@
     "semantic_hash": "61e6e57ce83feb9c2909714a9d1e9059"
   },
   "/Users/egreska/Systems Inspector/docs/adr/0008-inspectionitem-recorded-issues-paths.md": {
-    "mtime": 1788135836.0707853,
-    "ast_hash": "e37c15b28da39094a1f5a49aed119915",
-    "semantic_hash": "e37c15b28da39094a1f5a49aed119915"
+    "mtime": 1788286797.3473074,
+    "ast_hash": "aed6f055a9a8af55de8476614a35cf3c",
+    "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/docs/adr/0009-web-load-adapters.md": {
     "mtime": 1788138157.0460176,
@@ -4128,5 +4197,20 @@
     "mtime": 1788278448.1347668,
     "ast_hash": "7a75d9135c48d6efaae6d65111f8e3b1",
     "semantic_hash": "7a75d9135c48d6efaae6d65111f8e3b1"
+  },
+  "/Users/egreska/Systems Inspector/webapp/frontend/src/issue.test.ts": {
+    "mtime": 1788289465.5223503,
+    "ast_hash": "18beda63bb4812ea8e990aa23000f315",
+    "semantic_hash": ""
+  },
+  "/Users/egreska/Systems Inspector/webapp/frontend/src/issue.ts": {
+    "mtime": 1788289462.2640302,
+    "ast_hash": "b63506d721f89b590cb94bc3751ee838",
+    "semantic_hash": ""
+  },
+  "/Users/egreska/Systems Inspector/docs/adr/0011-web-inspectionitem-issue-paths.md": {
+    "mtime": 1788289465.5719035,
+    "ast_hash": "72b14fc57ad6d5b436252127d3ea8745",
+    "semantic_hash": ""
   }
 }

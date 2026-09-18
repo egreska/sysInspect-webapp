@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/CustomerDetailsViewController.swift": {
-    "mtime": 1788277220.2665706,
-    "ast_hash": "0c33a05c49bd2c6fc28c356a81851726",
+    "mtime": 1788286797.080108,
+    "ast_hash": "4edb5e1b363b9faba95e1313272284c7",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/CustomerDirectoryViewController.swift": {
@@ -170,8 +170,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/ReportGenerator.swift": {
-    "mtime": 1787875806.5605135,
-    "ast_hash": "4f7ab15d2ae97283b4518e218eb7919f",
+    "mtime": 1788286789.9439335,
+    "ast_hash": "ee11cea34eeb1728a2f47e7ca32321eb",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/ReportPDFLayoutOptionsViewController.swift": {
@@ -3775,8 +3775,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/CONTEXT.md": {
-    "mtime": 1788275756.6716058,
-    "ast_hash": "47d793919cc4f98db487e5e778d33973",
+    "mtime": 1788286161.8911839,
+    "ast_hash": "f1480d3d72e8d8aa6e07c9bb535c842c",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Pods/Firebase/README.md": {
@@ -3865,13 +3865,13 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/Issue.swift": {
-    "mtime": 1787854020.2255564,
-    "ast_hash": "b6f560c34cabfc21ebb966cadb1b8969",
+    "mtime": 1788286785.5146604,
+    "ast_hash": "59e913ffb677570a652e9c0a81764868",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/IssueSelectionViewController.swift": {
-    "mtime": 1788280487.0341852,
-    "ast_hash": "794ae3d1797955148346e92445237e87",
+    "mtime": 1788280553.1783836,
+    "ast_hash": "cf7c9393d5f015c22ce4ed09314b6f45",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/PDFTableLayout.swift": {
@@ -3880,8 +3880,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/IssueTests.swift": {
-    "mtime": 1787854513.9285874,
-    "ast_hash": "e5f9cfcd11abc3ef62f9d6c68655a230",
+    "mtime": 1788286786.345093,
+    "ast_hash": "badb9c486cf08b7a75fc54d66b9a6483",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems InspectorTests/PDFTableLayoutTests.swift": {
@@ -3892,11 +3892,11 @@
   "/Users/egreska/Systems Inspector/docs/adr/0001-delete-damagecomponent-with-issue-module.md": {
     "mtime": 1787853938.8116763,
     "ast_hash": "6e59e451aa054dad554a6a12e00baee6",
-    "semantic_hash": ""
+    "semantic_hash": "6e59e451aa054dad554a6a12e00baee6"
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/InspectionItemFormState.swift": {
-    "mtime": 1787944281.917691,
-    "ast_hash": "f937fafb97e8a0bbdb4d94a9564e6d4c",
+    "mtime": 1788286787.108044,
+    "ast_hash": "6ce99d392468ae64f7e201e5f043e109",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/ReportSnapshot.swift": {
@@ -3932,12 +3932,12 @@
   "/Users/egreska/Systems Inspector/docs/adr/0002-stored-method-zip-in-report.md": {
     "mtime": 1787861051.412207,
     "ast_hash": "f467ef7451abb0b6f21f6e4c29fdd149",
-    "semantic_hash": ""
+    "semantic_hash": "f467ef7451abb0b6f21f6e4c29fdd149"
   },
   "/Users/egreska/Systems Inspector/docs/adr/0003-report-export-snapshots.md": {
     "mtime": 1787876925.0456564,
     "ast_hash": "4134988401e10450bcb902b14c9a93af",
-    "semantic_hash": ""
+    "semantic_hash": "4134988401e10450bcb902b14c9a93af"
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/Catalog.swift": {
     "mtime": 1788277017.0532365,
@@ -3970,8 +3970,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/InspectionItemFormViewController.swift": {
-    "mtime": 1788130996.8440225,
-    "ast_hash": "20864f753d6685fe1275f8d561d71955",
+    "mtime": 1788283246.6445954,
+    "ast_hash": "9267fe9fa9f7d62d3ee15e0381f41355",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/ReportFromInspections.swift": {
@@ -3990,8 +3990,8 @@
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/SiteRackingViewController.swift": {
-    "mtime": 1788280487.4119563,
-    "ast_hash": "efdd936601412a91ef97e2fc2ed0eb61",
+    "mtime": 1788280553.1783926,
+    "ast_hash": "015239d91e99d744b14f84202a0e9582",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/Systems Inspector/ZipCodeLookup.swift": {
@@ -4087,32 +4087,32 @@
   "/Users/egreska/Systems Inspector/docs/adr/0004-session-lastuser.md": {
     "mtime": 1787968017.1543372,
     "ast_hash": "5afcb20af7b49b4fec4d0d9dd42e4b14",
-    "semantic_hash": ""
+    "semantic_hash": "5afcb20af7b49b4fec4d0d9dd42e4b14"
   },
   "/Users/egreska/Systems Inspector/docs/adr/0005-inspectionitem-photo-bytes.md": {
     "mtime": 1788130042.5957973,
     "ast_hash": "4bae30a78c527f1039db244ffa1f7c6d",
-    "semantic_hash": ""
+    "semantic_hash": "4bae30a78c527f1039db244ffa1f7c6d"
   },
   "/Users/egreska/Systems Inspector/docs/adr/0006-inspectionitem-form-hosts.md": {
     "mtime": 1788132193.132096,
     "ast_hash": "eaf925b575fb68bae644bbdaa45bfd4e",
-    "semantic_hash": ""
+    "semantic_hash": "eaf925b575fb68bae644bbdaa45bfd4e"
   },
   "/Users/egreska/Systems Inspector/docs/adr/0007-report-from-inspections.md": {
     "mtime": 1788133990.545324,
     "ast_hash": "61e6e57ce83feb9c2909714a9d1e9059",
-    "semantic_hash": ""
+    "semantic_hash": "61e6e57ce83feb9c2909714a9d1e9059"
   },
   "/Users/egreska/Systems Inspector/docs/adr/0008-inspectionitem-recorded-issues-paths.md": {
-    "mtime": 1788135836.0707853,
-    "ast_hash": "e37c15b28da39094a1f5a49aed119915",
+    "mtime": 1788286797.3473074,
+    "ast_hash": "aed6f055a9a8af55de8476614a35cf3c",
     "semantic_hash": ""
   },
   "/Users/egreska/Systems Inspector/docs/adr/0009-web-load-adapters.md": {
     "mtime": 1788138157.0460176,
     "ast_hash": "b05ad2314f444b5893f3423e60208381",
-    "semantic_hash": ""
+    "semantic_hash": "b05ad2314f444b5893f3423e60208381"
   },
   "/Users/egreska/Systems Inspector/docs/superpowers/plans/2026-09-01-customer-site-racking.md": {
     "mtime": 1788276583.17795,
@@ -4127,6 +4127,6 @@
   "/Users/egreska/Systems Inspector/docs/adr/0010-customer-siteracking-sitedocuments.md": {
     "mtime": 1788278448.1347668,
     "ast_hash": "7a75d9135c48d6efaae6d65111f8e3b1",
-    "semantic_hash": ""
+    "semantic_hash": "7a75d9135c48d6efaae6d65111f8e3b1"
   }
 }

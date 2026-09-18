@@ -6,6 +6,7 @@
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import type { Inspection, InspectionItem } from '../types';
+import { Issue } from '../issue';
 
 const PAGE_WIDTH = 792;   // 11" landscape
 const PAGE_HEIGHT = 612;  // 8.5" landscape
@@ -17,70 +18,6 @@ const HEADER_ROW_HEIGHT = 28;
 const FOOTER_HEIGHT = 30;
 
 const COL_WIDTHS = [60, 120, 72, 200, CONTENT_WIDTH - 60 - 120 - 72 - 200];
-
-function getHierarchicalIssues(item: InspectionItem): string[] {
-  const issues: string[] = [];
-  function add(parent: string, child?: string, grandchild?: string) {
-    let s = parent;
-    if (child) { s += ' > ' + child; if (grandchild) s += ' > ' + grandchild; }
-    issues.push(s);
-  }
-
-  if (item.upright) {
-    if (item.uprightFrontDamage) add('Upright', 'Front', 'Damage');
-    if (item.uprightFrontTwisted) add('Upright', 'Front', 'Twisted');
-    if (item.uprightRearDamage) add('Upright', 'Rear', 'Damage');
-    if (item.uprightRearTwisted) add('Upright', 'Rear', 'Twisted');
-    if (item.uprightAlignmentOutOfAlignment) add('Upright', 'Alignment', 'Out of alignment');
-    if (item.uprightAlignmentOutOfVerticalPlumb) add('Upright', 'Alignment', 'Out of vertical plumb');
-    if (!item.uprightFrontDamage && !item.uprightFrontTwisted && !item.uprightRearDamage &&
-        !item.uprightRearTwisted && !item.uprightAlignmentOutOfAlignment &&
-        !item.uprightAlignmentOutOfVerticalPlumb) add('Upright');
-  }
-  if (item.beam) {
-    if (item.beamFrontDamage) add('Beam', 'Front damage');
-    if (item.beamRearDamage) add('Beam', 'Rear damage');
-    if (item.beamFrontBowed) add('Beam', 'Front bowed');
-    if (item.beamRearBowed) add('Beam', 'Rear bowed');
-    if (!item.beamFrontDamage && !item.beamRearDamage && !item.beamFrontBowed && !item.beamRearBowed) add('Beam');
-  }
-  if (item.wireDeck) {
-    if (item.wireDeckMissing) add('Wire Deck', 'Missing');
-    if (item.wireDeckDamaged) add('Wire Deck', 'Damaged');
-    if (item.wireDeckOutOfPosition) add('Wire Deck', 'Out of position');
-    if (!item.wireDeckMissing && !item.wireDeckDamaged && !item.wireDeckOutOfPosition) add('Wire Deck');
-  }
-  if (item.basePlate) {
-    if (item.basePlateFloorDamaged) add('Base Plate', 'Floor damaged');
-    if (item.basePlateTwisted) add('Base Plate', 'Twisted');
-    if (item.basePlateDamaged) add('Base Plate', 'Damaged');
-    if (!item.basePlateFloorDamaged && !item.basePlateTwisted && !item.basePlateDamaged) add('Base Plate');
-  }
-  if (item.anchors) {
-    if (item.anchorsMissing) add('Anchors', 'Missing anchors or bolts');
-    if (item.anchorsDamaged) add('Anchors', 'Damaged or bent');
-    if (item.anchorsTorqued) add('Anchors', 'Torqued to 35lbs');
-    if (!item.anchorsMissing && !item.anchorsDamaged && !item.anchorsTorqued) add('Anchors');
-  }
-  if (item.bracingDamage) {
-    if (item.bracingHorizontal) add('Bracing', 'Horizontal');
-    if (item.bracingDiagonal) add('Bracing', 'Diagonal');
-    if (!item.bracingHorizontal && !item.bracingDiagonal) add('Bracing');
-  }
-  if (item.postProtector) {
-    if (item.postProtectorMissing) add('Post Protector', 'Missing');
-    if (item.postProtectorDamaged) add('Post Protector', 'Damaged');
-    if (item.postProtectorRepairRequired) add('Post Protector', 'Repair required');
-    if (!item.postProtectorMissing && !item.postProtectorDamaged && !item.postProtectorRepairRequired) add('Post Protector');
-  }
-  if (item.aisleGuarding) {
-    if (item.aisleGuardingMissing) add('Aisle Guarding', 'Missing');
-    if (item.aisleGuardingDamaged) add('Aisle Guarding', 'Damaged');
-    if (item.aisleGuardingRepairRequired) add('Aisle Guarding', 'Repair required');
-    if (!item.aisleGuardingMissing && !item.aisleGuardingDamaged && !item.aisleGuardingRepairRequired) add('Aisle Guarding');
-  }
-  return issues;
-}
 
 function drawTableHeader(doc: jsPDF, y: number): number {
   doc.setFillColor(230, 230, 230);
@@ -296,8 +233,8 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
 
     // Issue (hierarchical like iOS)
     const issueW = COL_WIDTHS[3] - 10;
-    const issueStrings = getHierarchicalIssues(item);
-    const issueText = issueStrings.length > 0 ? issueStrings.map(s => '\u2022 ' + s).join('\n') : 'No issues';
+    const issueStrings = Issue.labels(item.issues);
+    const issueText = issueStrings.length > 0 ? issueStrings.join('\n') : 'No issues';
     doc.setFontSize(7);
     const issueLines = wrapText(doc, issueText, issueW);
     doc.text(issueLines.slice(0, 8), x + 5, y + 12);

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { load } from '../services/appLoad';
 import { ArrowLeft, FileText, AlertCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
-import type { InspectionItem } from '../types';
+import { Issue } from '../issue';
 
 export default function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -155,12 +155,10 @@ export default function InspectionDetailPage() {
                   </div>
                 )}
 
-                {/* Damage Details */}
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  {getDamagesList(item).map((damage, i) => (
-                    <div key={i} className="flex items-center text-gray-700">
-                      <span className="text-red-500 mr-2">•</span>
-                      {damage}
+                  {Issue.labels(item.issues).map((label) => (
+                    <div key={label} className="flex items-center text-gray-700">
+                      {label}
                     </div>
                   ))}
                 </div>
@@ -175,37 +173,4 @@ export default function InspectionDetailPage() {
       </div>
     </div>
   );
-}
-
-function getDamagesList(item: InspectionItem): string[] {
-  const damages: string[] = [];
-  
-  if (item.uprightFrontDamage) damages.push('Upright Front Damage');
-  if (item.uprightFrontTwisted) damages.push('Upright Front Twisted');
-  if (item.uprightRearDamage) damages.push('Upright Rear Damage');
-  if (item.uprightRearTwisted) damages.push('Upright Rear Twisted');
-  if (item.uprightAlignmentOutOfAlignment) damages.push('Out of Alignment');
-  if (item.uprightAlignmentOutOfVerticalPlumb) damages.push('Out of Vertical Plumb');
-  if (item.beamFrontDamage) damages.push('Beam Front Damage');
-  if (item.beamFrontBowed) damages.push('Beam Front Bowed');
-  if (item.beamRearDamage) damages.push('Beam Rear Damage');
-  if (item.beamRearBowed) damages.push('Beam Rear Bowed');
-  if (item.bracingDamage) damages.push('Bracing Damage');
-  if (item.basePlateDamaged) damages.push('Base Plate Damaged');
-  if (item.basePlateTwisted) damages.push('Base Plate Twisted');
-  if (item.basePlateFloorDamaged) damages.push('Floor Damaged');
-  if (item.anchorsDamaged) damages.push('Anchors Damaged');
-  if (item.anchorsMissing) damages.push('Anchors Missing');
-  if (item.anchors && !item.anchorsTorqued) damages.push('Anchors Not Torqued');
-  if (item.wireDeckDamaged) damages.push('Wire Deck Damaged');
-  if (item.wireDeckMissing) damages.push('Wire Deck Missing');
-  if (item.wireDeckOutOfPosition) damages.push('Wire Deck Out of Position');
-  if (item.postProtectorDamaged) damages.push('Post Protector Damaged');
-  if (item.postProtectorMissing) damages.push('Post Protector Missing');
-  if (item.postProtectorRepairRequired) damages.push('Post Protector Repair Required');
-  if (item.aisleGuardingDamaged) damages.push('Aisle Guarding Damaged');
-  if (item.aisleGuardingMissing) damages.push('Aisle Guarding Missing');
-  if (item.aisleGuardingRepairRequired) damages.push('Aisle Guarding Repair Required');
-  
-  return damages;
 }
