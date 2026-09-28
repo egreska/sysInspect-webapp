@@ -53,7 +53,7 @@ final class InspectionItemFormStateTests: XCTestCase {
         var form = InspectionItemFormState(
             location: "Aisle",
             bayNumber: "B1",
-            importance: "Needs immediate attention",
+            importance: .needsImmediateAttention,
             comments: "Note",
             issues: [Issue.Path(segments: ["Upright"])],
             photos: [pixel()],
@@ -62,7 +62,7 @@ final class InspectionItemFormStateTests: XCTestCase {
         form.reset()
         XCTAssertEqual(form.location, "")
         XCTAssertNil(form.bayNumber)
-        XCTAssertEqual(form.importance, "Monitor")
+        XCTAssertEqual(form.importance, .monitor)
         XCTAssertNil(form.comments)
         XCTAssertTrue(form.issues.isEmpty)
         XCTAssertTrue(form.photos.isEmpty)
@@ -71,11 +71,11 @@ final class InspectionItemFormStateTests: XCTestCase {
 
     func testToggleImportanceAndIssueLabels() {
         var form = InspectionItemFormState(issues: [Issue.Path(segments: ["Upright"])])
-        XCTAssertEqual(form.importance, "Monitor")
+        XCTAssertEqual(form.importance, .monitor)
         form.toggleImportance()
-        XCTAssertEqual(form.importance, "Needs immediate attention")
+        XCTAssertEqual(form.importance, .needsImmediateAttention)
         form.toggleImportance()
-        XCTAssertEqual(form.importance, "Monitor")
+        XCTAssertEqual(form.importance, .monitor)
         XCTAssertEqual(form.issueDisplayLabels, ["• Upright"])
     }
 

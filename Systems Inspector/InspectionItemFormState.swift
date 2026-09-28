@@ -8,7 +8,7 @@ import UIKit
 struct InspectionItemFormState {
     var location: String = ""
     var bayNumber: String?
-    var importance: String = "Monitor"
+    var importance: Importance = .monitor
     var comments: String?
     var issues: Set<Issue.Path> = []
     private(set) var photos: [UIImage] = []
@@ -17,7 +17,7 @@ struct InspectionItemFormState {
     init(
         location: String = "",
         bayNumber: String? = nil,
-        importance: String = "Monitor",
+        importance: Importance = .monitor,
         comments: String? = nil,
         issues: Set<Issue.Path> = [],
         photos: [UIImage] = [],
@@ -53,7 +53,7 @@ struct InspectionItemFormState {
     }
 
     mutating func toggleImportance() {
-        importance = (importance == "Monitor") ? "Needs immediate attention" : "Monitor"
+        importance = importance.toggled
     }
 
     @discardableResult

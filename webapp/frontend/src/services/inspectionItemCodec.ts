@@ -1,3 +1,4 @@
+import { importanceFromStored } from '../importance';
 import { Issue, ISSUE_FLAGS, type IssueFlagMap } from '../issue';
 import type { InspectionItem } from '../types';
 import { extractRecordName } from './cloudkit';
@@ -6,16 +7,6 @@ export type InspectionItemCloudKitRecord = {
   recordName: string;
   fields: Record<string, { value?: unknown } | undefined>;
 };
-
-const NEEDS_IMMEDIATE_ATTENTION = 'Needs immediate attention';
-const MONITOR = 'Monitor';
-
-function decodeImportance(raw: unknown): InspectionItem['importance'] {
-  if (raw === NEEDS_IMMEDIATE_ATTENTION || raw === 'Critical') {
-    return NEEDS_IMMEDIATE_ATTENTION;
-  }
-  return MONITOR;
-}
 
 function extractDownloadURL(field: { value?: unknown } | undefined): string | null {
   if (!field || field.value == null) return null;
@@ -62,7 +53,7 @@ export function decodeInspectionItem(record: InspectionItemCloudKitRecord): Insp
     inspectionId: extractRecordName(fields.CD_inspection?.value) ?? '',
     location: (fields.CD_location?.value as string) || '',
     bayNumber: (fields.CD_bayNumber?.value as string) || '',
-    importance: decodeImportance(fields.CD_importance?.value),
+    importance: importanceFromStored(fields.CD_importance?.value),
     comments: (fields.CD_comments?.value as string) || '',
     sequenceNumber: (fields.CD_sequenceNumber?.value as number) || 0,
     photoUrls: extractPhotoUrls(fields),

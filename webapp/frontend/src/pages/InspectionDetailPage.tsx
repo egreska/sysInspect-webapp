@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { load } from '../services/appLoad';
 import { ArrowLeft, FileText, AlertCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
+import { importanceCounts, importancePhrase, isImmediate, MONITOR, NEEDS_IMMEDIATE_ATTENTION } from '../importance';
 import { Issue } from '../issue';
 
 export default function InspectionDetailPage() {
@@ -22,9 +23,7 @@ export default function InspectionDetailPage() {
     return <div className="text-center py-12">Inspection not found</div>;
   }
 
-  const needsImmediateCount =
-    inspection.items?.filter(i => i.importance === 'Needs immediate attention').length || 0;
-  const monitorCount = inspection.items?.filter(i => i.importance === 'Monitor').length || 0;
+  const counts = importanceCounts(inspection.items?.map((item) => item.importance) ?? []);
 
   return (
     <div className="space-y-6">
@@ -84,8 +83,8 @@ export default function InspectionDetailPage() {
           <div className="flex items-center">
             <AlertCircle className="h-8 w-8 text-red-600 mr-3" />
             <div>
-              <p className="text-sm text-red-600 font-medium">Needs immediate attention</p>
-              <p className="text-2xl font-bold text-red-900">{needsImmediateCount}</p>
+              <p className="text-sm text-red-600 font-medium">{importancePhrase(NEEDS_IMMEDIATE_ATTENTION)}</p>
+              <p className="text-2xl font-bold text-red-900">{counts.immediate}</p>
             </div>
           </div>
         </div>
@@ -94,8 +93,8 @@ export default function InspectionDetailPage() {
           <div className="flex items-center">
             <Eye className="h-8 w-8 text-blue-600 mr-3" />
             <div>
-              <p className="text-sm text-blue-600 font-medium">Monitor</p>
-              <p className="text-2xl font-bold text-blue-900">{monitorCount}</p>
+              <p className="text-sm text-blue-600 font-medium">{importancePhrase(MONITOR)}</p>
+              <p className="text-2xl font-bold text-blue-900">{counts.monitor}</p>
             </div>
           </div>
         </div>
@@ -124,12 +123,12 @@ export default function InspectionDetailPage() {
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      item.importance === 'Needs immediate attention'
+                      isImmediate(item.importance)
                         ? 'bg-red-100 text-red-800'
                         : 'bg-blue-100 text-blue-800'
                     }`}
                   >
-                    {item.importance}
+                    {importancePhrase(item.importance)}
                   </span>
                 </div>
 

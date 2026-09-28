@@ -555,14 +555,14 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
 
     private func updateImportanceToggleDisplay() {
         let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        if form.importance == "Needs immediate attention" {
+        if form.importance.isImmediate {
             importanceToggleButton.setImage(UIImage(systemName: "exclamationmark.triangle.fill", withConfiguration: configuration), for: .normal)
-            importanceToggleButton.setTitle("  Needs immediate attention", for: .normal)
+            importanceToggleButton.setTitle("  \(form.importance.phrase)", for: .normal)
             importanceToggleButton.tintColor = .systemRed
             importanceToggleButton.setTitleColor(.systemRed, for: .normal)
         } else {
             importanceToggleButton.setImage(UIImage(systemName: "eye.fill", withConfiguration: configuration), for: .normal)
-            importanceToggleButton.setTitle("  Monitor", for: .normal)
+            importanceToggleButton.setTitle("  \(form.importance.phrase)", for: .normal)
             importanceToggleButton.tintColor = .systemYellow
             importanceToggleButton.setTitleColor(.systemYellow, for: .normal)
         }
@@ -577,7 +577,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
         }
         importanceToggleButton.accessibilityLabel = "Importance"
-        importanceToggleButton.accessibilityValue = form.importance
+        importanceToggleButton.accessibilityValue = form.importance.phrase
         importanceToggleButton.accessibilityHint = "Double tap to change"
     }
 

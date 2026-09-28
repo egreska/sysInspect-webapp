@@ -1,5 +1,7 @@
 # Multiple Photos per Inspection Item Implementation Plan
 
+> **Status:** Shipped. The checkboxes below are not a live tracker.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (inline) or superpowers:subagent-driven-development. Steps use checkbox syntax for tracking.
 
 **Goal:** Let an inspection item store up to five photos, added one at a time, shown on iOS, PDF/ZIP reports, and the web dashboard.

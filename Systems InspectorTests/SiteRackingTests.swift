@@ -15,7 +15,7 @@ final class SiteRackingTests: XCTestCase {
 
     func testUprightsOnlyIsInvalid() {
         var spec = SiteRacking.empty
-        spec.uprights.rows = [UprightSpec(manufacturer: "Interlake")]
+        spec.uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: "Interlake")])
         XCTAssertEqual(
             spec.validationMessage(),
             "Beams are required when Upright Frames are recorded."
@@ -24,7 +24,7 @@ final class SiteRackingTests: XCTestCase {
 
     func testBeamsOnlyIsInvalid() {
         var spec = SiteRacking.empty
-        spec.beams.rows = [BeamSpec(manufacturer: "Interlake")]
+        spec.beams = SiteRackingSection(rows: [BeamSpec(manufacturer: "Interlake")])
         XCTAssertEqual(
             spec.validationMessage(),
             "Upright Frames are required when Beams are recorded."
@@ -33,52 +33,102 @@ final class SiteRackingTests: XCTestCase {
 
     func testPairedUprightsAndBeamsValid() {
         var spec = SiteRacking.empty
-        spec.uprights.rows = [UprightSpec(manufacturer: "Interlake")]
-        spec.beams.rows = [BeamSpec(manufacturer: "Interlake")]
+        spec.uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: "Interlake")])
+        spec.beams = SiteRackingSection(rows: [BeamSpec(manufacturer: "Interlake")])
         XCTAssertNil(spec.validationMessage())
         XCTAssertFalse(spec.isEmpty)
     }
 
     func testDecksOnlyIsValid() {
         var spec = SiteRacking.empty
-        spec.decks.rows = [DeckSpec(manufacturer: "Interlake", type: "wire")]
+        spec.decks = SiteRackingSection(rows: [DeckSpec(manufacturer: "Interlake", type: "wire")])
         XCTAssertNil(spec.validationMessage())
     }
 
     func testDeckWithoutTypeIsInvalid() {
         var spec = SiteRacking.empty
-        spec.decks.rows = [DeckSpec(manufacturer: "Interlake", type: "")]
+        spec.decks = SiteRackingSection(rows: [DeckSpec(manufacturer: "Interlake", type: "")])
         XCTAssertEqual(spec.validationMessage(), "Each deck needs a type.")
     }
 
-    func testCanSetStandardizedFalseWhenTwoRows() {
-        var spec = SiteRacking.empty
-        spec.uprights.mode = .mixed
-        spec.uprights.rows = [
-            UprightSpec(manufacturer: "A"),
-            UprightSpec(manufacturer: "B")
-        ]
-        XCTAssertFalse(spec.canSetUprightsStandardized())
-        spec.uprights.rows.removeLast()
-        XCTAssertTrue(spec.canSetUprightsStandardized())
+    func testStandardizedIsAllowedUntilTwoSpecsNameAManufacturer() {
+        var uprights = SiteRackingSection(mode: .mixed, rows: [UprightSpec(manufacturer: "A")])
+        XCTAssertTrue(uprights.appendBlank())
+        XCTAssertTrue(uprights.allowsStandardized)
+        uprights.setMode(.standardized)
+        XCTAssertEqual(uprights.mode, .standardized)
+        XCTAssertEqual(uprights.rows.map(\.manufacturer), ["A"])
+
+        uprights = SiteRackingSection(
+            mode: .mixed,
+            rows: [UprightSpec(manufacturer: "A"), UprightSpec(manufacturer: "B")]
+        )
+        XCTAssertFalse(uprights.allowsStandardized)
+        uprights.setMode(.standardized)
+        XCTAssertEqual(uprights.mode, .mixed)
+        XCTAssertEqual(uprights.rows.map(\.manufacturer), ["A", "B"])
     }
 
-    func testCanSetCrossBarsStandardizedFalseWhenTwoRows() {
-        var spec = SiteRacking.empty
-        spec.crossBars.mode = .mixed
-        spec.crossBars.rows = [
-            CrossBarSpec(manufacturer: "A"),
-            CrossBarSpec(manufacturer: "B")
-        ]
-        XCTAssertFalse(spec.canSetCrossBarsStandardized())
-        spec.crossBars.rows.removeLast()
-        XCTAssertTrue(spec.canSetCrossBarsStandardized())
+    func testAppendAndSeed() {
+        var uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: "A")])
+        XCTAssertFalse(uprights.appendBlank())
+        XCTAssertEqual(uprights.rows.count, 1)
+        uprights.setMode(.mixed)
+        XCTAssertTrue(uprights.appendBlank())
+        XCTAssertEqual(uprights.rows.count, 2)
+        XCTAssertFalse(uprights.rows[1].hasManufacturer)
+        XCTAssertEqual(uprights.rows[0].construction, .structural)
+
+        var decks = SiteRackingSection<DeckSpec>(mode: .mixed)
+        XCTAssertTrue(decks.appendBlank())
+        XCTAssertEqual(decks.rows.first?.manufacturer, "")
+        XCTAssertEqual(decks.rows.first?.type, "")
+
+        var beams = SiteRackingSection<BeamSpec>()
+        beams.seedBlankIfEmpty()
+        XCTAssertEqual(beams.rows.count, 1)
+        XCTAssertFalse(beams.rows[0].hasManufacturer)
+        beams.seedBlankIfEmpty()
+        XCTAssertEqual(beams.rows.count, 1)
+    }
+
+    func testCreationAndLoadDropNamelessSpecsAndCoerceStandardized() {
+        let created = SiteRackingSection(
+            mode: .standardized,
+            rows: [
+                UprightSpec(manufacturer: "A"),
+                UprightSpec(manufacturer: " "),
+                UprightSpec(manufacturer: "B")
+            ]
+        )
+        XCTAssertEqual(created.mode, .mixed)
+        XCTAssertEqual(created.rows.map(\.manufacturer), ["A", "B"])
+
+        let json = """
+        {"uprights":{"mode":"standardized","rows":[{"manufacturer":"A"},{"manufacturer":" "},{"manufacturer":"B"}]}}
+        """
+        let loaded = SiteRacking.from(jsonData: Data(json.utf8))
+        XCTAssertEqual(loaded.uprights.mode, .mixed)
+        XCTAssertEqual(loaded.uprights.rows.map(\.manufacturer), ["A", "B"])
+    }
+
+    func testBecomingStandardizedDropsBlanksAndMixedKeepsThem() {
+        var section = SiteRackingSection<CrossBarSpec>(mode: .mixed)
+        section.seedBlankIfEmpty()
+        XCTAssertTrue(section.appendBlank())
+        section.setMode(.mixed)
+        XCTAssertEqual(section.rows.count, 2)
+        section.setMode(.standardized)
+        XCTAssertEqual(section.mode, .standardized)
+        XCTAssertTrue(section.rows.isEmpty)
+        section.seedBlankIfEmpty()
+        XCTAssertEqual(section.rows.count, 1)
+        XCTAssertFalse(section.rows[0].hasManufacturer)
     }
 
     func testJSONRoundTripPreservesFields() {
         var spec = SiteRacking.empty
-        spec.uprights.mode = .mixed
-        spec.uprights.rows = [
+        spec.uprights = SiteRackingSection(mode: .mixed, rows: [
             UprightSpec(
                 manufacturer: "Interlake",
                 type: "teardrop",
@@ -87,8 +137,8 @@ final class SiteRackingTests: XCTestCase {
                 capacity: "20k",
                 construction: .rollFormed
             )
-        ]
-        spec.beams.rows = [
+        ])
+        spec.beams = SiteRackingSection(rows: [
             BeamSpec(
                 manufacturer: "Interlake",
                 type: "step",
@@ -97,8 +147,8 @@ final class SiteRackingTests: XCTestCase {
                 stepDimensions: "1.5\"",
                 capacity: "4000"
             )
-        ]
-        spec.decks.rows = [
+        ])
+        spec.decks = SiteRackingSection(rows: [
             DeckSpec(
                 manufacturer: "Interlake",
                 capacity: "2500",
@@ -106,7 +156,7 @@ final class SiteRackingTests: XCTestCase {
                 udl: true,
                 numberOfDecks: "3"
             )
-        ]
+        ])
         let data = spec.jsonData()
         XCTAssertNotNil(data)
         XCTAssertEqual(SiteRacking.from(jsonData: data), spec)
@@ -149,9 +199,9 @@ final class SiteRackingTests: XCTestCase {
 
     func testCrossBarsAnchorsAndRowSpacersRoundTrip() {
         var spec = SiteRacking.empty
-        spec.crossBars.rows = [CrossBarSpec(manufacturer: "Interlake", size: "42\"")]
-        spec.anchors.rows = [AnchorSpec(manufacturer: "Hilti", size: "1/2\"")]
-        spec.rowSpacers.rows = [RowSpacerSpec(manufacturer: "Interlake", length: "96\"", width: "6\"")]
+        spec.crossBars = SiteRackingSection(rows: [CrossBarSpec(manufacturer: "Interlake", size: "42\"")])
+        spec.anchors = SiteRackingSection(rows: [AnchorSpec(manufacturer: "Hilti", size: "1/2\"")])
+        spec.rowSpacers = SiteRackingSection(rows: [RowSpacerSpec(manufacturer: "Interlake", length: "96\"", width: "6\"")])
         XCTAssertNil(spec.validationMessage())
         XCTAssertFalse(spec.isEmpty)
         XCTAssertEqual(SiteRacking.from(jsonData: spec.jsonData()), spec)
@@ -178,7 +228,8 @@ final class SiteRackingTests: XCTestCase {
 
     func testJSONOmitsManufacturerlessRows() {
         var spec = SiteRacking.empty
-        spec.crossBars.rows = [CrossBarSpec(manufacturer: "")]
+        spec.crossBars.setMode(.mixed)
+        XCTAssertTrue(spec.crossBars.appendBlank())
         spec.loadInformation.maximumWeight = "1000"
         let roundTrip = SiteRacking.from(jsonData: spec.jsonData())
         XCTAssertEqual(roundTrip.loadInformation.maximumWeight, "1000")
@@ -231,5 +282,58 @@ final class SiteRackingTests: XCTestCase {
 
     func testInvalidJSONYieldsEmpty() {
         XCTAssertEqual(SiteRacking.from(jsonData: Data("nope".utf8)), .empty)
+    }
+
+    func testSiteInformationSummaryEmpty() {
+        XCTAssertEqual(SiteRacking.empty.siteInformationSummary, "Not filled")
+    }
+
+    func testSiteInformationSummaryJoinsFilledFields() {
+        var spec = SiteRacking.empty
+        spec.siteInformation.numberOfBays = "12"
+        spec.siteInformation.numberOfBeamLevels = "4"
+        XCTAssertEqual(spec.siteInformationSummary, "12 bays · 4 levels")
+        spec.siteInformation.beamSpacing = "48\""
+        XCTAssertEqual(spec.siteInformationSummary, "12 bays · 4 levels · 48\" spacing")
+    }
+
+    func testLoadInformationSummaryEmptyAndFilled() {
+        var spec = SiteRacking.empty
+        XCTAssertEqual(spec.loadInformationSummary, "Not filled")
+        spec.loadInformation.maximumWeight = "2500 lb"
+        XCTAssertEqual(spec.loadInformationSummary, "2500 lb")
+        spec.loadInformation.storedContents = "pallets"
+        spec.loadInformation.palletDimensions = "40x48"
+        XCTAssertEqual(spec.loadInformationSummary, "pallets · 2500 lb · 40x48")
+    }
+
+    func testDocumentsSummary() {
+        XCTAssertEqual(SiteRacking.documentsSummary(count: 0), "No documents")
+        XCTAssertEqual(SiteRacking.documentsSummary(count: 1), "1 document")
+        XCTAssertEqual(SiteRacking.documentsSummary(count: 3), "3 documents")
+    }
+
+    func testManufacturerSectionSummary() {
+        var spec = SiteRacking.empty
+        XCTAssertEqual(spec.uprightsSummary, "Not filled")
+        spec.uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: "Interlake")])
+        XCTAssertEqual(spec.uprightsSummary, "Interlake")
+        spec.uprights = SiteRackingSection(mode: .mixed, rows: [
+            UprightSpec(manufacturer: "A"),
+            UprightSpec(manufacturer: "B")
+        ])
+        XCTAssertEqual(spec.uprightsSummary, "Mixed · 2 manufacturers")
+        spec.uprights = SiteRackingSection(mode: .mixed, rows: [UprightSpec(manufacturer: "A")])
+        spec.uprights.appendBlank()
+        XCTAssertEqual(spec.uprightsSummary, "A")
+    }
+
+    func testSafetyClipsSummary() {
+        XCTAssertEqual(SiteRacking.empty.safetyClipsSummary, "Not present")
+        var spec = SiteRacking.empty
+        spec.safetyClips.present = true
+        XCTAssertEqual(spec.safetyClipsSummary, "Present")
+        spec.safetyClips.neededCount = "12"
+        XCTAssertEqual(spec.safetyClipsSummary, "Present · 12 needed")
     }
 }

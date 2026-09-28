@@ -1,230 +1,130 @@
-# Help & Support Content (in-app copy)
+# Help & Support content
 
-Formatted for **Settings → Help & Support**. Full detail: **USER_GUIDE.md**.
+Short copy for **Settings → Help & Support**. The four blocks below are the text in the app. Keep them identical to `HelpContentViewController`. The longer manual is [USER_GUIDE.md](USER_GUIDE.md).
 
----
+## User Guide
 
-## Section 1: Getting Started
-
-### Title: "Welcome to Systems Inspector"
-**Content:**
 ```
-Systems Inspector helps you manage inspections: customers, inspections, photos, and PDF reports. Data syncs with iCloud (CloudKit) when you’re signed in.
+# Pallet Rack Safety
 
-See the User Guide in Settings for the full manual.
-```
+Pallet Rack Safety records customers, inspections, Issues, photos, and PDF or CSV reports. Data stays on this device and syncs to your iCloud account when iCloud sync is on.
 
----
+## Account
 
-## Section 2: Account & Login
+Create an account with your email, a password, and a security question. The password needs at least 8 characters, one uppercase letter, one lowercase letter, and one number.
 
-### Topic: "Creating an Account"
-**Content:**
-```
-1. Tap Create New Account
-2. Enter email and password
-3. Choose a security question and answer
-4. Submit
+Log in with email and password. After a successful login on this device, the login screen can offer Face ID.
 
-Password: 8+ characters, 1 upper, 1 lower, 1 number. Passwords are hashed; we don’t store plain text.
-```
+Forgot Password asks for your email and security answer, then a new password.
 
-### Topic: "Logging In"
-**Content:**
-```
-Email + password. You can enable Face ID or Touch ID in Settings after a successful login for faster unlock.
+After 5 failed logins the account locks for 15 minutes. Wait, or use Forgot Password.
 
-Too many wrong attempts may temporarily lock the account — the screen shows what to do next (wait or use Forgot Password).
-```
+## Customers
 
-### Topic: "Forgot Your Password?"
-**Content:**
-```
-Forgot Password → enter email → answer your security question → set a new password.
+Open the Customers tab and tap + to add a customer. Search filters the list. The list loads 20 customers at a time.
 
-If you can’t answer the question, you may need account recovery help through support.
-```
+Open a customer to edit details, start an inspection, or open Site racking & documents.
 
-### Topic: "Account Lockout"
-**Content:**
-```
-Failed logins can trigger a short lockout to reduce guessing attacks. Wait for the timer, or use Forgot Password if you’re the real account owner.
+## Inspections
+
+On a customer, tap New Inspection. For each location, enter Area/Aisle and, if you need it, Bay/Level. Tap Select Issue, then set Importance to Needs immediate attention or Monitor. Take Photo adds a photo. An item holds up to five photos. The button label changes to Add Photo after the first one. Save the item, then finish the inspection.
+
+## Site racking and documents
+
+Site racking & documents is on the customer form and on the customer screen. It records installed equipment and up to five site documents (photos or PDFs). It is not an inspection and it is not an Issue.
+
+## Reports
+
+Open the Reports tab. Select the inspections you want, then tap Generate PDF Report or Generate CSV Report. Share the file from the share sheet.
+
+## Settings
+
+Inspector Name and Company Information are printed on reports. iCloud Sync shows the current sync status. Backup Data shares a copy of the database. Restore Data is not available in this version.
+
+Clear All Data deletes local data after you confirm it.
+
+Email support@rackinspector.com for help.
 ```
 
----
+## FAQ
 
-## Section 3: Using the App
+```
+# Frequently Asked Questions
 
-### Topic: "Managing Customers"
-**Content:**
-```
-Customers tab: add (+), search, open a customer for details. Edit or delete from the list or detail screen. Long lists may load in pages — scroll to load more.
-```
+## Account
 
-### Topic: "Creating Inspections"
-**Content:**
-```
-Open a customer → New Inspection → date, location, damage rows, notes, photos → Save. You can add multiple components and photos per inspection.
-```
+**Can I use the app without an account?**
+No. Create an account on this device first.
 
-### Topic: "Adding Photos"
-**Content:**
-```
-Add Photo → camera or photo library (grant permissions in Settings if prompted). First load may use the network; revisiting the same image is faster thanks to caching.
-```
+**What if I forget my password?**
+On the login screen, tap Forgot Password. You need the email and the security answer.
 
-### Topic: "Generating Reports"
-**Content:**
-```
-From the inspection or reports flow, generate a PDF, then share via Mail, Files, AirDrop, or other apps. Ensure photos have finished loading if they should appear in the PDF.
-```
+**What if I forget the security answer?**
+This app cannot reset the account without that answer.
 
----
+**Can I change my email?**
+No. The email you used to create the account stays the login.
 
-## Section 4: Performance
+## Data
 
-### Topic: "Why is the app responsive?"
-**Content:**
-```
-Images use memory and disk caching. Customer lists may use pagination so large directories stay scrollable. Heavy work runs off the main thread where possible.
-```
+**Where is my data stored?**
+On this device. When iCloud sync is on, inspection data also syncs to your iCloud account.
 
-### Topic: "Performance & cache"
-**Content:**
-```
-If Settings exposes Performance or cache controls, you can inspect memory/cache usage or clear the image cache. Clearing cache frees space; images may download again.
+**Does the app work offline?**
+You can keep working on this device. Sync runs when iCloud is available.
+
+**What if I delete the app?**
+The local copy is removed. Records already synced to your iCloud account can remain there. Restore Data in Settings is not available in this version.
+
+**How many photos can I add?**
+Up to five photos on an inspection item, and up to five site documents on a customer.
+
+## Reports
+
+**How do I send a report?**
+Reports tab, select inspections, then Generate PDF Report or Generate CSV Report, then share.
 ```
 
-### Topic: "Cache management"
-**Content:**
+## Troubleshooting
+
 ```
-Clear Image Cache removes cached thumbnails/files. Use when troubleshooting storage or stale images — not needed for normal daily use.
-```
+# Troubleshooting
 
----
+## Can't log in
 
-## Section 5: Settings
+Check the email and password, including capitals. Use Forgot Password if you know the security answer. If the account is locked, wait 15 minutes or use Forgot Password.
 
-### Topic: "Inspector settings"
-**Content:**
-```
-Set the name and company that appear on PDFs. Enable biometrics for quicker login. iCloud must be available for CloudKit sync.
-```
+## Face ID does not appear
 
-### Topic: "Data management"
-**Content:**
-```
-Clear cache: only image cache, data reloads as needed.
+Log in once with email and password on this device. Face ID is offered on the login screen after that, when the device has Face ID set up.
 
-Clear All Data: destructive — requires confirmation and usually your password. Export PDFs first if you need records offline.
-```
+## Sync
 
----
+Settings → iCloud Sync shows the current status. If sync failed, tap the row for an explanation. Sign into iCloud in the iOS Settings app, check the network, then reopen Pallet Rack Safety.
 
-## Section 6: Security
+## Photos
 
-### Topic: "How is my data protected?"
-**Content:**
-```
-Passwords are hashed with a strong KDF. Data is stored using iOS protections; CloudKit sync uses Apple’s infrastructure. Enable biometric login only on devices you trust.
+Allow camera access when iOS asks. Inspection item photos come from the camera. Site documents can come from the camera, Photo Library, or Files. An inspection item holds up to five photos.
+
+## Reports
+
+Select at least one inspection before you generate a PDF or CSV. If sharing fails, try saving to Files.
+
+## Restore
+
+Settings → Restore Data is not available in this version. Backup Data can share a database copy. This version cannot load that file back in.
 ```
 
-### Topic: "Privacy"
-**Content:**
+## About
+
 ```
-We don’t sell your inspection data. Content lives on your devices and in your iCloud account when sync is on. Review the App Store privacy details for analytics/crash reporting if enabled.
+# About
+
+Pallet Rack Safety records racking inspections: customers, Issues, photos, site racking, site documents, and PDF or CSV reports.
+
+The version number is on Settings → About.
+
+Support: support@rackinspector.com
+
+© 2025 EKG Apps. All rights reserved.
 ```
-
----
-
-## Section 7: Troubleshooting
-
-### Topic: "Can't log in"
-**Content:**
-```
-Check spelling and caps. Use Forgot Password. If locked out, follow the on-screen timer or reset flow. Re-enable Face ID/Touch ID in Settings if biometrics fail.
-```
-
-### Topic: "Sync issues"
-**Content:**
-```
-Confirm network and iCloud sign-in. Toggle airplane mode off, reopen the app, or restart the device if CloudKit is stuck. First-time photo loads need connectivity.
-```
-
-### Topic: "Performance issues"
-**Content:**
-```
-Close other apps, free storage, restart the app or device. Clear image cache if Settings offers it and you’re troubleshooting slowness.
-```
-
-### Topic: "Photo issues"
-**Content:**
-```
-Check Photos and Camera permissions. Retry after network returns. Clear image cache only if images look wrong or storage is tight.
-```
-
-### Topic: "PDF issues"
-**Content:**
-```
-Retry after photos load. Free disk space. Try sharing to Files first if the share sheet misbehaves.
-```
-
----
-
-## Section 8: Quick Tips
-
-### Topic: "Tips"
-**Content:**
-```
-Use Wi‑Fi for large syncs when possible. Keep iOS updated. Back up your device if you rely on local data.
-```
-
----
-
-## Section 9: Common Questions
-
-### Topic: "Frequently Asked Questions"
-**Content:**
-```
-Q: Work offline?
-A: Core features work offline; sync resumes when online.
-
-Q: Multiple devices?
-A: Same Apple ID / iCloud setup can sync via CloudKit.
-
-Q: Delete the app?
-A: Cloud data may remain in iCloud; local data is removed with the app. Plan exports before deleting.
-
-Q: Report a bug?
-A: Use App Store feedback or the contact option in Settings if shown.
-```
-
----
-
-## Section 10: App Information
-
-### Topic: "About Systems Inspector"
-**Content:**
-```
-See Settings → About (if present) for version and build. Requires iOS 14 or later unless your release notes say otherwise.
-```
-
-### Topic: "Contact & Support"
-**Content:**
-```
-Read the User Guide, then contact support through the email or link shown in Settings, or leave structured feedback on the App Store.
-```
-
----
-
-## Section 11: Quick Reference
-
-### Topic: "Feature summary"
-**Content:**
-```
-Customers, inspections, photos, PDF reports, search, settings, optional biometrics, CloudKit sync when iCloud is available.
-```
-
----
-
-*Developer wiring notes: **HELP_IMPLEMENTATION_GUIDE.md**.*

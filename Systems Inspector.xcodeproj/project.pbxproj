@@ -40,7 +40,6 @@
 		7D5E72438B1A3FB45917E85B /* libPods-Systems InspectorUITests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Systems InspectorUITests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A197175770396C4BE43106E7 /* Pods-Systems InspectorTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Systems InspectorTests.debug.xcconfig"; path = "Target Support Files/Pods-Systems InspectorTests/Pods-Systems InspectorTests.debug.xcconfig"; sourceTree = "<group>"; };
 		B6B2CFA3151B432891944190 /* Pods-Systems InspectorUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Systems InspectorUITests.release.xcconfig"; path = "Target Support Files/Pods-Systems InspectorUITests/Pods-Systems InspectorUITests.release.xcconfig"; sourceTree = "<group>"; };
-		B717BD9130472EC100B28AB3 /* Systems Inspector.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Systems Inspector.xcodeproj"; sourceTree = "<group>"; };
 		B71F75282DE115F9009F8964 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		B71F752A2DE1161E009F8964 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		B71F752C2DE1162F009F8964 /* MessageUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
@@ -58,16 +57,22 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B7F7D67F2DDE4DAE0058FD49 /* Systems Inspector */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "Systems Inspector";
 			sourceTree = "<group>";
 		};
 		B7F7D6922DDE4DAF0058FD49 /* Systems InspectorTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "Systems InspectorTests";
 			sourceTree = "<group>";
 		};
 		B7F7D69C2DDE4DAF0058FD49 /* Systems InspectorUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "Systems InspectorUITests";
 			sourceTree = "<group>";
 		};
@@ -119,15 +124,9 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		B7C3A1EE304737A600D44988 /* Products */ = {
-			isa = PBXGroup;
-			name = Products;
-			sourceTree = "<group>";
-		};
 		B7F7D6742DDE4DAE0058FD49 = {
 			isa = PBXGroup;
 			children = (
-				B717BD9130472EC100B28AB3 /* Systems Inspector.xcodeproj */,
 				B7F7D67F2DDE4DAE0058FD49 /* Systems Inspector */,
 				B7F7D6922DDE4DAF0058FD49 /* Systems InspectorTests */,
 				B7F7D69C2DDE4DAF0058FD49 /* Systems InspectorUITests */,
@@ -266,12 +265,6 @@
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B7F7D67E2DDE4DAE0058FD49 /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = B7C3A1EE304737A600D44988 /* Products */;
-					ProjectRef = B717BD9130472EC100B28AB3 /* Systems Inspector.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				B7F7D67C2DDE4DAE0058FD49 /* Systems Inspector */,
@@ -351,13 +344,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Systems Inspector/Pods-Systems Inspector-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Systems Inspector/Pods-Systems Inspector-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -572,6 +561,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_EXPLICIT_MODULES = NO;
 				CODE_SIGN_ENTITLEMENTS = "Systems Inspector/Systems Inspector.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1.0;
@@ -599,6 +589,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "EKGDev.Systems-Inspector";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OBJC_BRIDGING_HEADER = "Systems Inspector/Systems-Inspector-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -611,6 +602,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_EXPLICIT_MODULES = NO;
 				CODE_SIGN_ENTITLEMENTS = "Systems Inspector/Systems Inspector.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1.0;
@@ -636,6 +628,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "EKGDev.Systems-Inspector";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OBJC_BRIDGING_HEADER = "Systems Inspector/Systems-Inspector-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

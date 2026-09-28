@@ -43,7 +43,7 @@ enum InspectionItemIntake {
         InspectionItemFormState(
             location: item.location ?? "",
             bayNumber: item.bayNumber,
-            importance: item.importance ?? "Monitor",
+            importance: Importance(stored: item.importance),
             comments: item.comments,
             issues: item.recordedIssues(),
             photos: item.getAllPhotosSync(),
@@ -59,7 +59,7 @@ enum InspectionItemIntake {
         } else {
             item.bayNumber = nil
         }
-        item.importance = form.importance
+        item.importance = form.importance.phrase
         item.comments = form.comments
     }
 

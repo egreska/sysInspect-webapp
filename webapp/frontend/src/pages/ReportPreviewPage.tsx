@@ -5,6 +5,7 @@ import { generatePDF } from '../services/pdfGenerator';
 import { ArrowLeft, Download, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState, useEffect, useCallback } from 'react';
+import { importanceFromStored, importancePhrase, importanceValues, isImmediate } from '../importance';
 import type { Inspection, InspectionItem } from '../types';
 import { Issue } from '../issue';
 
@@ -30,7 +31,7 @@ export default function ReportPreviewPage() {
   }, [inspection]);
 
   const updateItem = useCallback(
-    (index: number, field: keyof InspectionItem, value: string) => {
+    <K extends keyof InspectionItem>(index: number, field: K, value: InspectionItem[K]) => {
       setEdited((prev) => {
         if (!prev?.items) return prev;
         const next = { ...prev, items: [...prev.items] };
@@ -221,15 +222,16 @@ export default function ReportPreviewPage() {
                         </label>
                         <select
                           value={item.importance}
-                          onChange={(e) => updateItem(index, 'importance', e.target.value)}
+                          onChange={(e) => updateItem(index, 'importance', importanceFromStored(e.target.value))}
                           className={`w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm font-medium ${
-                            item.importance === 'Needs immediate attention'
+                            isImmediate(item.importance)
                               ? 'border-red-300 text-red-800 bg-red-50'
                               : 'border-blue-300 text-blue-800 bg-blue-50'
                           }`}
                         >
-                          <option value="Needs immediate attention">Needs immediate attention</option>
-                          <option value="Monitor">Monitor</option>
+                          {importanceValues.map((value) => (
+                            <option key={value} value={value}>{importancePhrase(value)}</option>
+                          ))}
                         </select>
                       </div>
 

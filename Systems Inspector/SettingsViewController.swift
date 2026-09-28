@@ -192,7 +192,7 @@ class SettingsViewController: UIViewController {
 
     private func showAboutScreen() {
         let aboutVC = UIViewController()
-        aboutVC.title = "About Systems Inspector"
+        aboutVC.title = "About"
         aboutVC.view.backgroundColor = .systemBackground
 
         let scrollView = UIScrollView()
@@ -211,7 +211,7 @@ class SettingsViewController: UIViewController {
 
         // App title label
         let titleLabel = UILabel()
-        titleLabel.text = "Systems Inspector"
+        titleLabel.text = "Pallet Rack Safety"
         titleLabel.font = .preferredFont(forTextStyle: .title1)
         titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textAlignment = .center
@@ -220,7 +220,8 @@ class SettingsViewController: UIViewController {
 
         // Version label
         let versionLabel = UILabel()
-        versionLabel.text = "Version 1.0"
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        versionLabel.text = version.isEmpty ? "Version" : "Version \(version)"
         versionLabel.font = .preferredFont(forTextStyle: .body)
         versionLabel.adjustsFontForContentSizeCategory = true
         versionLabel.textAlignment = .center
@@ -231,15 +232,14 @@ class SettingsViewController: UIViewController {
         // Description label
         let descriptionLabel = UILabel()
         descriptionLabel.text = """
-        Systems Inspector is a comprehensive tool for warehouse racking inspections.
-        It helps you maintain safety standards by providing a structured approach to inspecting, documenting, and reporting on the condition of warehouse racking systems.
+        Pallet Rack Safety records warehouse racking inspections: customers, Issues, photos, site racking, site documents, and PDF or CSV reports.
 
         Features:
-        • Customer management
-        • Detailed inspections with photo documentation
-        • Hierarchical damage reporting
-        • PDF and CSV report generation
-        • Data backup and restore
+        • Customers and inspections
+        • Issues, with up to five photos on each inspection item
+        • Site racking and up to five site documents
+        • PDF and CSV reports
+        • Backup from Settings. Restore Data is not available in this version.
 
         © 2025 EKG Apps. All rights reserved.
         """
@@ -293,41 +293,43 @@ class SettingsViewController: UIViewController {
         let privacyTextView = UITextView()
         privacyTextView.isEditable = false
         privacyTextView.text = """
-        Privacy Policy for Systems Inspector
+        Privacy Policy for Pallet Rack Safety
 
-        Last Updated: May 22, 2025
+        Last Updated: September 27, 2026
 
         1. Introduction
 
-        This Privacy Policy describes how Systems Inspector collects, uses, and discloses your information when you use our mobile application.
+        This Privacy Policy describes how Pallet Rack Safety handles information when you use the app.
 
-        2. Information We Collect
+        2. Information You Enter
 
-        The app does not collect any personal information automatically. All data entered in the app (customer information, inspection details, photos) is stored locally on your device and is not transmitted to any external servers unless you explicitly choose to share reports via the sharing functionality.
+        You enter account details, customers, inspections, Issues, photos, and site documents. The app stores a hash of your password on this device, not the password itself.
 
-        3. How We Use Your Information
+        3. Where Data Is Stored
 
-        The information you enter is used solely for the purpose of generating inspection reports. No analytics or tracking is implemented in the app.
+        Inspection data is stored on your device. When iCloud sync is on, that data also syncs to your iCloud account. A report goes to whoever you send it to when you share it.
 
-        4. Data Sharing and Disclosure
+        4. Analytics
 
-        We do not share your data with any third parties. When you generate reports and choose to share them, you control who receives those reports.
+        When Firebase is enabled, the app can send crash and usage analytics. Analytics are separate from your inspection data.
 
-        5. Data Security
+        5. How Information Is Used
 
-        We implement appropriate security measures to protect your data within the app. However, please be aware that no method of transmission or storage is 100% secure.
+        Information you enter is used to manage inspections and generate reports.
 
-        6. Your Rights
+        6. Data Security
 
-        You have full control over all data in the app. You can delete any information at any time through the app's interface.
+        iCloud sync uses Apple's CloudKit. No method of storage or transmission is perfectly secure.
 
-        7. Changes to This Privacy Policy
+        7. Your Choices
 
-        We may update our Privacy Policy from time to time. Any changes will be reflected in the app with the updated "Last Updated" date.
+        You can edit or delete customers, inspections, and photos in the app. Clear All Data in Settings removes local data after you confirm it.
 
-        8. Contact Us
+        8. Changes to This Policy
 
-        If you have any questions about this Privacy Policy, please contact us at:
+        We may update this policy. The date above changes when we do.
+
+        9. Contact
 
         Email: support@rackinspector.com
         """

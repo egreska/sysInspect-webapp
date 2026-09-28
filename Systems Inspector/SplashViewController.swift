@@ -21,7 +21,7 @@ final class SplashViewController: UIViewController {
 
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Systems Inspector"
+        label.text = "Pallet Rack Safety"
         label.font = .boldSystemFont(ofSize: 32)
         label.textAlignment = .center
         label.textColor = UIColor(named: "LaunchText") ?? AppTheme.primaryContrast
@@ -49,11 +49,12 @@ final class SplashViewController: UIViewController {
         super.viewDidAppear(animated)
         let startedAt = Date()
         let minimumDuration: TimeInterval = 0.3
+        let onComplete = onComplete
         CoreDataManager.shared.waitForStoreToLoad { _ in
             let elapsed = Date().timeIntervalSince(startedAt)
             let delay = max(0, minimumDuration - elapsed)
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                self?.onComplete?()
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                onComplete?()
             }
         }
     }

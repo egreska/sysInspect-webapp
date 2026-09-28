@@ -67,7 +67,7 @@ final class ReportSnapshotMapperTests: XCTestCase {
             form: InspectionItemFormState(
                 location: "Aisle",
                 bayNumber: "B2",
-                importance: "Monitor",
+                importance: .monitor,
                 comments: nil,
                 issues: [damage],
                 photos: [pixelImage(), pixelImage()],
@@ -98,7 +98,7 @@ final class ReportSnapshotMapperTests: XCTestCase {
             form: InspectionItemFormState(
                 location: "Aisle",
                 bayNumber: nil,
-                importance: "Monitor",
+                importance: .monitor,
                 comments: nil,
                 issues: [],
                 photos: [pixelImage()],

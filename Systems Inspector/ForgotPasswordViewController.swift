@@ -322,7 +322,7 @@ class ForgotPasswordViewController: UIViewController {
         
         activityIndicator.startAnimating()
         
-        Task {
+        Task { [weak self] in
             let result = await PasswordRecoveryManager.shared.resetPassword(
                 for: email,
                 newPassword: newPassword,
@@ -330,7 +330,8 @@ class ForgotPasswordViewController: UIViewController {
             )
             
             await MainActor.run {
-                activityIndicator.stopAnimating()
+                guard let self else { return }
+                self.activityIndicator.stopAnimating()
                 
                 if result.success {
                     let alert = UIAlertController(
@@ -338,12 +339,12 @@ class ForgotPasswordViewController: UIViewController {
                         message: result.message,
                         preferredStyle: .alert
                     )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-                        self?.dismiss(animated: true)
+                    alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                        self.dismiss(animated: true)
                     })
-                    present(alert, animated: true)
+                    self.present(alert, animated: true)
                 } else {
-                    showAlert(title: "Error", message: result.message)
+                    self.showAlert(title: "Error", message: result.message)
                 }
             }
         }

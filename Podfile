@@ -1,7 +1,7 @@
 # Podfile for Systems Inspector
 # Firebase Analytics and Crashlytics Integration
 
-platform :ios, '14.0'
+platform :ios, '15.0'
 
 target 'Systems Inspector' do
   use_frameworks!
@@ -52,13 +52,18 @@ post_install do |installer|
   # Pods project defaults set CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES (Xcode 15+).
   installer.pods_project.build_configurations.each do |config|
     config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     dedupe_ldflags.call(config)
   end
 
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+      # Xcode 27 supports 15.0–27.0 only; 14.0 is a hard error, not a warning.
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
       config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+      # Clang/Swift explicit modules scan Firebase.h before pod frameworks exist.
+      config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+      config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
 
       # Xcode's Module Verifier still validates framework headers with strict rules; Firebase/Google
       # pods use quoted includes in umbrellas. Disabling avoids verifier failures independent of CLANG_WARN_*.
@@ -205,6 +210,24 @@ post_install do |installer|
 
     make_writable.call(path)
     File.write(path, patched)
+  end
+
+  # Clang explicit-module scanning resolves <FirebaseCore/FirebaseCore.h> from source, not
+  # only from the built framework (which does not exist yet during the scan).
+  Dir.glob(File.join(pods_root, 'Target Support Files', 'Pods-Systems Inspector', '*.xcconfig')).each do |path|
+    text = File.read(path)
+    extras = [
+      '"${PODS_ROOT}/FirebaseCore/FirebaseCore/Sources/Public"',
+      '"${PODS_ROOT}/FirebaseCrashlytics/Crashlytics/Crashlytics/Public"'
+    ]
+    extras.each do |extra|
+      next if text.include?(extra)
+      text = text.sub(/^(HEADER_SEARCH_PATHS = .*)$/, "\\1 #{extra}")
+    end
+    next if text == File.read(path)
+
+    make_writable.call(path)
+    File.write(path, text)
   end
 
   # FirebaseCrashlytics lists -lc++ in OTHER_LDFLAGS and also compiles C++ sources, so the

@@ -12,7 +12,7 @@ final class PDFTableLayoutTests: XCTestCase {
         photos: Int = 0,
         location: String = "Aisle 1",
         secondary: String? = nil,
-        importance: String = "Monitor",
+        importance: Importance = .monitor,
         issue: String = "No issues",
         comments: String = ""
     ) -> PDFItemLayoutInput {

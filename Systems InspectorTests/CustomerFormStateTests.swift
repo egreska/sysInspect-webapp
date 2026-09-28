@@ -21,7 +21,7 @@ final class CustomerFormStateTests: XCTestCase {
 
     func testSpecAndDocsDoNotAffectValidity() {
         var form = CustomerFormState()
-        form.siteRacking.uprights.rows = [UprightSpec(manufacturer: "X")]
+        form.siteRacking.uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: "X")])
         form.siteDocuments = [
             SiteDocumentFile(id: nil, filename: "a.pdf", contentType: "public.pdf", data: Data([1]))
         ]

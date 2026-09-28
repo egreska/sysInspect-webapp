@@ -57,15 +57,6 @@ describe('decodeInspectionItem', () => {
     expect(item.importance).toBe('Needs immediate attention');
   });
 
-  it('maps unknown importance including Repair to Monitor', () => {
-    expect(decodeInspectionItem(record({ CD_importance: 'Repair' })).importance).toBe('Monitor');
-    expect(decodeInspectionItem(record({ CD_importance: 'Urgent' })).importance).toBe('Monitor');
-  });
-
-  it('keeps Monitor', () => {
-    expect(decodeInspectionItem(record({ CD_importance: 'Monitor' })).importance).toBe('Monitor');
-  });
-
   it('resolves a string photo URL', () => {
     const item = decodeInspectionItem(
       record({ CD_photoURL: 'https://ck.example/from-string.jpg' })

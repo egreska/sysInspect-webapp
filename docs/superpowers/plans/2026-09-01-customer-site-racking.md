@@ -1,5 +1,7 @@
 # Customer SiteRacking Implementation Plan
 
+> **Status:** Shipped. The checkboxes below are not a live tracker.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let a Customer hold optional SiteDocuments (≤5 photos/PDFs) and optional SiteRacking (uprights/beams/decks) on iOS, via CustomerFormState and CustomerIntake.

@@ -34,7 +34,7 @@ public struct PDFItemLayoutInput: Equatable {
     public var inspectionDateText: String?
     public var primaryLocation: String
     public var secondaryLocation: String?
-    public var importance: String
+    public var importance: Importance
     public var issueText: String
     public var comments: String
 
@@ -42,7 +42,7 @@ public struct PDFItemLayoutInput: Equatable {
         photoCount: Int,
         primaryLocation: String,
         secondaryLocation: String?,
-        importance: String,
+        importance: Importance,
         issueText: String,
         comments: String,
         inspectionDateText: String? = nil
@@ -139,10 +139,10 @@ public struct PDFResolvedTableLayout: Equatable {
 
         let importanceRange = importanceWidthRange(preset: preset)
         let importancePreferred = clampedMeasuredWidth(
-            texts: items.map(\.importance),
+            texts: items.map(\.importance.phrase),
             font: bodyFont,
             range: importanceRange,
-            extra: items.contains(where: { $0.importance == "Needs immediate attention" }) ? 16 : 0
+            extra: items.contains(where: \.importance.isImmediate) ? 16 : 0
         )
         builders.append(ColumnBuilder(kind: .importance, width: importancePreferred, minWidth: importanceRange.lowerBound, flexible: false))
 
@@ -178,7 +178,7 @@ public struct PDFResolvedTableLayout: Equatable {
             case .secondaryLocation:
                 needed = max(needed, Self.textHeight(item.trimmedSecondary ?? "N/A", width: textWidth, font: Self.bodyFont) + Self.cellInset)
             case .importance:
-                needed = max(needed, Self.textHeight(item.importance, width: textWidth, font: Self.bodyFont) + Self.cellInset)
+                needed = max(needed, Self.textHeight(item.importance.phrase, width: textWidth, font: Self.bodyFont) + Self.cellInset)
             case .issue:
                 needed = max(needed, Self.textHeight(item.issueText, width: textWidth, font: Self.smallFont) + Self.cellInset)
             case .comments:

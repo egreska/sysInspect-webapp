@@ -39,7 +39,7 @@ enum ReportSnapshotMapper {
             sequenceNumber: item.sequenceNumber,
             location: item.location ?? "",
             bayNumber: item.bayNumber,
-            importance: item.importance ?? "Monitor",
+            importance: Importance(stored: item.importance),
             comments: item.comments,
             issues: item.recordedIssues(),
             photos: includePhotos ? item.photoBytes() : []

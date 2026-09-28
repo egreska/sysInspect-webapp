@@ -17,8 +17,22 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     private let onDone: (SiteRacking, [SiteDocumentFile]) -> Void
     private var previewURL: URL?
 
+    private enum CardID: String {
+        case siteInformation
+        case loadInformation
+        case documents
+        case uprights
+        case beams
+        case decks
+        case crossBars
+        case safetyClips
+        case anchors
+        case rowSpacers
+    }
+
     private let scrollView = UIScrollView()
     private let stackView = UIStackView()
+    private var expandedCards: Set<CardID> = [.siteInformation]
 
     init(
         siteRacking: SiteRacking,
@@ -40,8 +54,8 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Site racking"
-        view.backgroundColor = AppTheme.background
+        title = "Site Racking"
+        view.backgroundColor = .systemGroupedBackground
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .cancel,
             target: self,
@@ -56,7 +70,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         navigationItem.rightBarButtonItem = doneItem
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .vertical
-        stackView.spacing = 16
+        stackView.spacing = 12
         stackView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
         scrollView.addSubview(stackView)
@@ -65,183 +79,336 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -20),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 16),
+            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 16),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -16),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -24),
+            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -32)
         ])
         rebuild()
     }
 
     private func ensurePlaceholderRows() {
-        if racking.uprights.rows.isEmpty {
-            racking.uprights.rows = [UprightSpec(manufacturer: "")]
-        }
-        if racking.beams.rows.isEmpty {
-            racking.beams.rows = [BeamSpec(manufacturer: "")]
-        }
-        if racking.decks.rows.isEmpty {
-            racking.decks.rows = [DeckSpec(manufacturer: "", type: "")]
-        }
-        if racking.crossBars.rows.isEmpty {
-            racking.crossBars.rows = [CrossBarSpec(manufacturer: "")]
-        }
-        if racking.anchors.rows.isEmpty {
-            racking.anchors.rows = [AnchorSpec(manufacturer: "")]
-        }
-        if racking.rowSpacers.rows.isEmpty {
-            racking.rowSpacers.rows = [RowSpacerSpec(manufacturer: "")]
-        }
+        racking.uprights.seedBlankIfEmpty()
+        racking.beams.seedBlankIfEmpty()
+        racking.decks.seedBlankIfEmpty()
+        racking.crossBars.seedBlankIfEmpty()
+        racking.anchors.seedBlankIfEmpty()
+        racking.rowSpacers.seedBlankIfEmpty()
     }
 
     private func rebuild() {
+        let offset = scrollView.contentOffset
         stackView.arrangedSubviews.forEach {
             stackView.removeArrangedSubview($0)
             $0.removeFromSuperview()
         }
-        stackView.addArrangedSubview(sectionLabel("Site Information"))
-        stackView.addArrangedSubview(siteInformationCard())
-        stackView.addArrangedSubview(sectionLabel("Load Information"))
-        stackView.addArrangedSubview(loadInformationCard())
-        stackView.addArrangedSubview(sectionLabel("Site documents"))
-        stackView.addArrangedSubview(documentsView())
-        stackView.addArrangedSubview(componentSection(
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .siteInformation,
+            title: "Site Information",
+            symbolName: "building.2",
+            summary: racking.siteInformationSummary,
+            body: siteInformationCard()
+        ))
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .loadInformation,
+            title: "Load Information",
+            symbolName: "shippingbox",
+            summary: racking.loadInformationSummary,
+            body: loadInformationCard()
+        ))
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .documents,
+            title: "Site documents",
+            symbolName: "doc",
+            summary: SiteRacking.documentsSummary(count: documents.count),
+            body: documentsView()
+        ))
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .uprights,
             title: "Upright Frames",
-            mode: racking.uprights.mode,
-            canStandardize: racking.canSetUprightsStandardized(),
-            addEnabled: racking.uprights.mode == .mixed,
-            onMode: { [weak self] mixed in self?.setUprightsMixed(mixed) },
-            onAdd: { [weak self] in
-                self?.racking.uprights.rows.append(UprightSpec(manufacturer: ""))
-                self?.rebuild()
-            }
+            symbolName: "rectangle.split.3x1",
+            summary: racking.uprightsSummary,
+            body: manufacturerBody(
+                toolbar: modeToolbar(
+                    mode: racking.uprights.mode,
+                    allowsStandardized: racking.uprights.allowsStandardized,
+                    addEnabled: racking.uprights.mode == .mixed,
+                    onMode: { [weak self] mixed in self?.setUprightsMixed(mixed) },
+                    onAdd: { [weak self] in
+                        self?.racking.uprights.appendBlank()
+                        self?.rebuild()
+                    }
+                ),
+                rows: racking.uprights.rows.indices.map { uprightCard(index: $0) }
+            )
         ))
-        for index in racking.uprights.rows.indices {
-            stackView.addArrangedSubview(uprightCard(index: index))
-        }
-        stackView.addArrangedSubview(componentSection(
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .beams,
             title: "Beams",
-            mode: racking.beams.mode,
-            canStandardize: racking.canSetBeamsStandardized(),
-            addEnabled: racking.beams.mode == .mixed,
-            onMode: { [weak self] mixed in self?.setBeamsMixed(mixed) },
-            onAdd: { [weak self] in
-                self?.racking.beams.rows.append(BeamSpec(manufacturer: ""))
-                self?.rebuild()
-            }
+            symbolName: "rectangle.portrait",
+            summary: racking.beamsSummary,
+            body: manufacturerBody(
+                toolbar: modeToolbar(
+                    mode: racking.beams.mode,
+                    allowsStandardized: racking.beams.allowsStandardized,
+                    addEnabled: racking.beams.mode == .mixed,
+                    onMode: { [weak self] mixed in self?.setBeamsMixed(mixed) },
+                    onAdd: { [weak self] in
+                        self?.racking.beams.appendBlank()
+                        self?.rebuild()
+                    }
+                ),
+                rows: racking.beams.rows.indices.map { beamCard(index: $0) }
+            )
         ))
-        for index in racking.beams.rows.indices {
-            stackView.addArrangedSubview(beamCard(index: index))
-        }
-        stackView.addArrangedSubview(componentSection(
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .decks,
             title: "Wire Decks",
-            mode: racking.decks.mode,
-            canStandardize: racking.canSetDecksStandardized(),
-            addEnabled: racking.decks.mode == .mixed,
-            onMode: { [weak self] mixed in self?.setDecksMixed(mixed) },
-            onAdd: { [weak self] in
-                self?.racking.decks.rows.append(DeckSpec(manufacturer: "", type: ""))
-                self?.rebuild()
-            }
+            symbolName: "square.grid.3x3",
+            summary: racking.decksSummary,
+            body: manufacturerBody(
+                toolbar: modeToolbar(
+                    mode: racking.decks.mode,
+                    allowsStandardized: racking.decks.allowsStandardized,
+                    addEnabled: racking.decks.mode == .mixed,
+                    onMode: { [weak self] mixed in self?.setDecksMixed(mixed) },
+                    onAdd: { [weak self] in
+                        self?.racking.decks.appendBlank()
+                        self?.rebuild()
+                    }
+                ),
+                rows: racking.decks.rows.indices.map { deckCard(index: $0) }
+            )
         ))
-        for index in racking.decks.rows.indices {
-            stackView.addArrangedSubview(deckCard(index: index))
-        }
-        stackView.addArrangedSubview(componentSection(
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .crossBars,
             title: "Cross Bars",
-            mode: racking.crossBars.mode,
-            canStandardize: racking.canSetCrossBarsStandardized(),
-            addEnabled: racking.crossBars.mode == .mixed,
-            onMode: { [weak self] mixed in self?.setCrossBarsMixed(mixed) },
-            onAdd: { [weak self] in
-                self?.racking.crossBars.rows.append(CrossBarSpec(manufacturer: ""))
-                self?.rebuild()
-            }
+            symbolName: "minus",
+            summary: racking.crossBarsSummary,
+            body: manufacturerBody(
+                toolbar: modeToolbar(
+                    mode: racking.crossBars.mode,
+                    allowsStandardized: racking.crossBars.allowsStandardized,
+                    addEnabled: racking.crossBars.mode == .mixed,
+                    onMode: { [weak self] mixed in self?.setCrossBarsMixed(mixed) },
+                    onAdd: { [weak self] in
+                        self?.racking.crossBars.appendBlank()
+                        self?.rebuild()
+                    }
+                ),
+                rows: racking.crossBars.rows.indices.map { crossBarCard(index: $0) }
+            )
         ))
-        for index in racking.crossBars.rows.indices {
-            stackView.addArrangedSubview(crossBarCard(index: index))
-        }
-        stackView.addArrangedSubview(sectionLabel("Safety Clips"))
-        stackView.addArrangedSubview(safetyClipsCard())
-        stackView.addArrangedSubview(componentSection(
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .safetyClips,
+            title: "Safety Clips",
+            symbolName: "paperclip",
+            summary: racking.safetyClipsSummary,
+            body: safetyClipsCard()
+        ))
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .anchors,
             title: "Anchors",
-            mode: racking.anchors.mode,
-            canStandardize: racking.canSetAnchorsStandardized(),
-            addEnabled: racking.anchors.mode == .mixed,
-            onMode: { [weak self] mixed in self?.setAnchorsMixed(mixed) },
-            onAdd: { [weak self] in
-                self?.racking.anchors.rows.append(AnchorSpec(manufacturer: ""))
-                self?.rebuild()
-            }
+            symbolName: "anchor",
+            summary: racking.anchorsSummary,
+            body: manufacturerBody(
+                toolbar: modeToolbar(
+                    mode: racking.anchors.mode,
+                    allowsStandardized: racking.anchors.allowsStandardized,
+                    addEnabled: racking.anchors.mode == .mixed,
+                    onMode: { [weak self] mixed in self?.setAnchorsMixed(mixed) },
+                    onAdd: { [weak self] in
+                        self?.racking.anchors.appendBlank()
+                        self?.rebuild()
+                    }
+                ),
+                rows: racking.anchors.rows.indices.map { anchorCard(index: $0) }
+            )
         ))
-        for index in racking.anchors.rows.indices {
-            stackView.addArrangedSubview(anchorCard(index: index))
-        }
-        stackView.addArrangedSubview(componentSection(
+        stackView.addArrangedSubview(collapsibleCard(
+            id: .rowSpacers,
             title: "Row Spacers",
-            mode: racking.rowSpacers.mode,
-            canStandardize: racking.canSetRowSpacersStandardized(),
-            addEnabled: racking.rowSpacers.mode == .mixed,
-            onMode: { [weak self] mixed in self?.setRowSpacersMixed(mixed) },
-            onAdd: { [weak self] in
-                self?.racking.rowSpacers.rows.append(RowSpacerSpec(manufacturer: ""))
-                self?.rebuild()
-            }
+            symbolName: "arrow.left.and.right",
+            summary: racking.rowSpacersSummary,
+            body: manufacturerBody(
+                toolbar: modeToolbar(
+                    mode: racking.rowSpacers.mode,
+                    allowsStandardized: racking.rowSpacers.allowsStandardized,
+                    addEnabled: racking.rowSpacers.mode == .mixed,
+                    onMode: { [weak self] mixed in self?.setRowSpacersMixed(mixed) },
+                    onAdd: { [weak self] in
+                        self?.racking.rowSpacers.appendBlank()
+                        self?.rebuild()
+                    }
+                ),
+                rows: racking.rowSpacers.rows.indices.map { rowSpacerCard(index: $0) }
+            )
         ))
-        for index in racking.rowSpacers.rows.indices {
-            stackView.addArrangedSubview(rowSpacerCard(index: index))
-        }
+        view.layoutIfNeeded()
+        scrollView.setContentOffset(offset, animated: false)
     }
 
     private func setUprightsMixed(_ mixed: Bool) {
-        if !mixed && !racking.canSetUprightsStandardized() { rebuild(); return }
-        racking.uprights.mode = mixed ? .mixed : .standardized
-        rebuild()
+        applyMode(mixed, to: &racking.uprights)
     }
 
     private func setBeamsMixed(_ mixed: Bool) {
-        if !mixed && !racking.canSetBeamsStandardized() { rebuild(); return }
-        racking.beams.mode = mixed ? .mixed : .standardized
-        rebuild()
+        applyMode(mixed, to: &racking.beams)
     }
 
     private func setDecksMixed(_ mixed: Bool) {
-        if !mixed && !racking.canSetDecksStandardized() { rebuild(); return }
-        racking.decks.mode = mixed ? .mixed : .standardized
-        rebuild()
+        applyMode(mixed, to: &racking.decks)
     }
 
     private func setCrossBarsMixed(_ mixed: Bool) {
-        if !mixed && !racking.canSetCrossBarsStandardized() { rebuild(); return }
-        racking.crossBars.mode = mixed ? .mixed : .standardized
-        rebuild()
+        applyMode(mixed, to: &racking.crossBars)
     }
 
     private func setAnchorsMixed(_ mixed: Bool) {
-        if !mixed && !racking.canSetAnchorsStandardized() { rebuild(); return }
-        racking.anchors.mode = mixed ? .mixed : .standardized
-        rebuild()
+        applyMode(mixed, to: &racking.anchors)
     }
 
     private func setRowSpacersMixed(_ mixed: Bool) {
-        if !mixed && !racking.canSetRowSpacersStandardized() { rebuild(); return }
-        racking.rowSpacers.mode = mixed ? .mixed : .standardized
+        applyMode(mixed, to: &racking.rowSpacers)
+    }
+
+    private func applyMode<Row>(_ mixed: Bool, to section: inout SiteRackingSection<Row>) {
+        section.setMode(mixed ? .mixed : .standardized)
+        section.seedBlankIfEmpty()
         rebuild()
     }
 
-    private func sectionLabel(_ text: String) -> UILabel {
-        let label = UILabel()
-        label.text = text
-        label.font = AppTheme.fontBold(.subheadline)
-        label.textColor = AppTheme.textSecondary
-        return label
+    private func toggleCard(_ id: CardID) {
+        if expandedCards.contains(id) {
+            expandedCards.remove(id)
+        } else {
+            expandedCards.insert(id)
+        }
+        rebuild()
     }
 
-    private func componentSection(
+    private func collapsibleCard(
+        id: CardID,
         title: String,
+        symbolName: String,
+        summary: String,
+        body: @autoclosure () -> UIView
+    ) -> UIView {
+        let expanded = expandedCards.contains(id)
+        let card = UIView()
+        card.backgroundColor = AppTheme.surface
+        card.layer.cornerRadius = 12
+        card.clipsToBounds = true
+        let column = UIStackView()
+        column.axis = .vertical
+        column.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(column)
+        NSLayoutConstraint.activate([
+            column.topAnchor.constraint(equalTo: card.topAnchor),
+            column.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            column.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            column.bottomAnchor.constraint(equalTo: card.bottomAnchor)
+        ])
+        column.addArrangedSubview(
+            cardHeader(id: id, title: title, symbolName: symbolName, summary: summary, expanded: expanded)
+        )
+        if expanded {
+            column.addArrangedSubview(separatorLine())
+            let inset = UIStackView()
+            inset.axis = .vertical
+            inset.isLayoutMarginsRelativeArrangement = true
+            inset.layoutMargins = UIEdgeInsets(top: 12, left: 16, bottom: 16, right: 16)
+            inset.addArrangedSubview(body())
+            column.addArrangedSubview(inset)
+        }
+        return card
+    }
+
+    private func cardHeader(
+        id: CardID,
+        title: String,
+        symbolName: String,
+        summary: String,
+        expanded: Bool
+    ) -> UIView {
+        let button = UIButton(type: .custom)
+        button.addAction(UIAction { [weak self] _ in self?.toggleCard(id) }, for: .touchUpInside)
+        button.accessibilityLabel = title
+        button.accessibilityValue = expanded ? "Expanded, \(summary)" : summary
+        button.accessibilityHint = expanded ? "Collapses this section" : "Expands this section"
+        button.accessibilityTraits.insert(.header)
+        let icon = UIImageView(image: UIImage(systemName: symbolName))
+        icon.tintColor = AppTheme.secondary
+        icon.contentMode = .scaleAspectFit
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        icon.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        let titleLabel = UILabel()
+        titleLabel.text = title
+        titleLabel.font = AppTheme.fontBold(.body)
+        titleLabel.textColor = AppTheme.textPrimary
+        titleLabel.lineBreakMode = .byTruncatingTail
+        let summaryLabel = UILabel()
+        summaryLabel.text = summary
+        summaryLabel.font = AppTheme.font(.footnote)
+        summaryLabel.textColor = AppTheme.textSecondary
+        summaryLabel.isHidden = expanded
+        summaryLabel.lineBreakMode = .byTruncatingTail
+        let textStack = UIStackView(arrangedSubviews: [titleLabel, summaryLabel])
+        textStack.axis = .vertical
+        textStack.spacing = 2
+        textStack.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        let chevron = UIImageView(image: UIImage(systemName: expanded ? "chevron.down" : "chevron.right"))
+        chevron.tintColor = AppTheme.textTertiary
+        chevron.contentMode = .scaleAspectFit
+        chevron.translatesAutoresizingMaskIntoConstraints = false
+        chevron.widthAnchor.constraint(equalToConstant: 14).isActive = true
+        chevron.heightAnchor.constraint(equalToConstant: 16).isActive = true
+        let row = UIStackView(arrangedSubviews: [icon, textStack, chevron])
+        row.axis = .horizontal
+        row.alignment = .center
+        row.spacing = 12
+        row.isLayoutMarginsRelativeArrangement = true
+        row.layoutMargins = UIEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
+        row.isUserInteractionEnabled = false
+        row.translatesAutoresizingMaskIntoConstraints = false
+        button.addSubview(row)
+        NSLayoutConstraint.activate([
+            row.topAnchor.constraint(equalTo: button.topAnchor),
+            row.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: button.trailingAnchor),
+            row.bottomAnchor.constraint(equalTo: button.bottomAnchor),
+            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
+        ])
+        return button
+    }
+
+    private func manufacturerBody(toolbar: UIView, rows: [UIView]) -> UIView {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.addArrangedSubview(toolbar)
+        for (index, row) in rows.enumerated() {
+            if index > 0 {
+                stack.addArrangedSubview(separatorLine())
+            }
+            stack.addArrangedSubview(row)
+        }
+        return stack
+    }
+
+    private func separatorLine() -> UIView {
+        let line = UIView()
+        line.backgroundColor = AppTheme.separator
+        line.translatesAutoresizingMaskIntoConstraints = false
+        line.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        return line
+    }
+
+    private func modeToolbar(
         mode: SiteRackingMode,
-        canStandardize: Bool,
+        allowsStandardized: Bool,
         addEnabled: Bool,
         onMode: @escaping (Bool) -> Void,
         onAdd: @escaping () -> Void
@@ -250,17 +417,12 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         header.axis = .horizontal
         header.spacing = 8
         header.alignment = .center
-        let label = sectionLabel(title)
         let control = UISegmentedControl(items: ["Standardized", "Mixed"])
         control.selectedSegmentIndex = mode == .mixed ? 1 : 0
-        control.isEnabled = mode == .mixed ? canStandardize || true : true
-        if mode == .mixed && !canStandardize {
-            // Keep Mixed selected; Standardized tap is ignored in onMode.
-        }
+        control.setEnabled(allowsStandardized, forSegmentAt: 0)
         control.addAction(UIAction { _ in
             onMode(control.selectedSegmentIndex == 1)
         }, for: .valueChanged)
-        header.addArrangedSubview(label)
         header.addArrangedSubview(control)
         if addEnabled {
             let add = UIButton(type: .system)
@@ -275,6 +437,14 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         let wrap = UIStackView()
         wrap.axis = .vertical
         wrap.spacing = 8
+        if documents.isEmpty {
+            let empty = UILabel()
+            empty.text = "Add photos or PDFs of the installed system."
+            empty.font = AppTheme.font(.footnote)
+            empty.textColor = AppTheme.textSecondary
+            empty.numberOfLines = 0
+            wrap.addArrangedSubview(empty)
+        }
         let tiles = UIStackView()
         tiles.axis = .horizontal
         tiles.spacing = 8
@@ -415,7 +585,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     }
 
     private func uprightCard(index: Int) -> UIView {
-        let spec = racking.uprights.rows[index]
+        let spec = racking.uprights[index]
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
@@ -425,25 +595,25 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
                 ("Capacity", spec.capacity)
             ],
             footerControl: constructionToggle(spec.construction) { [weak self] construction in
-                self?.racking.uprights.rows[index].construction = construction
+                self?.racking.uprights[index].construction = construction
             },
             onManufacturer: { [weak self] name in
-                self?.racking.uprights.rows[index].manufacturer = name
+                self?.racking.uprights[index].manufacturer = name
                 self?.rebuild()
             },
             onField: { [weak self] fieldIndex, text in
                 switch fieldIndex {
-                case 0: self?.racking.uprights.rows[index].type = Self.optionalText(text)
-                case 1: self?.racking.uprights.rows[index].height = Self.optionalText(text)
-                case 2: self?.racking.uprights.rows[index].depth = Self.optionalText(text)
-                default: self?.racking.uprights.rows[index].capacity = Self.optionalText(text)
+                case 0: self?.racking.uprights[index].type = Self.optionalText(text)
+                case 1: self?.racking.uprights[index].height = Self.optionalText(text)
+                case 2: self?.racking.uprights[index].depth = Self.optionalText(text)
+                default: self?.racking.uprights[index].capacity = Self.optionalText(text)
                 }
             }
         )
     }
 
     private func beamCard(index: Int) -> UIView {
-        let spec = racking.beams.rows[index]
+        let spec = racking.beams[index]
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
@@ -454,23 +624,23 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
                 ("Capacity", spec.capacity)
             ],
             onManufacturer: { [weak self] name in
-                self?.racking.beams.rows[index].manufacturer = name
+                self?.racking.beams[index].manufacturer = name
                 self?.rebuild()
             },
             onField: { [weak self] fieldIndex, text in
                 switch fieldIndex {
-                case 0: self?.racking.beams.rows[index].type = Self.optionalText(text)
-                case 1: self?.racking.beams.rows[index].length = Self.optionalText(text)
-                case 2: self?.racking.beams.rows[index].face = Self.optionalText(text)
-                case 3: self?.racking.beams.rows[index].stepDimensions = Self.optionalText(text)
-                default: self?.racking.beams.rows[index].capacity = Self.optionalText(text)
+                case 0: self?.racking.beams[index].type = Self.optionalText(text)
+                case 1: self?.racking.beams[index].length = Self.optionalText(text)
+                case 2: self?.racking.beams[index].face = Self.optionalText(text)
+                case 3: self?.racking.beams[index].stepDimensions = Self.optionalText(text)
+                default: self?.racking.beams[index].capacity = Self.optionalText(text)
                 }
             }
         )
     }
 
     private func deckCard(index: Int) -> UIView {
-        let spec = racking.decks.rows[index]
+        let spec = racking.decks[index]
         let card = UIStackView()
         card.axis = .vertical
         card.spacing = 8
@@ -479,62 +649,62 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             current: spec.manufacturer,
             placeholder: "Manufacturer"
         ) { [weak self] name in
-            self?.racking.decks.rows[index].manufacturer = name
+            self?.racking.decks[index].manufacturer = name
             self?.rebuild()
         })
         card.addArrangedSubview(textField(placeholder: "Capacity", text: spec.capacity) { [weak self] text in
-            self?.racking.decks.rows[index].capacity = Self.optionalText(text)
+            self?.racking.decks[index].capacity = Self.optionalText(text)
         })
         card.addArrangedSubview(catalogPullDown(
             kind: .deckType,
             current: spec.type,
             placeholder: "Type"
         ) { [weak self] type in
-            self?.racking.decks.rows[index].type = type
+            self?.racking.decks[index].type = type
             self?.rebuild()
         })
         card.addArrangedSubview(yesNoToggle(title: "UDL", isOn: spec.udl, accessibilityLabel: "UDL") { [weak self] isOn in
-            self?.racking.decks.rows[index].udl = isOn
+            self?.racking.decks[index].udl = isOn
             self?.rebuild()
         })
         card.addArrangedSubview(textField(placeholder: "Number of Decks", text: spec.numberOfDecks) { [weak self] text in
-            self?.racking.decks.rows[index].numberOfDecks = Self.optionalText(text)
+            self?.racking.decks[index].numberOfDecks = Self.optionalText(text)
         })
         return card
     }
 
     private func crossBarCard(index: Int) -> UIView {
-        let spec = racking.crossBars.rows[index]
+        let spec = racking.crossBars[index]
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [("Size", spec.size)],
             onManufacturer: { [weak self] name in
-                self?.racking.crossBars.rows[index].manufacturer = name
+                self?.racking.crossBars[index].manufacturer = name
                 self?.rebuild()
             },
             onField: { [weak self] _, text in
-                self?.racking.crossBars.rows[index].size = Self.optionalText(text)
+                self?.racking.crossBars[index].size = Self.optionalText(text)
             }
         )
     }
 
     private func anchorCard(index: Int) -> UIView {
-        let spec = racking.anchors.rows[index]
+        let spec = racking.anchors[index]
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [("Size", spec.size)],
             onManufacturer: { [weak self] name in
-                self?.racking.anchors.rows[index].manufacturer = name
+                self?.racking.anchors[index].manufacturer = name
                 self?.rebuild()
             },
             onField: { [weak self] _, text in
-                self?.racking.anchors.rows[index].size = Self.optionalText(text)
+                self?.racking.anchors[index].size = Self.optionalText(text)
             }
         )
     }
 
     private func rowSpacerCard(index: Int) -> UIView {
-        let spec = racking.rowSpacers.rows[index]
+        let spec = racking.rowSpacers[index]
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
@@ -542,14 +712,14 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
                 ("Width", spec.width)
             ],
             onManufacturer: { [weak self] name in
-                self?.racking.rowSpacers.rows[index].manufacturer = name
+                self?.racking.rowSpacers[index].manufacturer = name
                 self?.rebuild()
             },
             onField: { [weak self] fieldIndex, text in
                 if fieldIndex == 0 {
-                    self?.racking.rowSpacers.rows[index].length = Self.optionalText(text)
+                    self?.racking.rowSpacers[index].length = Self.optionalText(text)
                 } else {
-                    self?.racking.rowSpacers.rows[index].width = Self.optionalText(text)
+                    self?.racking.rowSpacers[index].width = Self.optionalText(text)
                 }
             }
         )

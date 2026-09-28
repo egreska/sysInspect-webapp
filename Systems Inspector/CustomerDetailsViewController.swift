@@ -498,8 +498,7 @@ extension CustomerDetailsViewController: UITableViewDelegate {
                     preferredStyle: .alert
                 )
                 alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-                alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-                    guard let self = self else { return }
+                alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
                     CoreDataManager.shared.deleteObject(inspection)
                     self.inspections.remove(at: indexPath.row)
                     tableView.deleteRows(at: [indexPath], with: .fade)
@@ -716,8 +715,8 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
         let secondaryLocation = item.bayNumber ?? "N/A"
         
         // Include importance indicator in the title
-        let importance = item.importance ?? "Monitor"
-        let importanceIcon = importance == "Needs immediate attention" ? "🔺" : "👁"
+        let importance = Importance(stored: item.importance)
+        let importanceIcon = importance.isImmediate ? "🔺" : "👁"
         
         var title = "\(importanceIcon) \(primaryLocation) - \(secondaryLocation)"
         let photoCount = item.photoCount
@@ -894,8 +893,9 @@ class InspectionItemDetailViewController: UIViewController {
         // Add inspection details with updated labels
         addDetailLabel(to: stackView, title: "Primary Location (Area/Aisle)", value: inspectionItem.location ?? "N/A")
         addDetailLabel(to: stackView, title: "Secondary Location (Bay/Level)", value: inspectionItem.bayNumber ?? "N/A")
-        let importance = inspectionItem.importance ?? "Monitor"
-        let importanceDisplay = importance == "Needs immediate attention" ? "􀇾 Needs immediate attention" : "􀋭 Monitor"
+        let importance = Importance(stored: inspectionItem.importance)
+        let mark = importance.isImmediate ? "􀇾" : "􀋭"
+        let importanceDisplay = "\(mark) \(importance.phrase)"
         addDetailLabel(to: stackView, title: "Importance", value: importanceDisplay)
            
         // Add each component group

@@ -17,8 +17,8 @@ An exported PDF or CSV of one or more Inspections. Callers pick Inspections; Rep
 _Avoid_: export, package, document, ReportViewController hop
 
 **Importance**:
-How urgently an InspectionItem needs attention, stored as "Needs immediate attention" or "Monitor".
-_Avoid_: Critical, Repair, priority, severity
+How urgently an InspectionItem needs attention: Needs immediate attention, or Monitor. Critical means Needs immediate attention; a missing value, Repair, Urgent, or any other word means Monitor.
+_Avoid_: Critical, Repair, Urgent, priority, severity
 
 **InspectionItemIntake**:
 The iOS module at the seam between InspectionItemFormState and InspectionItem, in both directions (create, update, hydrate).
@@ -33,7 +33,7 @@ The in-memory form for one Customer (name, site, contact, address, SiteRacking, 
 _Avoid_: ViewModel, mapper, Add/Edit form
 
 **SiteRacking**:
-Optional installed-equipment profile on a Customer: Site Information, Load Information, Upright Frames, Beams, Wire Decks, Cross Bars, Safety Clips, Anchors, and Row Spacers. Hardware types (except Site Information, Load Information, and Safety Clips) are standardized (one spec) or mixed (several specs). Not Issues and not an Inspection.
+Optional installed-equipment profile on a Customer: Site Information, Load Information, Upright Frames, Beams, Wire Decks, Cross Bars, Safety Clips, Anchors, and Row Spacers. Hardware types (except Site Information, Load Information, and Safety Clips) are standardized (one spec that names a manufacturer) or mixed (several), a spec with no manufacturer name does not count, and the profile is not an Issue or an Inspection.
 _Avoid_: inventory, rack layout, Issue, Inspection snapshot, DamageComponent
 
 **SiteDocument**:

@@ -1,4 +1,5 @@
 import type { IssuePath } from '../issue';
+import type { Importance } from '../importance';
 
 export interface User {
   userId: string;
@@ -33,7 +34,7 @@ export interface InspectionItem {
   inspectionId: string;
   location: string;
   bayNumber?: string;
-  importance: 'Needs immediate attention' | 'Monitor';
+  importance: Importance;
   comments?: string;
   sequenceNumber: number;
   photoUrls: string[];

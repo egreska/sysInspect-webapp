@@ -645,7 +645,7 @@ class ReportGenerator {
             case .secondaryLocation:
                 drawMultiLineText(input.trimmedSecondary ?? "N/A", in: textRect, attributes: attributes)
             case .importance:
-                if input.importance == "Needs immediate attention" {
+                if input.importance.isImmediate {
                     let trianglePoint = CGPoint(x: xPosition + 8, y: yPosition + 8)
                     drawTriangleIcon(at: trianglePoint, color: UIColor.red, size: Layout.triangleIconSize)
                     let remaining = CGRect(
@@ -654,9 +654,9 @@ class ReportGenerator {
                         width: max(column.width - 10 - Layout.triangleIconSize - 8, 12),
                         height: rowHeight - 10
                     )
-                    drawMultiLineText(input.importance, in: remaining, attributes: attributes)
+                    drawMultiLineText(input.importance.phrase, in: remaining, attributes: attributes)
                 } else {
-                    drawMultiLineText(input.importance, in: textRect, attributes: attributes)
+                    drawMultiLineText(input.importance.phrase, in: textRect, attributes: attributes)
                 }
             case .issue:
                 drawMultiLineText(input.issueText, in: textRect, attributes: smallAttributes)
@@ -828,8 +828,8 @@ class ReportGenerator {
             for item in items {
                 let primaryLocation = item.location.isEmpty ? "N/A" : item.location
                 let secondaryLocation = item.bayNumber ?? "N/A"
-                let rawImportance = item.importance.isEmpty ? "Monitor" : item.importance
-                let importance = rawImportance == "Needs immediate attention" ? "▲ \(rawImportance)" : rawImportance
+                let phrase = item.importance.phrase
+                let importance = item.importance.isImmediate ? "▲ \(phrase)" : phrase
                 let issueStrings = Issue.labels(from: item.issues)
                 let issues = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "; ")
                 let comments = item.comments ?? ""
@@ -908,7 +908,7 @@ class ReportGenerator {
                 photoCount: row.item.photos.count,
                 primaryLocation: row.item.location.isEmpty ? "N/A" : row.item.location,
                 secondaryLocation: row.item.bayNumber,
-                importance: row.item.importance.isEmpty ? "Monitor" : row.item.importance,
+                importance: row.item.importance,
                 issueText: issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "\n"),
                 comments: row.item.comments ?? "",
                 inspectionDateText: dateText
@@ -929,12 +929,8 @@ class ReportGenerator {
         switch sortCriteria {
         case .importance:
             return items.sorted { lhs, rhs in
-                let importance1 = lhs.item.importance.isEmpty ? "Monitor" : lhs.item.importance
-                let importance2 = rhs.item.importance.isEmpty ? "Monitor" : rhs.item.importance
-                if importance1 == "Needs immediate attention" && importance2 == "Monitor" {
-                    return true
-                } else if importance1 == "Monitor" && importance2 == "Needs immediate attention" {
-                    return false
+                if lhs.item.importance != rhs.item.importance {
+                    return lhs.item.importance < rhs.item.importance
                 }
                 return lhs.item.location < rhs.item.location
             }

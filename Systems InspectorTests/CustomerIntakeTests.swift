@@ -122,8 +122,8 @@ final class CustomerIntakeTests: XCTestCase {
         let userId = UUID()
         UserManager.shared.startSession(userId: userId)
         var form = CustomerFormState(name: "Acme")
-        form.siteRacking.uprights.rows = [UprightSpec(manufacturer: "Interlake", height: "16'")]
-        form.siteRacking.beams.rows = [BeamSpec(manufacturer: "Interlake")]
+        form.siteRacking.uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: "Interlake", height: "16'")])
+        form.siteRacking.beams = SiteRackingSection(rows: [BeamSpec(manufacturer: "Interlake")])
         form.siteDocuments = [
             SiteDocumentFile(id: nil, filename: "plan.pdf", contentType: "public.pdf", data: Data([0x25, 0x50, 0x44, 0x46]))
         ]

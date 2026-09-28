@@ -1,18 +1,25 @@
 # Help & Support — developer notes
 
-**Purpose:** `HELP_AND_SUPPORT_CONTENT.md` holds copy formatted for **Settings → Help & Support**. `USER_GUIDE.md` is the longer manual.
+The iOS product name in user-facing help is **Pallet Rack Safety**. This repository and the Xcode project stay **Systems Inspector**.
 
-## Integration
+## Where the text lives
 
-- **UI:** `HelpAndSupportTableViewController` presents the help surface; entry from `SettingsViewController` (`showHelpAndSupport()`).
-- **Content:** Prefer loading strings from a small struct or localized resources that mirror the sections in `HELP_AND_SUPPORT_CONTENT.md`, or render Markdown in a `UITextView` / `WKWebView` if you expand the UI.
+- [USER_GUIDE.md](USER_GUIDE.md) is the long manual. The app does not load this file.
+- [HELP_AND_SUPPORT_CONTENT.md](HELP_AND_SUPPORT_CONTENT.md) is the short copy for the four Help screens.
+- `HelpContentViewController` hardcodes that same short copy. There is no markdown loader.
 
-## Editing workflow
+When you change help text, update **both** `HELP_AND_SUPPORT_CONTENT.md` and the matching string in `HelpContentViewController`. The four screens are User Guide, FAQ, Troubleshooting, and About.
 
-1. Update **USER_GUIDE.md** for full documentation.
-2. Mirror short, user-facing snippets into **HELP_AND_SUPPORT_CONTENT.md** so in-app text stays consistent.
-3. Avoid duplicating password rules and lockout numbers in three places — change **AccountLockoutManager** / product copy together.
+`SettingsViewController` has its own About screen and Privacy Policy. Those are not read from the markdown files. Update them in Swift when the product description or privacy claims change.
 
-## Optional enhancements
+## Entry point
 
-Search, categories, and deep links are product decisions; keep the table-driven structure in `HelpAndSupportTableViewController` unless you need richer navigation.
+`SettingsViewController.showHelpAndSupport()` pushes `HelpAndSupportTableViewController`. That table pushes `HelpContentViewController` for each row. It does not call `SettingsActionsDelegate`.
+
+## Editing rules
+
+- Use Issue, Importance, site racking, and site document. Do not write “damage component.”
+- Importance values are **Needs immediate attention** and **Monitor**.
+- Describe only behavior that is in the app. Restore Data is one sentence: it is not available in this version.
+- Support email in the guides is support@rackinspector.com.
+- Password length and lockout numbers must match `PasswordRecoveryManager` and `AccountLockoutManager` (8 characters with upper, lower, and a number; 5 failures; 15 minutes).

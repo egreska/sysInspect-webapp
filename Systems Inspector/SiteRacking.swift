@@ -10,8 +10,9 @@ enum SiteRackingMode: String, Codable, Equatable {
     case mixed
 }
 
-protocol SiteRackingRow {
+protocol SiteRackingRow: Codable, Equatable {
     var manufacturer: String { get }
+    static var blank: Self { get }
 }
 
 extension SiteRackingRow {
@@ -223,13 +224,92 @@ struct RowSpacerSpec: Codable, Equatable, SiteRackingRow {
     }
 }
 
-struct SiteRackingSection<Row: Codable & Equatable>: Codable, Equatable {
-    var mode: SiteRackingMode
-    var rows: [Row]
+extension UprightSpec {
+    static var blank: UprightSpec { UprightSpec(manufacturer: "") }
+}
+
+extension BeamSpec {
+    static var blank: BeamSpec { BeamSpec(manufacturer: "") }
+}
+
+extension DeckSpec {
+    static var blank: DeckSpec { DeckSpec(manufacturer: "", type: "") }
+}
+
+extension CrossBarSpec {
+    static var blank: CrossBarSpec { CrossBarSpec(manufacturer: "") }
+}
+
+extension AnchorSpec {
+    static var blank: AnchorSpec { AnchorSpec(manufacturer: "") }
+}
+
+extension RowSpacerSpec {
+    static var blank: RowSpacerSpec { RowSpacerSpec(manufacturer: "") }
+}
+
+struct SiteRackingSection<Row: SiteRackingRow>: Codable, Equatable {
+    private(set) var mode: SiteRackingMode
+    private(set) var rows: [Row]
 
     init(mode: SiteRackingMode = .standardized, rows: [Row] = []) {
-        self.mode = mode
-        self.rows = rows
+        let recorded = rows.filter(\.hasManufacturer)
+        self.mode = (mode == .standardized && recorded.count > 1) ? .mixed : mode
+        self.rows = recorded
+    }
+
+    var allowsStandardized: Bool {
+        rows.filter(\.hasManufacturer).count < 2
+    }
+
+    mutating func setMode(_ mode: SiteRackingMode) {
+        if mode == .mixed {
+            self.mode = .mixed
+            return
+        }
+        guard allowsStandardized else { return }
+        rows.removeAll { !$0.hasManufacturer }
+        self.mode = .standardized
+    }
+
+    @discardableResult
+    mutating func appendBlank() -> Bool {
+        guard mode == .mixed else { return false }
+        rows.append(Row.blank)
+        return true
+    }
+
+    mutating func seedBlankIfEmpty() {
+        guard rows.isEmpty else { return }
+        rows.append(Row.blank)
+    }
+
+    fileprivate func droppingNamelessSpecs() -> SiteRackingSection<Row> {
+        var copy = self
+        copy.rows.removeAll { !$0.hasManufacturer }
+        return copy
+    }
+
+    subscript(index: Int) -> Row {
+        get { rows[index] }
+        set { rows[index] = newValue }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, rows
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let mode = try container.decodeIfPresent(SiteRackingMode.self, forKey: .mode) ?? .standardized
+        let rows = try container.decodeIfPresent([Row].self, forKey: .rows) ?? []
+        self.init(mode: mode, rows: rows)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(mode, forKey: .mode)
+        try container.encode(rows, forKey: .rows)
     }
 }
 
@@ -304,13 +384,6 @@ struct SiteRacking: Codable, Equatable {
             && !rowSpacersRecorded
     }
 
-    func canSetUprightsStandardized() -> Bool { uprights.rows.count <= 1 }
-    func canSetBeamsStandardized() -> Bool { beams.rows.count <= 1 }
-    func canSetDecksStandardized() -> Bool { decks.rows.count <= 1 }
-    func canSetCrossBarsStandardized() -> Bool { crossBars.rows.count <= 1 }
-    func canSetAnchorsStandardized() -> Bool { anchors.rows.count <= 1 }
-    func canSetRowSpacersStandardized() -> Bool { rowSpacers.rows.count <= 1 }
-
     func validationMessage() -> String? {
         if uprightsRecorded && !beamsRecorded {
             return "Beams are required when Upright Frames are recorded."
@@ -327,12 +400,12 @@ struct SiteRacking: Codable, Equatable {
     func jsonData() -> Data? {
         guard !isEmpty else { return nil }
         var copy = self
-        copy.uprights.rows.removeAll { !$0.hasManufacturer }
-        copy.beams.rows.removeAll { !$0.hasManufacturer }
-        copy.decks.rows.removeAll { !$0.hasManufacturer }
-        copy.crossBars.rows.removeAll { !$0.hasManufacturer }
-        copy.anchors.rows.removeAll { !$0.hasManufacturer }
-        copy.rowSpacers.rows.removeAll { !$0.hasManufacturer }
+        copy.uprights = copy.uprights.droppingNamelessSpecs()
+        copy.beams = copy.beams.droppingNamelessSpecs()
+        copy.decks = copy.decks.droppingNamelessSpecs()
+        copy.crossBars = copy.crossBars.droppingNamelessSpecs()
+        copy.anchors = copy.anchors.droppingNamelessSpecs()
+        copy.rowSpacers = copy.rowSpacers.droppingNamelessSpecs()
         if !copy.safetyClips.present {
             copy.safetyClips.neededCount = nil
         }
@@ -347,6 +420,70 @@ struct SiteRacking: Codable, Equatable {
     fileprivate static func hasText(_ value: String?) -> Bool {
         guard let value else { return false }
         return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private static let cardSummaryEmpty = "Not filled"
+
+    var siteInformationSummary: String {
+        var parts: [String] = []
+        if let bays = trimmed(siteInformation.numberOfBays) {
+            parts.append("\(bays) bays")
+        }
+        if let levels = trimmed(siteInformation.numberOfBeamLevels) {
+            parts.append("\(levels) levels")
+        }
+        if let spacing = trimmed(siteInformation.beamSpacing) {
+            parts.append("\(spacing) spacing")
+        }
+        return parts.isEmpty ? Self.cardSummaryEmpty : parts.joined(separator: " · ")
+    }
+
+    var loadInformationSummary: String {
+        let parts = [
+            trimmed(loadInformation.storedContents),
+            trimmed(loadInformation.maximumWeight),
+            trimmed(loadInformation.palletDimensions),
+            trimmed(loadInformation.loadDimensions)
+        ].compactMap { $0 }
+        return parts.isEmpty ? Self.cardSummaryEmpty : parts.joined(separator: " · ")
+    }
+
+    var uprightsSummary: String { Self.manufacturerSummary(uprights.rows) }
+    var beamsSummary: String { Self.manufacturerSummary(beams.rows) }
+    var decksSummary: String { Self.manufacturerSummary(decks.rows) }
+    var crossBarsSummary: String { Self.manufacturerSummary(crossBars.rows) }
+    var anchorsSummary: String { Self.manufacturerSummary(anchors.rows) }
+    var rowSpacersSummary: String { Self.manufacturerSummary(rowSpacers.rows) }
+
+    var safetyClipsSummary: String {
+        guard safetyClips.present else { return "Not present" }
+        if let needed = trimmed(safetyClips.neededCount) {
+            return "Present · \(needed) needed"
+        }
+        return "Present"
+    }
+
+    static func documentsSummary(count: Int) -> String {
+        if count <= 0 { return "No documents" }
+        if count == 1 { return "1 document" }
+        return "\(count) documents"
+    }
+
+    private static func manufacturerSummary<Row: SiteRackingRow>(_ rows: [Row]) -> String {
+        let named = rows.compactMap { trimmed($0.manufacturer) }
+        if named.isEmpty { return cardSummaryEmpty }
+        if named.count == 1 { return named[0] }
+        return "Mixed · \(named.count) manufacturers"
+    }
+
+    private static func trimmed(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func trimmed(_ value: String?) -> String? {
+        Self.trimmed(value)
     }
 }
 

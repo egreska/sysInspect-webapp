@@ -39,7 +39,7 @@ final class ReportExportTests: XCTestCase {
             sequenceNumber: sequence,
             location: location,
             bayNumber: nil,
-            importance: "Monitor",
+            importance: .monitor,
             comments: comments,
             issues: issues,
             photos: photos

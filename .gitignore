@@ -26,4 +26,8 @@ node_modules/
 
 # Task files
 tasks.json
-tasks/ 
+tasks/
+
+# Generated graph cache if graphify is run inside the app folder.
+# The Xcode target syncs that folder, so this cache would ship in the app.
+Systems Inspector/graphify-out/ 

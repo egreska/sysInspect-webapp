@@ -17,7 +17,7 @@ struct ReportItemSnapshot: Equatable {
     var sequenceNumber: Int32
     var location: String
     var bayNumber: String?
-    var importance: String
+    var importance: Importance
     var comments: String?
     var issues: Set<Issue.Path>
     var photos: [Data]

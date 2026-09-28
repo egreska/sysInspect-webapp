@@ -5,6 +5,7 @@
  */
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
+import { importancePhrase, isImmediate } from '../importance';
 import type { Inspection, InspectionItem } from '../types';
 import { Issue } from '../issue';
 
@@ -216,9 +217,9 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
 
     // Importance
     const impW = COL_WIDTHS[2] - 10;
-    const impStr = item.importance || 'Monitor';
+    const impStr = importancePhrase(item.importance);
     doc.setFontSize(8);
-    if (impStr === 'Needs immediate attention') {
+    if (isImmediate(item.importance)) {
       doc.setTextColor(200, 0, 0);
       doc.setFont('helvetica', 'bold');
     } else {

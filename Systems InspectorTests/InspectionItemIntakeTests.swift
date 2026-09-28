@@ -62,7 +62,7 @@ final class InspectionItemIntakeTests: XCTestCase {
         let form = InspectionItemFormState(
             location: "  Aisle 1  ",
             bayNumber: " B2 ",
-            importance: "Needs immediate attention",
+            importance: .needsImmediateAttention,
             comments: "Dented",
             issues: [damage],
             photos: [pixelImage()],
@@ -284,7 +284,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             form: InspectionItemFormState(
                 location: "Aisle",
                 bayNumber: "B2",
-                importance: "Needs immediate attention",
+                importance: .needsImmediateAttention,
                 comments: "Dented",
                 issues: [damage],
                 photos: [image],
@@ -296,11 +296,25 @@ final class InspectionItemIntakeTests: XCTestCase {
         let form = InspectionItemIntake.formState(from: item)
         XCTAssertEqual(form.location, "Aisle")
         XCTAssertEqual(form.bayNumber, "B2")
-        XCTAssertEqual(form.importance, "Needs immediate attention")
+        XCTAssertEqual(form.importance, .needsImmediateAttention)
         XCTAssertEqual(form.comments, "Dented")
         XCTAssertTrue(form.issues.contains(damage))
         XCTAssertEqual(form.photos.count, 1)
         XCTAssertFalse(form.photosChanged)
+    }
+
+    func testHydrateCriticalBecomesImmediateAndSaveWritesTheGlossaryPhrase() {
+        let inspection = makeInspection()
+        let item = InspectionItem(context: context)
+        item.importance = "Critical"
+        item.location = "Aisle"
+        inspection.addToItems(item)
+
+        let form = InspectionItemIntake.formState(from: item)
+        XCTAssertEqual(form.importance, .needsImmediateAttention)
+
+        InspectionItemIntake.update(item, form: form)
+        XCTAssertEqual(item.importance, "Needs immediate attention")
     }
 
     func testCreateAssignsNextSequenceWhenOmitted() {

@@ -1,179 +1,136 @@
-# Systems Inspector — User Guide
+# Pallet Rack Safety — User Guide
 
-**Version:** 1.0 · **Updated:** March 2026
+**Updated:** September 2026
+
+This is the full manual. The shorter text in the app is under **Settings → Help & Support**.
 
 ## Contents
 
-1. [Getting started](#getting-started)  
-2. [Account](#account)  
-3. [Customers & inspections](#customers--inspections)  
-4. [Photos & reports](#photos--reports)  
-5. [Search & navigation](#search--navigation)  
-6. [Settings](#settings)  
-7. [Performance & cache](#performance--cache)  
-8. [Security & privacy](#security--privacy)  
-9. [Troubleshooting](#troubleshooting)  
-10. [FAQ & support](#faq--support)
-
----
+1. [Getting started](#getting-started)
+2. [Account](#account)
+3. [Customers](#customers)
+4. [Inspections](#inspections)
+5. [Site racking and site documents](#site-racking-and-site-documents)
+6. [Reports](#reports)
+7. [Settings](#settings)
+8. [Troubleshooting](#troubleshooting)
+9. [Support](#support)
 
 ## Getting started
 
-Systems Inspector helps you manage field inspections: customers, inspection records, photos, and PDF reports, with **CloudKit** sync when iCloud is available.
+Pallet Rack Safety records field inspections of storage racking: customers, inspection items, Issues, photos, and PDF or CSV reports.
 
-**Highlights**
+Data is stored on the device. When iCloud sync is on, that data also syncs to your iCloud account.
 
-- Local-first data with optional iCloud sync  
-- PDF reports from inspection data  
-- Image caching for responsiveness  
+On first launch, create an account, then set **Settings → Inspector Name** and **Company Information**. Those names are printed on reports.
 
-### First launch
-
-1. **Create account** — email, password, security question (for password reset).  
-2. **Inspector profile** — **Settings → Inspector Settings**: name (used on reports), company, contact (optional).  
-3. Explore **Customers**, open a customer, then **New Inspection** as needed.
-
-### Password rules
-
-- At least **8** characters  
-- **1** uppercase, **1** lowercase, **1** digit  
-
-Passwords are stored with strong hashing; the app never shows your raw password after save.
-
-### Security questions
-
-Pick a question you can answer consistently. The answer is used only for **Forgot Password** on this device flow (see app behavior for exact steps).
-
----
+The tabs are **Customers**, **Reports**, and **Settings**.
 
 ## Account
 
-### Create account
+### Create an account
 
-**Create New Account** → email, password, security Q&A → submit. Use a real email you control if you rely on export or support.
+From the login screen, create an account with email, password, and a security question and answer.
+
+Password rules:
+
+- At least 8 characters
+- One uppercase letter
+- One lowercase letter
+- One number
+
+The app stores a hash of the password, not the password itself.
 
 ### Log in
 
-Email + password. If enabled, **Face ID / Touch ID** can unlock after first successful login (see **Settings**).
+Enter the email and password. After a successful login on this device, the login screen can offer **Log In with Face ID** when the device has Face ID set up. There is no Face ID switch in Settings.
 
 ### Forgot password
 
-From the login screen: **Forgot Password** → verify email → answer security question → set a new password that meets the rules above.
+Tap **Forgot Password**. Enter the email, answer the security question, and set a new password that meets the rules above.
 
-### Account lockout
+If you do not know the security answer, this app cannot reset the account. The login email cannot be changed.
 
-Repeated failed logins trigger a **temporary lockout** (see in-app messaging for attempt counts and duration). Waiting out the timer or completing a valid **password reset** clears the lockout path.
+### Lockout
 
-### Change password
+Five failed logins lock the account for 15 minutes. Wait for the timer, or complete **Forgot Password**. A successful login clears the lockout.
 
-Use the in-app flow from **Settings** (or account security section) when logged in. Old password is required where the app specifies.
+## Customers
 
----
+On the **Customers** tab, tap **+** to add a customer. Enter the company, site, contact, phone, and address, then save.
 
-## Customers & inspections
+Search filters the list as you type. The list loads 20 customers at a time. Scroll to load more.
 
-### Customers
+Open a customer to see inspections, add one, edit the customer, or open **Site racking & documents**.
 
-- **Add:** Customers tab → **+** → fill name, company, contact → **Save**.  
-- **Find:** Search bar filters by name, company, email, phone as implemented.  
-- **Edit / delete:** From the customer row or detail screen per UI affordances (swipe, **Edit**, etc.).  
-- Large directories may load in **pages** (e.g. batches of 20) — scroll to load more.
+## Inspections
 
-### Inspections
+1. Open a customer.
+2. Tap **New Inspection**.
+3. For each location, enter **Area/Aisle**. **Bay/Level** is optional.
+4. Tap **Select Issue** and choose the Issues for that location. An Issue is a condition from the app’s list (a parent, and when needed a child or grandchild).
+5. Set **Importance** to **Needs immediate attention** or **Monitor**.
+6. Tap **Take Photo** to add a camera photo. After the first photo the button says **Add Photo**. An inspection item holds at most five photos. At five, the camera button does not add another.
+7. Add comments if you need them, save the item, and finish the inspection when you are done.
 
-1. Open a **customer**.  
-2. **New Inspection** (or equivalent).  
-3. Set **date**, **location**, and other fields your form shows.  
-4. Add **damage / component** rows: type, severity, notes.  
-5. Attach **photos** where needed.  
-6. **Save** — data persists locally and syncs via CloudKit when possible.
+## Site racking and site documents
 
-### Damage components
+**Site racking & documents** is on the customer form and on the customer screen. It describes the equipment installed at the site. It is not an inspection, and it is not an Issue.
 
-Use the guided picker for component and damage types to keep reports consistent. Required fields are enforced before save where the app marks them.
+You can record site information, load information, and the hardware on site: upright frames, beams, wire decks, cross bars, safety clips, anchors, and row spacers. For most hardware you either enter one specification or several, when the site is mixed. Manufacturer names you add are kept for your login on this device. Wire-deck manufacturers and deck types use their own lists.
 
----
+A customer can hold up to five site documents. Each one is a photo or a PDF. Add one from **Camera**, **Photo Library**, or **Files**, and remove one with **Remove**.
 
-## Photos & reports
+Save the customer after you leave the site racking screen so the profile and documents are kept.
 
-### Photos
+## Reports
 
-- Capture with the **camera** or choose from the **library** per permissions.  
-- Images are associated with inspection items; you can remove or replace per screen controls.  
-- Thumbnails and full images use **caching** — first load may be slower; revisiting is faster.
+Open the **Reports** tab.
 
-### PDF reports
+1. Select the inspections to include.
+2. Tap **Generate PDF Report** or **Generate CSV Report**.
+3. Share the file from the system share sheet (Mail, Files, AirDrop, and the other apps on the device).
 
-From the inspection or report flow, generate a **PDF** with criteria you select (date range, layout options, etc., per current app screens). Share via the system sheet (**Mail**, **Files**, **AirDrop**, …).
+**Inspector Name** and **Company Information** from Settings are included on the report.
 
-If generation fails, see [Troubleshooting](#troubleshooting).
-
----
-
-## Search & navigation
-
-- **Global / customer search** — type in the search field; results narrow as you type.  
-- **Tabs** — primary areas (e.g. Customers, Reports, Settings) per your build’s `MainTabBarController`.  
-- **Back** — use navigation bar **Back** to preserve unsaved state warnings where implemented.
-
----
+You can filter and sort the inspection list on this screen before you generate.
 
 ## Settings
 
-Typical areas (names may match your build):
-
-- **Inspector / profile** — name, company, contact for reports.  
-- **Appearance / theme** — if offered.  
-- **Biometrics** — enable quick unlock.  
-- **Help & Support** — short topics and links to this guide.  
-- **Data** — export / reset options if present; destructive actions usually need confirmation.
-
----
-
-## Performance & cache
-
-The app uses **memory and disk caches** for images to keep scrolling smooth.
-
-- **First-time** loads or **large** libraries may take a moment.  
-- **Clear cache** (if exposed in Settings) frees space; images may reload from storage or cloud.  
-- **Low storage** on device can slow photo writes — free space if saves fail.
-
----
-
-## Security & privacy
-
-- Data is **encrypted at rest** on device per iOS Data Protection; **CloudKit** sync uses Apple’s infrastructure under your Apple ID / iCloud settings.  
-- **Analytics / crash reporting** (if Firebase is enabled) should be described in your privacy policy and App Store disclosures.  
-- **Backups** — device backups include app data per your iTunes / Finder / iCloud Backup settings.
-
----
+| Row | What it does |
+| --- | --- |
+| iCloud Sync | Shows the current sync status. If sync failed, tap the row for an explanation. This row does not turn sync on or off. |
+| Inspector Name | Name printed on reports. |
+| Company Information | Company name, address, and phone printed on reports. |
+| About | App name, version, and a short description. |
+| Privacy Policy | How data is stored and what analytics can be sent. |
+| Help & Support | User Guide, FAQ, Troubleshooting, and About. |
+| Backup Data | Shares a copy of the database through the share sheet. |
+| Restore Data | Not available in this version. |
+| Clear All Data | Deletes local data after confirmation. |
+| Logout | Ends the session on this device. |
+| Clear Image Cache | Removes cached images. Photos may load again the next time you open them. |
+| Performance Stats | Shows a short memory summary. |
+| Release Memory | Asks the app to drop caches it can rebuild. |
 
 ## Troubleshooting
 
-| Problem | Things to try |
-|--------|----------------|
-| Cannot log in | Check caps lock, use **Forgot Password** if needed; wait out lockout or reset. |
-| Sync delays | Check network; confirm iCloud signed in and **iCloud Drive** / CloudKit allowed for the app; force-quit and reopen after network returns. |
-| Photos missing | Confirm **Photos** permission in **Settings → Privacy**; retake or reattach. |
-| PDF fails | Retry after closing other heavy apps; ensure inspection has minimum required fields; update iOS if the share sheet misbehaves. |
-| Crash on launch | Update the app; reinstall only if you have a backup/export strategy — see support. |
+**Cannot log in.** Check capitals. Use **Forgot Password** if you know the security answer. If the account is locked, wait 15 minutes or reset the password.
 
----
+**Face ID is missing.** Log in once with email and password on this device, and turn on Face ID in iOS Settings.
 
-## FAQ & support
+**Sync failed.** Read **Settings → iCloud Sync**. Sign into iCloud in the iOS Settings app, check the network, and reopen Pallet Rack Safety.
 
-**Is my data only in the cloud?**  
-No — Core Data holds a local store; CloudKit syncs when available.
+**Camera will not open.** Allow camera access when iOS asks. Inspection item photos use the camera. If the device has no camera, the app tells you the camera is not available.
 
-**Can I use the app offline?**  
-Many actions work offline; sync catches up when online.
+**A sixth photo will not add.** An inspection item stops at five photos. A customer stops at five site documents.
 
-**How do I export data?**  
-Use **Settings** export options if present; PDFs export via the share sheet.
+**A report will not generate.** Select at least one inspection, then try again. If the share sheet fails, save to Files.
 
-**Who do I contact?**  
-Use **Help & Support** → **Contact** (or the email shown in-app) for product support.
+**Need the data back from a backup file.** **Restore Data** is not available in this version. **Backup Data** can share a copy, and this version cannot load that file back in.
 
----
+## Support
 
-*For developers: Firebase setup, web app, and doc index — see **README.md** and **DOCUMENTATION.md**.*
+Email [support@rackinspector.com](mailto:support@rackinspector.com).
+
+© 2025 EKG Apps. All rights reserved.
