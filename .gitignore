@@ -24,6 +24,9 @@ node_modules/
 # OS specific
 .DS_Store
 
+# CocoaPods build output (Pods SYMROOT). Do not commit.
+build/
+
 # Task files
 tasks.json
 tasks/

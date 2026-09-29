@@ -4,23 +4,22 @@ iOS inspection management app: customers, inspections, photos, PDF reports, Core
 
 ## Requirements
 
-- **Xcode** 16+ (see `Podfile` / CocoaPods notes for Xcode 26 + Pods)
-- **iOS** 14.0+
-- **CocoaPods** (for Firebase)
+- **Xcode** 26.2+
+- **iOS** 15.0+
+- **Swift Package Manager** (Firebase Analytics and Crashlytics, pinned in the Xcode project)
 
 ## Quick start
 
 ```bash
 cd "/path/to/Systems Inspector"
-pod install
-open "Systems Inspector.xcworkspace"
+open "Systems Inspector.xcodeproj"
 ```
 
-Build with **⌘B**, run with **⌘R**. Use the **`.xcworkspace`** when CocoaPods is installed.
+Xcode resolves the Firebase package on open. Build with **⌘B**, run with **⌘R**.
 
 ## Tech stack
 
-Swift, UIKit, Core Data, CloudKit, Combine. Firebase via CocoaPods (optional).
+Swift, UIKit, Core Data, CloudKit, Combine. Firebase via Swift Package Manager.
 
 ## Documentation
 
@@ -51,9 +50,8 @@ Tunable values live in source (not exhaustive):
 
 ## Troubleshooting
 
-- **Build errors after pods:** `pod install`, open **`.xcworkspace`**, **Clean Build Folder**, rebuild.  
-- **Firebase:** see [FIREBASE_SETUP_GUIDE.md](FIREBASE_SETUP_GUIDE.md).  
-- **Pods / Xcode 26:** maintain project via **Podfile** + `pod install`; avoid manually “updating recommended settings” on **Pods** unless you know the impact.
+- **Build errors:** open **`.xcodeproj`**, **File → Packages → Reset Package Caches** if Firebase fails to resolve, then **Clean Build Folder** and rebuild.
+- **Firebase:** see [FIREBASE_SETUP_GUIDE.md](FIREBASE_SETUP_GUIDE.md).
 
 ---
 

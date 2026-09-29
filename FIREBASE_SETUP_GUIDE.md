@@ -1,6 +1,6 @@
 # Firebase (Analytics & Crashlytics)
 
-Short reference for **Systems Inspector** iOS. Firebase is wired through CocoaPods; this doc covers console setup, plist, build phases, and verification.
+Short reference for **Systems Inspector** iOS. Firebase is wired through Swift Package Manager; this doc covers console setup, plist, build phases, and verification.
 
 ## 1. Firebase project
 
@@ -8,14 +8,11 @@ Short reference for **Systems Inspector** iOS. Firebase is wired through CocoaPo
 2. **Add app** → **iOS** → bundle ID matches Xcode (**Target → General → Bundle Identifier**), e.g. `com.yourcompany.systemsinspector`.
 3. Download **GoogleService-Info.plist** (keep it private; do not commit secrets to public repos if policy forbids it).
 
-## 2. CocoaPods
+## 2. Swift Package Manager
 
-```bash
-cd "/path/to/Systems Inspector"
-pod install
-```
+The app target depends on **firebase-ios-sdk** `12.18.0` (exact) from `https://github.com/firebase/firebase-ios-sdk.git`. Linked products are **FirebaseCore**, **FirebaseAnalytics**, and **FirebaseCrashlytics**. The app target sets **Other Linker Flags** to `-ObjC` so Analytics categories are not stripped.
 
-Open **`Systems Inspector.xcworkspace`** (not `.xcodeproj`) after pods are installed.
+Open **`Systems Inspector.xcodeproj`**. Xcode resolves packages into Derived Data. The lockfile is `Systems Inspector.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`.
 
 ## 3. Add `GoogleService-Info.plist`
 
@@ -33,11 +30,16 @@ Open **`Systems Inspector.xcworkspace`** (not `.xcodeproj`) after pods are insta
 2. Script:
 
 ```bash
-"${PODS_ROOT}/FirebaseCrashlytics/run"
+"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
 ```
 
-3. **Debug Information Format**: **DWARF with dSYM File** for Release (and Debug if you upload symbols from Debug builds).
-4. Optional: add the Crashlytics **Input Files** paths recommended in Firebase’s current docs for dSYM upload reliability.
+3. **Input Files** include the dSYM paths, the built executable, and:
+
+```
+$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist
+```
+
+4. **Debug Information Format**: **DWARF with dSYM File** (already set for Debug and Release). Keep this phase last.
 
 ## 6. Privacy & App Store
 
@@ -54,7 +56,7 @@ Open **`Systems Inspector.xcworkspace`** (not `.xcodeproj`) after pods are insta
 
 | Issue | What to try |
 |--------|-------------|
-| Build fails after `pod install` | Clean build folder, use **.xcworkspace**, run `pod install` again. |
+| Package resolve or build fails | Open **.xcodeproj**, reset package caches, clean the build folder, and rebuild. Confirm the pin is firebase-ios-sdk 12.18.0. |
 | No crashes in Crashlytics | Confirm run script, dSYM settings, and that you’re looking at the correct Firebase app / bundle ID. |
 | Wrong Firebase project | Replace plist with the one for the correct iOS app registration. |
 

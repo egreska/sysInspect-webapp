@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import CryptoKit
 @testable import Systems_Inspector
 
 final class PasswordRecoveryManagerTests: XCTestCase {
@@ -243,15 +244,5 @@ final class PasswordRecoveryManagerTests: XCTestCase {
                 _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer)
             }
         }
-    }
-}
-
-// MARK: - SHA256 Extension for Testing
-import CryptoKit
-
-extension SHA256 {
-    static func hash(data: Data) -> [UInt8] {
-        let hashed = SHA256.hash(data: data)
-        return Array(hashed)
     }
 }

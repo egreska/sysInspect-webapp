@@ -15,22 +15,12 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-WORKSPACE="Systems Inspector.xcworkspace"
+PROJECT="Systems Inspector.xcodeproj"
 SCHEME="Systems Inspector"
 SIMULATOR="iPhone 15"
 
 echo -e "${BLUE}🧪 Systems Inspector Test Suite${NC}"
 echo -e "${BLUE}================================${NC}\n"
-
-# Check if workspace exists
-if [ ! -d "$WORKSPACE" ]; then
-    echo -e "${YELLOW}⚠️  .xcworkspace not found. Have you run 'pod install'?${NC}"
-    echo -e "${YELLOW}   Using .xcodeproj instead...${NC}\n"
-    PROJECT="Systems Inspector.xcodeproj"
-    USE_PROJECT=true
-else
-    USE_PROJECT=false
-fi
 
 # Function to run tests
 run_tests() {
@@ -39,26 +29,17 @@ run_tests() {
     
     echo -e "${BLUE}Running $test_type...${NC}"
     
-    if [ "$USE_PROJECT" = true ]; then
-        xcodebuild test \
-            -project "$PROJECT" \
-            -scheme "$SCHEME" \
-            -destination "$destination" \
-            -only-testing:"Systems Inspector${test_type}" \
-            | xcpretty || return 1
-    else
-        xcodebuild test \
-            -workspace "$WORKSPACE" \
-            -scheme "$SCHEME" \
-            -destination "$destination" \
-            -only-testing:"Systems Inspector${test_type}" \
-            | xcpretty || return 1
-    fi
+    xcodebuild test \
+        -project "$PROJECT" \
+        -scheme "$SCHEME" \
+        -destination "$destination" \
+        -only-testing:"Systems Inspector${test_type}" \
+        | xcpretty || return 1
 }
 
 # Clean build folder
 echo -e "${YELLOW}🧹 Cleaning build folder...${NC}"
-xcodebuild clean -workspace "$WORKSPACE" -scheme "$SCHEME" > /dev/null 2>&1 || true
+xcodebuild clean -project "$PROJECT" -scheme "$SCHEME" > /dev/null 2>&1 || true
 
 # Run Unit Tests
 echo -e "\n${BLUE}1️⃣  Running Unit Tests...${NC}"
