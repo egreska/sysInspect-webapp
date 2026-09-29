@@ -12,6 +12,10 @@ node_modules/
 # Environment variables
 .env
 
+# Firebase / Google client config (contains API_KEY and related identifiers).
+# Keep the real file local; commit GoogleService-Info.plist.example only.
+GoogleService-Info.plist
+
 # Editor directories and files
 .idea
 .vscode

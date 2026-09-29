@@ -81,113 +81,29 @@ class SettingsViewController: UIViewController {
     }
     
     private func showInspectorNameSetting() {
-        let alert = UIAlertController(
-            title: "Inspector Name",
-            message: "Enter your name to display on inspection reports",
-            preferredStyle: .alert
-        )
-
-        alert.addTextField { textField in
-            textField.placeholder = "Your Name"
-            if let savedName = UserDefaults.standard.string(forKey: "inspectorName") {
-                textField.text = savedName
-            }
-        }
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
-            if let name = alert.textFields?.first?.text, !name.isEmpty {
-                UserDefaults.standard.set(name, forKey: "inspectorName")
-                self?.tableView.reloadData()
-            }
-        })
-
-        present(alert, animated: true)
+        presentInspectorForm(.inspectorName)
     }
 
     private func showCompanyInformationSetting() {
-        let alert = UIAlertController(
-            title: "Company Information",
-            message: "Enter your company details to display on reports",
-            preferredStyle: .alert
-        )
+        presentInspectorForm(.companyInformation)
+    }
 
-        alert.addTextField { textField in
-            textField.placeholder = "Company Name"
-            if let savedName = UserDefaults.standard.string(forKey: "companyName") {
-                textField.text = savedName
-            }
-        }
-
-        alert.addTextField { textField in
-            textField.placeholder = "Street Address"
-            if let savedAddress = UserDefaults.standard.string(forKey: "companyAddress") {
-                textField.text = savedAddress
-            }
-        }
-
-        alert.addTextField { textField in
-            textField.placeholder = "City"
-            if let savedCity = UserDefaults.standard.string(forKey: "companyCity") {
-                textField.text = savedCity
-            }
-        }
-
-        alert.addTextField { textField in
-            textField.placeholder = "State"
-            if let savedState = UserDefaults.standard.string(forKey: "companyState") {
-                textField.text = savedState
-            }
-        }
-
-        alert.addTextField { textField in
-            textField.placeholder = "ZIP Code"
-            textField.keyboardType = .numberPad
-            if let savedZip = UserDefaults.standard.string(forKey: "companyZipCode") {
-                textField.text = savedZip
-            }
-        }
-
-        alert.addTextField { textField in
-            textField.placeholder = "Phone Number"
-            textField.keyboardType = .phonePad
-            if let savedPhone = UserDefaults.standard.string(forKey: "companyPhone") {
-                textField.text = savedPhone
-            }
-        }
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
-            if let companyName = alert.textFields?[0].text, !companyName.isEmpty {
-                UserDefaults.standard.set(companyName, forKey: "companyName")
-            }
-
-            if let companyAddress = alert.textFields?[1].text {
-                UserDefaults.standard.set(companyAddress, forKey: "companyAddress")
-            }
-
-            if let companyCity = alert.textFields?[2].text {
-                UserDefaults.standard.set(companyCity, forKey: "companyCity")
-            }
-
-            if let companyState = alert.textFields?[3].text {
-                UserDefaults.standard.set(companyState, forKey: "companyState")
-            }
-
-            if let companyZip = alert.textFields?[4].text {
-                UserDefaults.standard.set(companyZip, forKey: "companyZipCode")
-            }
-
-            if let companyPhone = alert.textFields?[5].text {
-                UserDefaults.standard.set(companyPhone, forKey: "companyPhone")
-            }
-
+    private func presentInspectorForm(_ form: InspectorSettingsFormViewController.Form) {
+        let formVC = InspectorSettingsFormViewController(form: form) { [weak self] in
             self?.tableView.reloadData()
-        })
-
-        present(alert, animated: true)
+        }
+        let navigationController = UINavigationController(rootViewController: formVC)
+        if let sheet = navigationController.sheetPresentationController {
+            switch form {
+            case .inspectorName:
+                sheet.detents = [.medium(), .large()]
+                sheet.selectedDetentIdentifier = .medium
+            case .companyInformation:
+                sheet.detents = [.large()]
+            }
+            sheet.prefersGrabberVisible = true
+        }
+        present(navigationController, animated: true)
     }
 
     private func showAboutScreen() {

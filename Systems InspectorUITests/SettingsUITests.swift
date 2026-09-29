@@ -233,12 +233,12 @@ final class SettingsUITests: XCTestCase {
             // When: Tapping inspector name
             nameCell.tap()
             
-            // Then: Should show name input alert
-            let alert = app.alerts.firstMatch
-            XCTAssertTrue(alert.waitForExistence(timeout: 5))
-            XCTAssertTrue(alert.textFields.firstMatch.exists)
+            // Then: Should show the padded inspector name editor
+            let editor = app.navigationBars["Inspector Name"]
+            XCTAssertTrue(editor.waitForExistence(timeout: 5))
+            XCTAssertTrue(app.textFields["Your Name"].exists)
             
-            alert.buttons["Cancel"].tap()
+            editor.buttons["Cancel"].tap()
         }
     }
     

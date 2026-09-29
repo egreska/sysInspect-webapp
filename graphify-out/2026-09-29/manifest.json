@@ -42,10 +42,10 @@
     "semantic_hash": "930dbccbf3ba5ad4fcc4572bb4c34b32"
   },
   "Systems InspectorUITests/SettingsUITests.swift": {
-    "mtime": 1790691750.328579,
-    "seen": 1790691860.243715,
-    "ast_hash": "896a13ffb717fcb97bbad3d0a110c168",
-    "semantic_hash": ""
+    "mtime": 1769783939.0,
+    "seen": 1789702315.400191,
+    "ast_hash": "b84ecfea421fd4cba047a54f4085533a",
+    "semantic_hash": "b84ecfea421fd4cba047a54f4085533a"
   },
   "Systems InspectorUITests/Systems_InspectorUITests.swift": {
     "mtime": 1747850799.0,
@@ -240,9 +240,9 @@
     "semantic_hash": "a984e6962166ee9dc1c314973045490f"
   },
   "FIREBASE_SETUP_GUIDE.md": {
-    "mtime": 1790684134.586147,
-    "seen": 1790691860.243742,
-    "ast_hash": "759ceb3b3f93b6ebea71e70850c40a2a",
+    "mtime": 1790645815.20054,
+    "seen": 1790647357.312879,
+    "ast_hash": "7fd88b93eba836a630111b00cc60f645",
     "semantic_hash": ""
   },
   "HELP_AND_SUPPORT_CONTENT.md": {
@@ -936,9 +936,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SettingsViewController.swift": {
-    "mtime": 1790691748.7404392,
-    "seen": 1790691860.2436962,
-    "ast_hash": "eece519e964d63d414f9107ce164e358",
+    "mtime": 1790558094.6670356,
+    "seen": 1790558166.090724,
+    "ast_hash": "360a1c94da8ff9dc36869b253f03e2f9",
     "semantic_hash": ""
   },
   "Systems Inspector/SiteDocumentFile.swift": {
@@ -1059,12 +1059,6 @@
     "mtime": 1790605988.8273013,
     "seen": 1790606600.323616,
     "ast_hash": "11af93df4536d4eea545530271826883",
-    "semantic_hash": ""
-  },
-  "Systems Inspector/InspectorSettingsFormViewController.swift": {
-    "mtime": 1790691806.4963706,
-    "seen": 1790691860.243687,
-    "ast_hash": "37473d76ca64b1ebdb26354ba9e1617f",
     "semantic_hash": ""
   }
 }
