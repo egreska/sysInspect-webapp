@@ -16,7 +16,10 @@
 
 #import <Foundation/Foundation.h>
 
-#import <FirebaseCore/FIRLoggerLevel.h>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wquoted-include-in-framework-header"
+#import "FIRLoggerLevel.h"
+#pragma clang diagnostic pop
 
 NS_ASSUME_NONNULL_BEGIN
 

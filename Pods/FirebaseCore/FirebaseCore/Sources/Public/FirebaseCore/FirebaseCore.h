@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-#import <FirebaseCore/FIRApp.h>
-#import <FirebaseCore/FIRConfiguration.h>
-#import <FirebaseCore/FIRLoggerLevel.h>
-#import <FirebaseCore/FIROptions.h>
-#import <FirebaseCore/FIRTimestamp.h>
-#import <FirebaseCore/FIRVersion.h>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wquoted-include-in-framework-header"
+#import "FIRApp.h"
+#import "FIRConfiguration.h"
+#import "FIRLoggerLevel.h"
+#import "FIROptions.h"
+#import "FIRTimestamp.h"
+#import "FIRVersion.h"
+#pragma clang diagnostic pop

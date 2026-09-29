@@ -283,10 +283,12 @@ class CustomerDetailsViewController: UIViewController {
         let stackViewHeight = stackView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
         let estimatedHeight = max(120, stackViewHeight + 32) // Add padding
         
-        // Update the height constraint
+        // Update the height constraint. The first call is from viewDidLoad, before this
+        // controller is in a window. Forcing layout then makes the inspections table
+        // lay out off-screen (UITableViewAlertForLayoutOutsideViewHierarchy).
         headerHeightConstraint.constant = CGFloat(estimatedHeight)
-        
-        // Animate the change
+        guard view.window != nil else { return }
+
         UIView.animate(withDuration: 0.3) {
             self.view.layoutIfNeeded()
         }

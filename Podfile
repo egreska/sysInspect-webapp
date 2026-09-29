@@ -37,8 +37,8 @@ post_install do |installer|
   quoted_include_suppression = '-Wno-quoted-include-in-framework-header'
 
   # Reduce Xcode 'Update to recommended settings' on Pods.xcodeproj (bump Last* if Xcode nags after upgrade).
-  installer.pods_project.root_object.attributes['LastUpgradeCheck'] = '2640'
-  installer.pods_project.root_object.attributes['LastSwiftUpdateCheck'] = '2640'
+  installer.pods_project.root_object.attributes['LastUpgradeCheck'] = '2700'
+  installer.pods_project.root_object.attributes['LastSwiftUpdateCheck'] = '2700'
 
   dedupe_ldflags = lambda do |config|
     ld = config.build_settings['OTHER_LDFLAGS']
@@ -151,12 +151,32 @@ post_install do |installer|
     end
   end
 
-  # FirebaseCore — public headers + umbrella (module name FirebaseCore).
+  # FirebaseCore — public headers MUST use the same inclusion form as the umbrella ("FIR….h").
+  # Converting public headers to <FirebaseCore/FIR….h> while the umbrella keeps "FIR….h" makes
+  # Clang treat them as different inclusions → Duplicate interface definition / FIRLoggerLevel
+  # redefinition → FirebaseCore module fails → every Swift file that imports it dies.
+  # Convert any <FirebaseCore/…> back to quoted form and suppress -Wquoted-include-in-framework-header.
+  # The umbrella must KEEP quoted imports: Clang's -Wincomplete-umbrella only treats a header as
+  # covered when the umbrella uses #import "Header.h", not <FirebaseCore/Header.h>.
+  wrap_fc_quoted_imports = lambda do |text|
+    patched = text.gsub(/^(#(?:import|include))\s+<FirebaseCore\/((?:FIR\w+|FirebaseCore)\.h)>/) { "#{$1} \"#{$2}\"" }
+    # Idempotent: do not wrap again if the ignore pragma already precedes a quoted FirebaseCore import.
+    unless patched.match?(/#pragma clang diagnostic ignored "-Wquoted-include-in-framework-header"\n#(?:import|include)\s+"(?:FIR\w+|FirebaseCore)\.h"/)
+      patched = patched.gsub(/((?:^#(?:import|include)\s+"(?:FIR\w+|FirebaseCore)\.h"\n)+)/) do |block|
+        "#pragma clang diagnostic push\n" \
+          "#pragma clang diagnostic ignored \"-Wquoted-include-in-framework-header\"\n" \
+          "#{block}" \
+          "#pragma clang diagnostic pop\n"
+      end
+    end
+    patched
+  end
+
   fc_public = File.join(pods_root, 'FirebaseCore/FirebaseCore/Sources/Public/FirebaseCore')
   if Dir.exist?(fc_public)
     Dir.glob(File.join(fc_public, '*.h')).each do |path|
       text = File.read(path)
-      patched = text.gsub(/^(#(?:import|include))\s+"((?:FIR\w+|FirebaseCore)\.h)"/) { "#{$1} <FirebaseCore/#{$2}>" }
+      patched = wrap_fc_quoted_imports.call(text)
       next if patched == text
 
       make_writable.call(path)
@@ -167,7 +187,17 @@ post_install do |installer|
   fc_umbrella = File.join(pods_root, 'Target Support Files/FirebaseCore/FirebaseCore-umbrella.h')
   if File.exist?(fc_umbrella)
     text = File.read(fc_umbrella)
-    patched = text.gsub(/^(#(?:import|include))\s+"((?:FIR\w+|FirebaseCore)\.h)"/) { "#{$1} <FirebaseCore/#{$2}>" }
+    # Restore quoted form if a prior install left angle-bracket imports in the umbrella.
+    patched = text.gsub(/^(#(?:import|include))\s+<FirebaseCore\/((?:FIR\w+|FirebaseCore)\.h)>/) { "#{$1} \"#{$2}\"" }
+    # Suppress -Wquoted-include-in-framework-header only around those umbrella imports.
+    unless patched.include?('ignored "-Wquoted-include-in-framework-header"')
+      patched = patched.sub(/((?:^#(?:import|include)\s+"(?:FIR\w+|FirebaseCore)\.h"\n)+)/) do |block|
+        "#pragma clang diagnostic push\n" \
+          "#pragma clang diagnostic ignored \"-Wquoted-include-in-framework-header\"\n" \
+          "#{block}" \
+          "#pragma clang diagnostic pop\n"
+      end
+    end
     if patched != text
       make_writable.call(fc_umbrella)
       File.write(fc_umbrella, patched)

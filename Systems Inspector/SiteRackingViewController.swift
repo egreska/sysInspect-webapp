@@ -251,32 +251,37 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
 
     private func setUprightsMixed(_ mixed: Bool) {
         applyMode(mixed, to: &racking.uprights)
+        rebuild()
     }
 
     private func setBeamsMixed(_ mixed: Bool) {
         applyMode(mixed, to: &racking.beams)
+        rebuild()
     }
 
     private func setDecksMixed(_ mixed: Bool) {
         applyMode(mixed, to: &racking.decks)
+        rebuild()
     }
 
     private func setCrossBarsMixed(_ mixed: Bool) {
         applyMode(mixed, to: &racking.crossBars)
+        rebuild()
     }
 
     private func setAnchorsMixed(_ mixed: Bool) {
         applyMode(mixed, to: &racking.anchors)
+        rebuild()
     }
 
     private func setRowSpacersMixed(_ mixed: Bool) {
         applyMode(mixed, to: &racking.rowSpacers)
+        rebuild()
     }
 
     private func applyMode<Row>(_ mixed: Bool, to section: inout SiteRackingSection<Row>) {
         section.setMode(mixed ? .mixed : .standardized)
         section.seedBlankIfEmpty()
-        rebuild()
     }
 
     private func toggleCard(_ id: CardID) {
