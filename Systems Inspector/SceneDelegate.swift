@@ -38,20 +38,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let splash = SplashViewController()
         splash.onComplete = { [weak self] in
             guard let self = self, let window = self.window else { return }
-            let root: UIViewController
-            if UserManager.shared.isUserLoggedIn() {
-                root = MainTabBarController()
+            if accessCodeGateBypassed() {
+                self.showSessionRoot(in: window)
             } else {
-                root = UINavigationController(rootViewController: LoginViewController())
-            }
-            UIView.transition(with: window, duration: 0.25, options: .transitionCrossDissolve) {
-                window.rootViewController = root
+                Task { await AccessCodeCoordinator.shared.showInitial(in: window) }
             }
         }
         window?.rootViewController = splash
         print("SceneDelegate: Set root view controller to SplashViewController (0.3s brand moment)")
         
         window?.makeKeyAndVisible()
+        NotificationCenter.default.addObserver(
+            forName: .coreDataStoreDidLoad,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let window = self?.window else { return }
+            Task { await AccessCodeCoordinator.shared.recheck(in: window) }
+        }
         print("SceneDelegate: Made window key and visible")
         
         print("SceneDelegate: Final window state - isHidden: \(window?.isHidden ?? true), isKeyWindow: \(window?.isKeyWindow ?? false)")
@@ -70,8 +74,20 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
-        // Called when the scene has moved from an inactive state to an active state.
-        // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
+        guard let window else { return }
+        Task { await AccessCodeCoordinator.shared.recheck(in: window) }
+    }
+
+    private func showSessionRoot(in window: UIWindow) {
+        let root: UIViewController
+        if UserManager.shared.isUserLoggedIn() {
+            root = MainTabBarController()
+        } else {
+            root = UINavigationController(rootViewController: AccessCodeCoordinator.shared.makeLoginViewController())
+        }
+        UIView.transition(with: window, duration: 0.25, options: .transitionCrossDissolve) {
+            window.rootViewController = root
+        }
     }
 
     func sceneWillResignActive(_ scene: UIScene) {

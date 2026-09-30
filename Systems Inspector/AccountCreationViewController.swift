@@ -364,6 +364,7 @@ class AccountCreationViewController: UIViewController {
             let success = await UserManager.shared.createUser(email: email, password: password)
             
             if success {
+                await AccessCodeCoordinator.shared.markSessionReady()
                 // Set security question
                 let securitySuccess = PasswordRecoveryManager.shared.setSecurityQuestion(
                     for: email,

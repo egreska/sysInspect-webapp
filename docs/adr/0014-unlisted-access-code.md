@@ -4,4 +4,4 @@ Pallet Rack Safety is not sold. An inspector installs it from an unlisted App St
 
 **Considered options:** Custom app (Apple Business Manager); public free app; unlisted link with no code; unlisted link plus an in-app Access Code (chosen).
 
-**Consequences:** The first submission is a public, free app. After App Review accepts it, the Account Holder requests unlisted distribution. Review notes must say the app is intended to be unlisted. The Access Code gate is not in the 0.7.1 build. Do not submit review notes that ask the reviewer to enter a code until that gate is in the binary.
+**Consequences:** The first submission is a public, free app. After App Review accepts it, the Account Holder requests unlisted distribution. Review notes must say the app is intended to be unlisted. The app asks for an Access Code before a Session. Deploy the CloudKit record type and issue a review code in the database that build reads before submitting those notes.

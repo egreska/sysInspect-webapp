@@ -77,5 +77,5 @@ The binding of one Access Code to one Inspector.
 _Avoid_: redemption, login, registration, Session
 
 **Retired**:
-An Access Code whose Claim has been ended. It cannot be Claimed again. Inspections stay with that Inspector.
-_Avoid_: revoked, expired, suspended, reusable code, remote wipe
+An Access Code whose Claim has been ended. It cannot be Claimed again. Inspections stay with that Inspector, who can Claim a newly issued Access Code.
+_Avoid_: revoked, expired, suspended, reusable code, remote wipe, permanent ban

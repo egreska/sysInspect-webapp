@@ -2,7 +2,7 @@
 
 Copy for App Store Connect, and the order to submit it. Decisions are in [0014](../adr/0014-unlisted-access-code.md), [0015](../adr/0015-inspector-is-apple-id.md), and [0016](../adr/0016-claims-in-cloudkit-public-db.md). Issuing codes is in [access-codes.md](./access-codes.md).
 
-The Access Code gate is **not in version 0.7.1**. Do not submit this listing, and do not send the review notes below, until that gate is in the binary you upload. The notes tell the reviewer to enter a code. A build that ignores the code would make those notes false.
+The app enforces the Access Code gate. Deploy the `AccessCode` schema and create the review code in the CloudKit database that build uses before you submit. Xcode reads Development. TestFlight and the App Store read Production.
 
 Before you submit:
 

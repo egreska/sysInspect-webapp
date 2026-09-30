@@ -1,6 +1,6 @@
 # Access Codes
 
-How to issue and retire an Access Code for Pallet Rack Safety. The iOS app does not enforce this yet. Create the schema and the review code before the build that contains the gate is submitted. App Store and TestFlight builds read the **Production** database.
+How to issue and retire an Access Code for Pallet Rack Safety. The iOS app enforces the gate. Create the schema and the review code before you submit a build. Xcode builds read the **Development** public database. TestFlight and the App Store read **Production**.
 
 Container: `iCloud.SysInspectDB`. Database: **public**. The private database holds inspections and must not hold codes.
 
@@ -15,6 +15,7 @@ Create record type `AccessCode` in Development, then deploy the schema to Produc
 | `claimedUserRecordName` | String | CloudKit user record name of the Inspector. Empty until claimed. |
 | `claimedAt` | Date/Time | When the Claim was written. |
 | `retiredAt` | Date/Time | When the code was Retired. |
+| `sessionReady` | Int(64) | `1` after the Inspector creates the one Session. Empty until then. The app writes this. |
 
 Security, on the Development schema before you deploy:
 

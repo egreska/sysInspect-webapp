@@ -479,7 +479,7 @@ class SettingsViewController: UIViewController {
                         // Return to login screen
                         if let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate,
                            let window = sceneDelegate.window {
-                            let loginVC = LoginViewController()
+                            let loginVC = AccessCodeCoordinator.shared.makeLoginViewController()
                             let navigationController = UINavigationController(rootViewController: loginVC)
                             window.rootViewController = navigationController
                             UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil, completion: nil)

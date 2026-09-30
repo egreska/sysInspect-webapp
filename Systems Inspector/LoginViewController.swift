@@ -89,6 +89,9 @@ class LoginViewController: UIViewController {
     }()
 
     // MARK: - Properties
+    var canCreateAccount = true {
+        didSet { createAccountButton.isHidden = !canCreateAccount }
+    }
     private var activeTextField: UITextField?
     private var isAuthenticating = false
 
@@ -100,6 +103,7 @@ class LoginViewController: UIViewController {
         setupActions()
         setupKeyboardHandling()
         checkBiometricAvailability()
+        createAccountButton.isHidden = !canCreateAccount
     }
 
     override func viewWillAppear(_ animated: Bool) {
