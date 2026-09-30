@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1790724587.100717,
-    "seen": 1790726394.824595,
-    "ast_hash": "7eb726bbd9d927b1afc285d539bd64f2",
+    "mtime": 1790733479.7979782,
+    "seen": 1790734268.987221,
+    "ast_hash": "430a449a1a7980746d3623fc56eea3ad",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-multi-photo-inspection-item.md": {
@@ -612,9 +612,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/AccountCreationViewController.swift": {
-    "mtime": 1770771398.0,
-    "seen": 1789702315.400151,
-    "ast_hash": "89f8badafbbf61d883f05e0a19dcf4f7",
+    "mtime": 1790733798.5361817,
+    "seen": 1790734268.987145,
+    "ast_hash": "8f2ad37a84e89e2b37a2769e7aaed7a4",
     "semantic_hash": ""
   },
   "Systems Inspector/AccountLockoutManager.swift": {
@@ -780,9 +780,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/HelpContentViewController.swift": {
-    "mtime": 1790726219.1248894,
-    "seen": 1790726394.824533,
-    "ast_hash": "cbdc60d64a87bb11251af90c3dde050c",
+    "mtime": 1790727160.4949818,
+    "seen": 1790734268.9871612,
+    "ast_hash": "c06ff79519ba39f7e3a7b5239db935ee",
     "semantic_hash": ""
   },
   "Systems Inspector/ImageCacheManager.swift": {
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/LoginViewController.swift": {
-    "mtime": 1787967543.196863,
-    "seen": 1789702315.400168,
-    "ast_hash": "1a704bf1b7d4f92bcafc93a7ad83dd09",
+    "mtime": 1790733792.1002047,
+    "seen": 1790734268.987168,
+    "ast_hash": "80ce2cf50e615eed5348903420b84753",
     "semantic_hash": ""
   },
   "Systems Inspector/MainTabBarController.swift": {
@@ -930,15 +930,15 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SceneDelegate.swift": {
-    "mtime": 1787874035.442374,
-    "seen": 1789702315.4001741,
-    "ast_hash": "fceadd5b66d313d6748b0b5d516047fa",
+    "mtime": 1790734064.874343,
+    "seen": 1790734268.987175,
+    "ast_hash": "9fcea06581798036b2a708eac9917a65",
     "semantic_hash": ""
   },
   "Systems Inspector/SettingsViewController.swift": {
-    "mtime": 1790726218.5685728,
-    "seen": 1790726394.824547,
-    "ast_hash": "531e9b5b1110a112ddbdc8ef43827473",
+    "mtime": 1790733797.4897244,
+    "seen": 1790734268.987175,
+    "ast_hash": "bd93c310864f380cf4110cf5fd80252b",
     "semantic_hash": ""
   },
   "Systems Inspector/SiteDocumentFile.swift": {
@@ -1086,9 +1086,9 @@
     "semantic_hash": ""
   },
   "docs/adr/0014-unlisted-access-code.md": {
-    "mtime": 1790726244.3956254,
-    "seen": 1790726394.824605,
-    "ast_hash": "cb9c78cfe670e533685c6985f87e496d",
+    "mtime": 1790734264.833251,
+    "seen": 1790734268.987231,
+    "ast_hash": "90846e0c06e547cdf60afe2e46979042",
     "semantic_hash": ""
   },
   "docs/adr/0015-inspector-is-apple-id.md": {
@@ -1104,15 +1104,45 @@
     "semantic_hash": ""
   },
   "docs/app-store/access-codes.md": {
-    "mtime": 1790726287.7607365,
-    "seen": 1790726394.824606,
-    "ast_hash": "c1b0300a9de6da2d3d7cddf4bbfc4b50",
+    "mtime": 1790733801.4211004,
+    "seen": 1790734268.987233,
+    "ast_hash": "ebc95a527e27e85d0b4867c334e842ac",
     "semantic_hash": ""
   },
   "docs/app-store/release.md": {
-    "mtime": 1790726313.2648802,
-    "seen": 1790726394.824606,
-    "ast_hash": "3798b44f9c4914398994828291ec8700",
+    "mtime": 1790733803.0964499,
+    "seen": 1790734268.987233,
+    "ast_hash": "9dee46cd8e13090d99a052e418fe6b45",
+    "semantic_hash": ""
+  },
+  "Systems Inspector/AccessCodeCloud.swift": {
+    "mtime": 1790733705.2247207,
+    "seen": 1790734268.9871402,
+    "ast_hash": "8b38538ea6f5543cc67f6285c6279a8f",
+    "semantic_hash": ""
+  },
+  "Systems Inspector/AccessCodeCoordinator.swift": {
+    "mtime": 1790734063.525945,
+    "seen": 1790734268.9871428,
+    "ast_hash": "9849dfd87e2bb6132a2a2a0f52bbe41c",
+    "semantic_hash": ""
+  },
+  "Systems Inspector/AccessCodeGate.swift": {
+    "mtime": 1790733778.8184383,
+    "seen": 1790734268.9871428,
+    "ast_hash": "c9c0fb36276003f0fb117b08ff035781",
+    "semantic_hash": ""
+  },
+  "Systems Inspector/AccessCodeViewController.swift": {
+    "mtime": 1790733734.7327235,
+    "seen": 1790734268.987144,
+    "ast_hash": "38804b6ac0f29ffee226cb40fa88ea3b",
+    "semantic_hash": ""
+  },
+  "Systems InspectorTests/AccessCodeGateTests.swift": {
+    "mtime": 1790733694.9819078,
+    "seen": 1790734268.987181,
+    "ast_hash": "ed1ab09059ea996c9840fa3ec59331ce",
     "semantic_hash": ""
   }
 }
