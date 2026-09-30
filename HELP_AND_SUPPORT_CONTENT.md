@@ -43,7 +43,7 @@ Inspector Name and Company Information are printed on reports. iCloud Sync shows
 
 Clear All Data deletes local data after you confirm it.
 
-Email support@rackinspector.com for help.
+Email support@skynet97.org for help.
 ```
 
 ## FAQ
@@ -124,7 +124,7 @@ Pallet Rack Safety records racking inspections: customers, Issues, photos, site 
 
 The version number is on Settings → About.
 
-Support: support@rackinspector.com
+Support: support@skynet97.org
 
 © 2025 EKG Apps. All rights reserved.
 ```

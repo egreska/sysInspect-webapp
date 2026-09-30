@@ -90,10 +90,10 @@
     "semantic_hash": "53b9793bbbdcc76268a53244c52aeb1c"
   },
   "webapp/frontend/src/App.tsx": {
-    "mtime": 1772283851.0,
-    "seen": 1789702315.400194,
-    "ast_hash": "b7a8204b5854b8851aeef6e94a3fa0c4",
-    "semantic_hash": "b7a8204b5854b8851aeef6e94a3fa0c4"
+    "mtime": 1790726241.4538279,
+    "seen": 1790726394.824571,
+    "ast_hash": "8a5c4ad4f3efef7b29fa885d2d65e8c3",
+    "semantic_hash": ""
   },
   "webapp/frontend/src/cloudkitBootstrap.tsx": {
     "mtime": 1774545406.0,
@@ -246,15 +246,15 @@
     "semantic_hash": ""
   },
   "HELP_AND_SUPPORT_CONTENT.md": {
-    "mtime": 1790558055.0070822,
-    "seen": 1790558166.0907872,
-    "ast_hash": "b614960ed5a83a29bdcf0fba0f63ff45",
+    "mtime": 1790726219.616278,
+    "seen": 1790726394.824596,
+    "ast_hash": "1ef36eb24f921e6c298c1194f302e1ac",
     "semantic_hash": ""
   },
   "HELP_IMPLEMENTATION_GUIDE.md": {
-    "mtime": 1790558076.7667906,
-    "seen": 1790558166.0907881,
-    "ast_hash": "491079ddeebd5716b2d9aa9cb7ed8545",
+    "mtime": 1790726221.0533643,
+    "seen": 1790726394.824597,
+    "ast_hash": "5827d0f6d4cbc957f0628208d4191334",
     "semantic_hash": ""
   },
   "README.md": {
@@ -264,9 +264,9 @@
     "semantic_hash": ""
   },
   "USER_GUIDE.md": {
-    "mtime": 1790558072.0489118,
-    "seen": 1790558166.0907981,
-    "ast_hash": "ff133dec051ca0cc1718b3515c4723ed",
+    "mtime": 1790726220.5165176,
+    "seen": 1790726394.824598,
+    "ast_hash": "a652b64de9be26355a9c09ab9f40f88e",
     "semantic_hash": ""
   },
   "docs/planning.md": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1790608808.0067291,
-    "seen": 1790625750.334411,
-    "ast_hash": "a7af85e837fa2e269a1e9e2e52edd10b",
+    "mtime": 1790724587.100717,
+    "seen": 1790726394.824595,
+    "ast_hash": "7eb726bbd9d927b1afc285d539bd64f2",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-multi-photo-inspection-item.md": {
@@ -780,9 +780,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/HelpContentViewController.swift": {
-    "mtime": 1790558132.6950579,
-    "seen": 1790558166.09071,
-    "ast_hash": "6dd54acabe15610ae171bcd65091de99",
+    "mtime": 1790726219.1248894,
+    "seen": 1790726394.824533,
+    "ast_hash": "cbdc60d64a87bb11251af90c3dde050c",
     "semantic_hash": ""
   },
   "Systems Inspector/ImageCacheManager.swift": {
@@ -936,9 +936,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SettingsViewController.swift": {
-    "mtime": 1790691748.7404392,
-    "seen": 1790691860.2436962,
-    "ast_hash": "eece519e964d63d414f9107ce164e358",
+    "mtime": 1790726218.5685728,
+    "seen": 1790726394.824547,
+    "ast_hash": "531e9b5b1110a112ddbdc8ef43827473",
     "semantic_hash": ""
   },
   "Systems Inspector/SiteDocumentFile.swift": {
@@ -1065,6 +1065,54 @@
     "mtime": 1790691806.4963706,
     "seen": 1790691860.243687,
     "ast_hash": "37473d76ca64b1ebdb26354ba9e1617f",
+    "semantic_hash": ""
+  },
+  "webapp/frontend/src/components/PublicDocument.tsx": {
+    "mtime": 1790726278.3217528,
+    "seen": 1790726394.824573,
+    "ast_hash": "f10c784a5a4e37c753e4f2d14df0b8eb",
+    "semantic_hash": ""
+  },
+  "webapp/frontend/src/pages/PrivacyPage.tsx": {
+    "mtime": 1790726236.5934944,
+    "seen": 1790726394.824578,
+    "ast_hash": "2221905dd348533c9035985d30c23514",
+    "semantic_hash": ""
+  },
+  "webapp/frontend/src/pages/SupportPage.tsx": {
+    "mtime": 1790726239.7375479,
+    "seen": 1790726394.8245802,
+    "ast_hash": "6927a9988df2423cbaf3c56d573c758e",
+    "semantic_hash": ""
+  },
+  "docs/adr/0014-unlisted-access-code.md": {
+    "mtime": 1790726244.3956254,
+    "seen": 1790726394.824605,
+    "ast_hash": "cb9c78cfe670e533685c6985f87e496d",
+    "semantic_hash": ""
+  },
+  "docs/adr/0015-inspector-is-apple-id.md": {
+    "mtime": 1790726246.6169581,
+    "seen": 1790726394.824605,
+    "ast_hash": "518b4e79857ba89891c38c2cd95f1241",
+    "semantic_hash": ""
+  },
+  "docs/adr/0016-claims-in-cloudkit-public-db.md": {
+    "mtime": 1790726249.7396846,
+    "seen": 1790726394.824606,
+    "ast_hash": "7108ac772f02ca6ae6fd570dd1288e9a",
+    "semantic_hash": ""
+  },
+  "docs/app-store/access-codes.md": {
+    "mtime": 1790726287.7607365,
+    "seen": 1790726394.824606,
+    "ast_hash": "c1b0300a9de6da2d3d7cddf4bbfc4b50",
+    "semantic_hash": ""
+  },
+  "docs/app-store/release.md": {
+    "mtime": 1790726313.2648802,
+    "seen": 1790726394.824606,
+    "ast_hash": "3798b44f9c4914398994828291ec8700",
     "semantic_hash": ""
   }
 }

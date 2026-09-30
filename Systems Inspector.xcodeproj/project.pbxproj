@@ -473,7 +473,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Systems-Inspector-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Pallet Rack Safety";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos of inspections and site documents.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to securely log into the app.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -515,7 +516,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Systems-Inspector-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Pallet Rack Safety";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to take photos of inspections and site documents.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to securely log into the app.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

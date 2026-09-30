@@ -211,7 +211,7 @@ class SettingsViewController: UIViewController {
         privacyTextView.text = """
         Privacy Policy for Pallet Rack Safety
 
-        Last Updated: September 27, 2026
+        Last Updated: September 29, 2026
 
         1. Introduction
 
@@ -247,7 +247,7 @@ class SettingsViewController: UIViewController {
 
         9. Contact
 
-        Email: support@rackinspector.com
+        Email: support@skynet97.org
         """
         privacyTextView.font = .preferredFont(forTextStyle: .body)
         privacyTextView.adjustsFontForContentSizeCategory = true
@@ -282,7 +282,7 @@ class SettingsViewController: UIViewController {
         if MFMailComposeViewController.canSendMail() {
             let mail = MFMailComposeViewController()
             mail.mailComposeDelegate = self
-            mail.setToRecipients(["support@rackinspector.com"])
+            mail.setToRecipients(["support@skynet97.org"])
             mail.setSubject("Systems Inspector Support Request")
             mail.setMessageBody("Please describe your issue or question:", isHTML: false)
             present(mail, animated: true)
@@ -290,7 +290,7 @@ class SettingsViewController: UIViewController {
             // Show fallback if mail is not available
             let alert = UIAlertController(
                 title: "Email Not Available",
-                message: "Please email your support request to support@rackinspector.com",
+                message: "Please email your support request to support@skynet97.org",
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -302,7 +302,7 @@ class SettingsViewController: UIViewController {
         if MFMailComposeViewController.canSendMail() {
             let mail = MFMailComposeViewController()
             mail.mailComposeDelegate = self
-            mail.setToRecipients(["bugs@rackinspector.com"])
+            mail.setToRecipients(["bugs@skynet97.org"])
             mail.setSubject("Systems Inspector Bug Report")
 
             // Include device info and app version
@@ -321,7 +321,7 @@ class SettingsViewController: UIViewController {
             // Show fallback if mail is not available
             let alert = UIAlertController(
                 title: "Email Not Available",
-                message: "Please email your bug report to bugs@rackinspector.com",
+                message: "Please email your bug report to bugs@skynet97.org",
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "OK", style: .default))

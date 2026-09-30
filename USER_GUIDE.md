@@ -131,6 +131,6 @@ You can filter and sort the inspection list on this screen before you generate.
 
 ## Support
 
-Email [support@rackinspector.com](mailto:support@rackinspector.com).
+Email [support@skynet97.org](mailto:support@skynet97.org).
 
 © 2025 EKG Apps. All rights reserved.

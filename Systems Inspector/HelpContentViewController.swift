@@ -186,7 +186,7 @@ class HelpContentViewController: UIViewController {
 
         Clear All Data deletes local data after you confirm it.
 
-        Email support@rackinspector.com for help.
+        Email support@skynet97.org for help.
         """
     }
 
@@ -267,9 +267,9 @@ class HelpContentViewController: UIViewController {
 
         The version number is on Settings → About.
 
-        Support: support@rackinspector.com
+        Support: support@skynet97.org
 
-        © 2025 EKG Apps. All rights reserved.
+        © 2026 EKGDev. All rights reserved.
         """
     }
 }

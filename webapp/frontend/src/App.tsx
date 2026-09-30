@@ -8,6 +8,8 @@ import CustomerDetailPage from './pages/CustomerDetailPage';
 import InspectionDetailPage from './pages/InspectionDetailPage';
 import ReportPreviewPage from './pages/ReportPreviewPage';
 import Layout from './components/Layout';
+import PrivacyPage from './pages/PrivacyPage';
+import SupportPage from './pages/SupportPage';
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const initAuth = useAuthStore((s) => s.initAuth);
@@ -29,6 +31,8 @@ function App() {
     <AuthInitializer>
       <BrowserRouter>
         <Routes>
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/support" element={<SupportPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route
             path="/"

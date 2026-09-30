@@ -63,3 +63,19 @@ _Avoid_: CoreDataManager.currentUserID, PasswordRecoveryManager hashing, duplica
 **LastUser**:
 The user id of the last account that held a Session on this device, used for Face ID after logout. Not logged in; not Session.
 _Avoid_: currentUserEmail, session email, remembered login, Face ID as Session
+
+**Inspector**:
+The Apple ID entitled by one Access Code. The same Apple ID on another device is the same Inspector. A different Apple ID is not. An Inspector has one Session.
+_Avoid_: email, Session, company, device
+
+**Access Code**:
+A credential the company creates for exactly one Inspector before any Claim. Once Claimed it is bound to that Inspector's Apple ID. Distinct from the password on a Session.
+_Avoid_: promo code, offer code, Apple redemption code, license key, company code, device license
+
+**Claim**:
+The binding of one Access Code to one Inspector.
+_Avoid_: redemption, login, registration, Session
+
+**Retired**:
+An Access Code whose Claim has been ended. It cannot be Claimed again. Inspections stay with that Inspector.
+_Avoid_: revoked, expired, suspended, reusable code, remote wipe

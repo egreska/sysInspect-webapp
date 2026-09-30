@@ -21,5 +21,5 @@ When you change help text, update **both** `HELP_AND_SUPPORT_CONTENT.md` and the
 - Use Issue, Importance, site racking, and site document. Do not write “damage component.”
 - Importance values are **Needs immediate attention** and **Monitor**.
 - Describe only behavior that is in the app. Restore Data is one sentence: it is not available in this version.
-- Support email in the guides is support@rackinspector.com.
+- Support email in the guides is support@skynet97.org. Bug reports go to bugs@skynet97.org.
 - Password length and lockout numbers must match `PasswordRecoveryManager` and `AccountLockoutManager` (8 characters with upper, lower, and a number; 5 failures; 15 minutes).
