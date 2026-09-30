@@ -11128,16 +11128,6 @@
       "community": 25,
       "community_name": "CoreDataManager",
       "file_type": "code",
-      "metadata": {
-        "unresolved_calls": [
-          {
-            "callee": "default",
-            "receiver_type": "CKContainer",
-            "lang": "swift",
-            "line": "L227"
-          }
-        ]
-      },
       "norm_label": ".checkcloudkitstatus()",
       "source_file": "Systems Inspector/CoreDataManager.swift",
       "source_location": "L226"
@@ -105778,5 +105768,5 @@
       "source_file": "Systems Inspector/Assets.xcassets/LaunchIcon.imageset/rackicon.png"
     }
   ],
-  "built_at_commit": "dafe6347e0c81cb96674b8f83760ce929fe2306a"
+  "built_at_commit": "1afdef406e959364940a1cd0b325261e1bf79f6a"
 }

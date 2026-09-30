@@ -28,7 +28,7 @@ protocol AccessCodeCloudClient {
 struct CloudKitAccessCodeClient: AccessCodeCloudClient {
     private let container: CKContainer
 
-    init(container: CKContainer = .default()) {
+    init(container: CKContainer = CKContainer(identifier: "iCloud.SysInspectDB")) {
         self.container = container
     }
 

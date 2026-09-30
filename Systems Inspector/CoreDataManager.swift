@@ -224,7 +224,7 @@ class CoreDataManager {
     // MARK: - CloudKit Methods
     
     func checkCloudKitStatus() {
-        CKContainer.default().accountStatus { [weak self] (status, error) in
+        CKContainer(identifier: "iCloud.SysInspectDB").accountStatus { [weak self] (status, error) in
             DispatchQueue.main.async {
                 switch status {
                 case .available:
