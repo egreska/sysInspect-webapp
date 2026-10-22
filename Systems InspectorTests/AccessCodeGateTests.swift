@@ -122,6 +122,67 @@ final class AccessCodeGateTests: XCTestCase {
         XCTAssertFalse(resolution.writeClaim)
     }
 
+    func testUnfinishedDeleteHidesCreateAccount() {
+        let cache = CachedEntitlement(code: "abc", userRecordName: pat, sessionReady: true)
+        let resolution = resolve(
+            remote: .claimed(userRecordName: pat, sessionReady: true),
+            code: "abc",
+            user: pat,
+            cache: cache,
+            localUserCount: 0,
+            deleteUnfinished: true
+        )
+        XCTAssertEqual(resolution.route, .deleteFinishing)
+        XCTAssertFalse(resolution.markSessionReady)
+        XCTAssertFalse(resolution.writeClaim)
+        XCTAssertEqual(resolution.cache, cache)
+    }
+
+    func testFailedClaimUsesTheFreshRead() {
+        let cache = CachedEntitlement(code: "abc", userRecordName: pat, sessionReady: false)
+        let other = failedClaimResolution(
+            state: .claimed(userRecordName: coworker, sessionReady: false),
+            userRecordName: pat,
+            code: "abc",
+            cache: cache
+        )
+        XCTAssertEqual(other.route, .enterCode(.otherAppleID))
+        XCTAssertNil(other.cache)
+
+        let retired = failedClaimResolution(state: .retired, userRecordName: pat, code: "abc", cache: cache)
+        XCTAssertEqual(retired.route, .enterCode(.retired))
+        XCTAssertNil(retired.cache)
+
+        let missing = failedClaimResolution(state: .missing, userRecordName: pat, code: "abc", cache: cache)
+        XCTAssertEqual(missing.route, .enterCode(.notIssued))
+
+        let dropped = failedClaimResolution(state: .unreadable, userRecordName: pat, code: "abc", cache: cache)
+        XCTAssertEqual(dropped.route, .needNetwork)
+        XCTAssertEqual(dropped.cache, cache)
+
+        let stillIssued = failedClaimResolution(state: .issued, userRecordName: pat, code: "abc", cache: cache)
+        XCTAssertEqual(stillIssued.route, .needNetwork)
+        XCTAssertEqual(stillIssued.cache, cache)
+    }
+
+    func testExportBeforeTheDeleteDoesNotCount() {
+        let savedAt = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(exportCoversDelete(savedAt: savedAt, started: savedAt.addingTimeInterval(-1), ended: savedAt))
+        XCTAssertFalse(exportCoversDelete(savedAt: savedAt, started: savedAt, ended: nil))
+        XCTAssertTrue(exportCoversDelete(savedAt: savedAt, started: savedAt, ended: savedAt.addingTimeInterval(1)))
+    }
+
+    func testDeletedSessionCanBeCreatedAgain() {
+        let resolution = resolve(
+            remote: .claimed(userRecordName: pat, sessionReady: false),
+            code: "abc",
+            user: pat,
+            localUserCount: 0
+        )
+        XCTAssertEqual(resolution.route, .login(canCreateAccount: true))
+        XCTAssertFalse(resolution.markSessionReady)
+    }
+
     func testLocalSessionHidesAccountCreation() {
         let resolution = resolve(
             remote: .claimed(userRecordName: pat, sessionReady: false),
@@ -156,7 +217,8 @@ final class AccessCodeGateTests: XCTestCase {
         user: String,
         cache: CachedEntitlement? = nil,
         localUserCount: Int = 0,
-        isLoggedIn: Bool = false
+        isLoggedIn: Bool = false,
+        deleteUnfinished: Bool = false
     ) -> AccessResolution {
         resolveAccess(
             iCloudAvailable: true,
@@ -166,7 +228,8 @@ final class AccessCodeGateTests: XCTestCase {
             remote: remote,
             codeUnderCheck: code,
             localUserCount: localUserCount,
-            isLoggedIn: isLoggedIn
+            isLoggedIn: isLoggedIn,
+            deleteUnfinished: deleteUnfinished
         )
     }
 }

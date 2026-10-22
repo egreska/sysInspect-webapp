@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import CoreData
 import CryptoKit
 @testable import Systems_Inspector
 
@@ -32,10 +33,21 @@ final class PasswordRecoveryManagerTests: XCTestCase {
     }
     
     private func clearSecurityQuestion(for email: String) {
-        let questionKey = "securityQuestion_\(email.lowercased())"
-        let answerKey = "securityAnswer_\(email.lowercased())"
-        UserDefaults.standard.removeObject(forKey: questionKey)
-        UserDefaults.standard.removeObject(forKey: answerKey)
+        sut.clearSecurityQuestion(for: email)
+        AccountLockoutManager.shared.manuallyUnlock(email: email)
+    }
+
+    private func legacyHash(_ answer: String) -> String {
+        let normalized = answer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let data = Data(normalized.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
+    }
+
+    private func storeLegacyAnswer(_ answer: String) {
+        let email = testEmail.lowercased()
+        UserDefaults.standard.set(testQuestion, forKey: "securityQuestion_\(email)")
+        UserDefaults.standard.set(legacyHash(answer), forKey: "securityAnswer_\(email)")
     }
     
     // MARK: - Security Question Tests
@@ -213,7 +225,81 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         // Then: Should fail
         XCTAssertFalse(isValid, "Should reject wrong answer")
     }
+
+    func testLegacyAnswerIsSavedWithSaltAfterOneMatch() {
+        storeLegacyAnswer(testAnswer)
+
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy"))
+
+        let email = testEmail.lowercased()
+        let salt = UserDefaults.standard.data(forKey: "securityAnswerSalt_\(email)")
+        let stored = UserDefaults.standard.string(forKey: "securityAnswer_\(email)")
+        XCTAssertNotNil(salt)
+        XCTAssertNotEqual(stored, legacyHash(testAnswer))
+        XCTAssertTrue(UserManager.shared.verifyPasswordSecure("fluffy", hash: stored!, salt: salt!))
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "  FLUFFY "))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: testEmail), 0)
+    }
+
+    func testLockedResetDoesNotCheckOrUpgradeTheAnswer() async {
+        storeLegacyAnswer(testAnswer)
+        for _ in 1...5 {
+            XCTAssertFalse(sut.verifySecurityAnswer(for: testEmail, answer: "nope"))
+        }
+
+        let result = await sut.resetPassword(
+            for: testEmail,
+            newPassword: "Password123",
+            securityAnswer: testAnswer
+        )
+
+        XCTAssertFalse(result.success)
+        XCTAssertTrue(result.message.contains("Too many failed attempts"))
+        let email = testEmail.lowercased()
+        XCTAssertNil(UserDefaults.standard.data(forKey: "securityAnswerSalt_\(email)"))
+        XCTAssertEqual(
+            UserDefaults.standard.string(forKey: "securityAnswer_\(email)"),
+            legacyHash(testAnswer)
+        )
+    }
     
+    func testPhoneAnswerCopiesOntoTheSessionOnce() throws {
+        guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: CoreDataManager.self)]) else {
+            XCTFail("Missing Core Data model")
+            return
+        }
+        let container = NSPersistentContainer(name: "Systems_Inspector", managedObjectModel: model)
+        let description = NSPersistentStoreDescription()
+        description.type = NSInMemoryStoreType
+        description.shouldAddStoreAsynchronously = false
+        container.persistentStoreDescriptions = [description]
+        var loadError: Error?
+        container.loadPersistentStores { _, error in loadError = error }
+        XCTAssertNil(loadError)
+        let context = container.viewContext
+        let user = User(context: context)
+        user.id = UUID()
+        user.email = testEmail.lowercased()
+        user.isActive = true
+        try context.save()
+        storeLegacyAnswer(testAnswer)
+
+        sut.adoptPhoneAnswer(for: testEmail, in: context)
+
+        let email = testEmail.lowercased()
+        XCTAssertEqual(user.securityQuestion, testQuestion)
+        XCTAssertEqual(user.securityAnswerHash, legacyHash(testAnswer))
+        XCTAssertNil(user.securityAnswerSalt)
+        XCTAssertNil(UserDefaults.standard.string(forKey: "securityAnswer_\(email)"))
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
+        XCTAssertNotNil(user.securityAnswerSalt)
+        let kept = user.securityAnswerHash
+        UserDefaults.standard.set(legacyHash("other"), forKey: "securityAnswer_\(email)")
+        sut.adoptPhoneAnswer(for: testEmail, in: context)
+        XCTAssertEqual(user.securityAnswerHash, kept)
+        XCTAssertNil(UserDefaults.standard.string(forKey: "securityAnswer_\(email)"))
+    }
+
     // MARK: - Performance Tests
     
     func testPerformancePasswordValidation() {
@@ -239,10 +325,9 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         UserDefaults.standard.set(testQuestion, forKey: questionKey)
         UserDefaults.standard.set(hashString, forKey: answerKey)
         
+        _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer)
         measure {
-            for _ in 1...100 {
-                _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer)
-            }
+            _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer)
         }
     }
 }

@@ -60,6 +60,10 @@ _Avoid_: mapper, AddCustomerViewController, EditCustomerViewController
 The logged-in user's id on iOS, owned by UserManager. Entity `userId` attributes are data stamped from session, not session itself. Password writes (create, change, reset) go through UserManager. Screens do not read `currentUserEmail` or `isLoggedIn`. Wipe uses verify-without-login, not `authenticateUser`. Wipe ends Session through UserManager.
 _Avoid_: CoreDataManager.currentUserID, PasswordRecoveryManager hashing, duplicate PBKDF2, UserDefaults Session keys outside UserManager, LastUser
 
+**Security Answer**:
+A secret that travels with the Session and resets its password. The question text is only the prompt. A wrong guess counts toward that phone's email lock. A correct one ends that lock.
+_Avoid_: recovery code, backup password, Access Code, Session password
+
 **LastUser**:
 The user id of the last account that held a Session on this device, used for Face ID after logout. Not logged in; not Session.
 _Avoid_: currentUserEmail, session email, remembered login, Face ID as Session
@@ -69,13 +73,17 @@ The Apple ID entitled by one Access Code. The same Apple ID on another device is
 _Avoid_: email, Session, company, device
 
 **Access Code**:
-A credential the company creates for exactly one Inspector before any Claim. Once Claimed it is bound to that Inspector's Apple ID. Distinct from the password on a Session.
+A credential the company creates for exactly one Inspector before any Claim. Whoever has the code holds its Claim, including after it is bound to an Apple ID. Distinct from the password on a Session.
 _Avoid_: promo code, offer code, Apple redemption code, license key, company code, device license
 
 **Claim**:
-The binding of one Access Code to one Inspector.
+The binding of one Access Code to one Inspector. It follows the code.
 _Avoid_: redemption, login, registration, Session
 
 **Retired**:
 An Access Code whose Claim has been ended. It cannot be Claimed again. Inspections stay with that Inspector, who can Claim a newly issued Access Code.
-_Avoid_: revoked, expired, suspended, reusable code, remote wipe, permanent ban
+_Avoid_: revoked, expired, suspended, reusable code, remote wipe, permanent ban, Delete Account
+
+**Delete Account**:
+The end of a Session, including the customers, inspections, photos, and site documents that belong to it, including their iCloud copies. It stays unfinished until iCloud has accepted those deletions. The Claim remains. The same Inspector can start a new Session only after that.
+_Avoid_: Clear All Data, wipe, logout, Retire

@@ -125,6 +125,9 @@
         <attribute name="lastLoginDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="passwordHash" optional="YES" attributeType="String"/>
         <attribute name="passwordSalt" optional="YES" attributeType="Binary"/>
+        <attribute name="securityAnswerHash" optional="YES" attributeType="String"/>
+        <attribute name="securityAnswerSalt" optional="YES" attributeType="Binary"/>
+        <attribute name="securityQuestion" optional="YES" attributeType="String"/>
         <attribute name="userId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <fetchIndex name="byEmailIndex">
             <fetchIndexElement property="email" type="Binary" order="ascending"/>

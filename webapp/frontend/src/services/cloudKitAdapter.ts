@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger';
 import type { LoadAdapter } from './load';
-import { fetchRecord, queryRecords } from './cloudkit';
+import { fetchRecord, inspectionItemQueryFilters, queryRecords } from './cloudkit';
 import { decodeCustomer } from './customerCodec';
 import { decodeInspection } from './inspectionCodec';
 import { decodeInspectionItem } from './inspectionItemCodec';
@@ -8,8 +8,8 @@ import { decodeInspectionItem } from './inspectionItemCodec';
 export const cloudKitAdapter: LoadAdapter = {
   async customers() {
     try {
-      const records = await queryRecords('CD_Customer');
-      return records.map(decodeCustomer);
+      const { records, stoppedEarly } = await queryRecords('CD_Customer');
+      return { rows: records.map(decodeCustomer), stoppedEarly };
     } catch (err) {
       logger.error('CloudKit customers failed', err);
       throw err;
@@ -24,8 +24,8 @@ export const cloudKitAdapter: LoadAdapter = {
 
   async inspections() {
     try {
-      const records = await queryRecords('CD_Inspection');
-      return records.map(decodeInspection);
+      const { records, stoppedEarly } = await queryRecords('CD_Inspection');
+      return { rows: records.map(decodeInspection), stoppedEarly };
     } catch (err) {
       logger.error('CloudKit inspections failed', err);
       throw err;
@@ -38,10 +38,13 @@ export const cloudKitAdapter: LoadAdapter = {
     return decodeInspection(record);
   },
 
-  async items() {
+  async items(inspectionId) {
     try {
-      const records = await queryRecords('CD_InspectionItem');
-      return records.map(decodeInspectionItem);
+      const { records, stoppedEarly } = await queryRecords(
+        'CD_InspectionItem',
+        inspectionItemQueryFilters(inspectionId)
+      );
+      return { rows: records.map(decodeInspectionItem), stoppedEarly };
     } catch (err) {
       logger.error('CloudKit inspection items failed', err);
       throw err;

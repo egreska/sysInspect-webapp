@@ -18,9 +18,9 @@
     "semantic_hash": "283b7534d21770ea49073a2661fae23e"
   },
   "Systems InspectorTests/PasswordRecoveryManagerTests.swift": {
-    "mtime": 1790647481.4058404,
-    "seen": 1790647547.527533,
-    "ast_hash": "d4ccd12f9f9d47fc411c4908fec6321d",
+    "mtime": 1792702020.2713757,
+    "seen": 1792702036.685759,
+    "ast_hash": "d81ec42c17af418cf87c42d4b1595bbb",
     "semantic_hash": ""
   },
   "Systems InspectorTests/PerformanceOptimizerTests.swift": {
@@ -42,9 +42,9 @@
     "semantic_hash": "930dbccbf3ba5ad4fcc4572bb4c34b32"
   },
   "Systems InspectorUITests/SettingsUITests.swift": {
-    "mtime": 1790691750.328579,
-    "seen": 1790691860.243715,
-    "ast_hash": "896a13ffb717fcb97bbad3d0a110c168",
+    "mtime": 1792703718.6344447,
+    "seen": 1792703732.172996,
+    "ast_hash": "ae00d86a0b403ede5e25153677cf064d",
     "semantic_hash": ""
   },
   "Systems InspectorUITests/Systems_InspectorUITests.swift": {
@@ -108,27 +108,27 @@
     "semantic_hash": "57ae2937408878ace9b06318ce1ff0e6"
   },
   "webapp/frontend/src/pages/CustomerDetailPage.tsx": {
-    "mtime": 1788138157.0449893,
-    "seen": 1789702315.400197,
-    "ast_hash": "059518e4f2b4b17db61e61cfe4bb48ce",
+    "mtime": 1792702938.0781565,
+    "seen": 1792703010.611577,
+    "ast_hash": "dbf27d11a03a333629bd2b6ac99b8eb6",
     "semantic_hash": ""
   },
   "webapp/frontend/src/pages/CustomersPage.tsx": {
-    "mtime": 1788138157.0448143,
-    "seen": 1789702315.400197,
-    "ast_hash": "aef6f1e8c749cae7351c986b1ca45e98",
+    "mtime": 1792702931.7326882,
+    "seen": 1792703010.6115782,
+    "ast_hash": "e951192870619cb7238a94784ecbb4f3",
     "semantic_hash": ""
   },
   "webapp/frontend/src/pages/DashboardPage.tsx": {
-    "mtime": 1788138157.0444338,
-    "seen": 1789702315.400197,
-    "ast_hash": "7f493749443025287289c4f5e98c157a",
+    "mtime": 1792702934.0935159,
+    "seen": 1792703010.611579,
+    "ast_hash": "c018155542a0b99c3e2563b9b9a752fc",
     "semantic_hash": ""
   },
   "webapp/frontend/src/pages/InspectionDetailPage.tsx": {
-    "mtime": 1790606476.929075,
-    "seen": 1790606600.3235662,
-    "ast_hash": "9d9f99d13ade6d071831ee4e781acd22",
+    "mtime": 1792702941.7362769,
+    "seen": 1792703010.611579,
+    "ast_hash": "785f28f96b62a430cdfae64a71bbd98d",
     "semantic_hash": ""
   },
   "webapp/frontend/src/pages/LoginPage.tsx": {
@@ -138,21 +138,21 @@
     "semantic_hash": "7dec366e6e37440dccc8275be9be5810"
   },
   "webapp/frontend/src/pages/ReportPreviewPage.tsx": {
-    "mtime": 1790606491.2796917,
-    "seen": 1790606600.3235672,
-    "ast_hash": "8c45439cf6300df61b5cdbf15460f5f7",
+    "mtime": 1792702945.1047454,
+    "seen": 1792703010.6115808,
+    "ast_hash": "e012429e61105642bd2363f5fa7f4409",
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/cloudkit.ts": {
-    "mtime": 1787831862.7791307,
-    "seen": 1789702315.4002,
-    "ast_hash": "0232943a058d47cbea15962517b4d24b",
+    "mtime": 1792703390.2887182,
+    "seen": 1792703407.481023,
+    "ast_hash": "f749a8009bc6e637ecb0719320413b5b",
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/pdfGenerator.ts": {
-    "mtime": 1790606493.2720275,
-    "seen": 1790606600.323574,
-    "ast_hash": "d42be4d201626ca45746cf85d7aa556b",
+    "mtime": 1792702961.4219534,
+    "seen": 1792703010.611587,
+    "ast_hash": "6a27b7ddef3907f309cd9716e9723c3e",
     "semantic_hash": ""
   },
   "webapp/frontend/src/store/authStore.ts": {
@@ -162,9 +162,9 @@
     "semantic_hash": "b198ebf3dd71207f899e14c97b3d2b0d"
   },
   "webapp/frontend/src/types/index.ts": {
-    "mtime": 1790606457.9474094,
-    "seen": 1790606600.323575,
-    "ast_hash": "2b3c801694210db1da0ff6303806f8ac",
+    "mtime": 1792702896.6789029,
+    "seen": 1792703010.6115892,
+    "ast_hash": "317489753567c7da72a8c91c8532f1e7",
     "semantic_hash": ""
   },
   "webapp/frontend/src/utils/logger.ts": {
@@ -246,9 +246,9 @@
     "semantic_hash": ""
   },
   "HELP_AND_SUPPORT_CONTENT.md": {
-    "mtime": 1790726219.616278,
-    "seen": 1790726394.824596,
-    "ast_hash": "1ef36eb24f921e6c298c1194f302e1ac",
+    "mtime": 1790855790.704178,
+    "seen": 1790855946.825969,
+    "ast_hash": "75ea8407ce951a60cbebbfb3ca381af2",
     "semantic_hash": ""
   },
   "HELP_IMPLEMENTATION_GUIDE.md": {
@@ -264,9 +264,9 @@
     "semantic_hash": ""
   },
   "USER_GUIDE.md": {
-    "mtime": 1790726220.5165176,
-    "seen": 1790726394.824598,
-    "ast_hash": "a652b64de9be26355a9c09ab9f40f88e",
+    "mtime": 1790855776.9566095,
+    "seen": 1790855946.825971,
+    "ast_hash": "adb87f3538657dcdce9cf868282fa8fc",
     "semantic_hash": ""
   },
   "docs/planning.md": {
@@ -330,9 +330,9 @@
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/cloudkitQueryPage.test.ts": {
-    "mtime": 1787831785.7178135,
-    "seen": 1789702315.4002,
-    "ast_hash": "bf609659058f43e789060c0e0d15ca12",
+    "mtime": 1792703394.3953648,
+    "seen": 1792703407.481024,
+    "ast_hash": "6e6d61f9c848eba9b2d2336d46ec9166",
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/customerCodec.test.ts": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1790733479.7979782,
-    "seen": 1790734268.987221,
-    "ast_hash": "430a449a1a7980746d3623fc56eea3ad",
+    "mtime": 1792701679.5085628,
+    "seen": 1792702036.685788,
+    "ast_hash": "99a31ae80d0fa0061182657e53a1df3b",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-multi-photo-inspection-item.md": {
@@ -516,27 +516,27 @@
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/cloudKitAdapter.ts": {
-    "mtime": 1788138157.0433488,
-    "seen": 1789702315.400199,
-    "ast_hash": "92457f304538f89d975bc512472d07e5",
+    "mtime": 1792703391.790015,
+    "seen": 1792703407.481022,
+    "ast_hash": "81921f114b56f57f6df832b40a79d69d",
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/load.test.ts": {
-    "mtime": 1788289506.6576574,
-    "seen": 1789702315.400203,
-    "ast_hash": "ad2f5580bc1b3db3a55d3c064433603c",
+    "mtime": 1792702916.0585773,
+    "seen": 1792703010.611586,
+    "ast_hash": "e509c1c52b62e6df2caa872fa95285ce",
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/load.ts": {
-    "mtime": 1788138157.043201,
-    "seen": 1789702315.400204,
-    "ast_hash": "00019c3827beca05fc7234a80b575893",
+    "mtime": 1792703388.632072,
+    "seen": 1792703407.481028,
+    "ast_hash": "1d90ee51c9c6c259b66f86cb1e276062",
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/memoryAdapter.ts": {
-    "mtime": 1788138157.04328,
-    "seen": 1789702315.400204,
-    "ast_hash": "d8e9f8924a7f1c18515823ec1ecbcf97",
+    "mtime": 1792703388.7331524,
+    "seen": 1792703407.481028,
+    "ast_hash": "dcc3955e5dd49529985c8952a0ef58d0",
     "semantic_hash": ""
   },
   "docs/adr/0004-session-lastuser.md": {
@@ -630,9 +630,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/AppDelegate.swift": {
-    "mtime": 1789702230.654352,
-    "seen": 1789702315.400152,
-    "ast_hash": "787b9065001e2c18274adc278635f374",
+    "mtime": 1792701973.9117305,
+    "seen": 1792702036.6857228,
+    "ast_hash": "5bd87cfdd96c21471ffb1c4bbf524da1",
     "semantic_hash": ""
   },
   "Systems Inspector/AppTheme.swift": {
@@ -690,9 +690,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/CoreDataManager.swift": {
-    "mtime": 1790737409.6121497,
-    "seen": 1790737423.062654,
-    "ast_hash": "7baf7bf9d3ae4bcb2f68c4e40461262d",
+    "mtime": 1792697905.1414528,
+    "seen": 1792697954.190358,
+    "ast_hash": "3e58a09af34402fa67b666112fc1f835",
     "semantic_hash": ""
   },
   "Systems Inspector/Customer+SiteDocuments.swift": {
@@ -762,9 +762,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/ForgotPasswordViewController.swift": {
-    "mtime": 1789704039.882379,
-    "seen": 1789704072.156544,
-    "ast_hash": "95786409c97732fa3f0949b46f986c64",
+    "mtime": 1792695541.006506,
+    "seen": 1792695690.216245,
+    "ast_hash": "0ad3ab971ad74a0b35e0652003eb9d16",
     "semantic_hash": ""
   },
   "Systems Inspector/HapticManager.swift": {
@@ -780,9 +780,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/HelpContentViewController.swift": {
-    "mtime": 1790727160.4949818,
-    "seen": 1790734268.9871612,
-    "ast_hash": "c06ff79519ba39f7e3a7b5239db935ee",
+    "mtime": 1790855774.3962648,
+    "seen": 1790855946.82591,
+    "ast_hash": "eae5a49dc1245f21e2b08a44f9a4a884",
     "semantic_hash": ""
   },
   "Systems Inspector/ImageCacheManager.swift": {
@@ -864,9 +864,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/PasswordRecoveryManager.swift": {
-    "mtime": 1787963943.9252944,
-    "seen": 1789702315.400169,
-    "ast_hash": "8e04df0fc80ec6020cc9de333327ef1d",
+    "mtime": 1792701995.242402,
+    "seen": 1792702036.6857421,
+    "ast_hash": "6c684021daa3658b95a731424b52456d",
     "semantic_hash": ""
   },
   "Systems Inspector/PerformanceOptimizer.swift": {
@@ -930,15 +930,15 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SceneDelegate.swift": {
-    "mtime": 1790734064.874343,
-    "seen": 1790734268.987175,
-    "ast_hash": "9fcea06581798036b2a708eac9917a65",
+    "mtime": 1792697901.9160168,
+    "seen": 1792697954.190517,
+    "ast_hash": "882b0c2057764f542b3d3b58453897bf",
     "semantic_hash": ""
   },
   "Systems Inspector/SettingsViewController.swift": {
-    "mtime": 1790733797.4897244,
-    "seen": 1790734268.987175,
-    "ast_hash": "bd93c310864f380cf4110cf5fd80252b",
+    "mtime": 1792703718.5373356,
+    "seen": 1792703732.172976,
+    "ast_hash": "09c414473f85b48befebe90606cd484c",
     "semantic_hash": ""
   },
   "Systems Inspector/SiteDocumentFile.swift": {
@@ -990,9 +990,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/UserManager.swift": {
-    "mtime": 1787967457.7389894,
-    "seen": 1789702315.400178,
-    "ast_hash": "de29b3513745ec579adf49763bef9a9a",
+    "mtime": 1792695530.295951,
+    "seen": 1792695690.216264,
+    "ast_hash": "4de8b5ed5c64d4edcaaa9946c169acf1",
     "semantic_hash": ""
   },
   "Systems Inspector/ZipCodeLookup.swift": {
@@ -1074,9 +1074,9 @@
     "semantic_hash": ""
   },
   "webapp/frontend/src/pages/PrivacyPage.tsx": {
-    "mtime": 1790726236.5934944,
-    "seen": 1790726394.824578,
-    "ast_hash": "2221905dd348533c9035985d30c23514",
+    "mtime": 1790855776.1173081,
+    "seen": 1790855946.825953,
+    "ast_hash": "5d7cb1a069a18d69f7083b4537ff460d",
     "semantic_hash": ""
   },
   "webapp/frontend/src/pages/SupportPage.tsx": {
@@ -1092,9 +1092,9 @@
     "semantic_hash": ""
   },
   "docs/adr/0015-inspector-is-apple-id.md": {
-    "mtime": 1790726246.6169581,
-    "seen": 1790726394.824605,
-    "ast_hash": "518b4e79857ba89891c38c2cd95f1241",
+    "mtime": 1792699450.6943207,
+    "seen": 1792702036.6857972,
+    "ast_hash": "a29d4f2d9f861091d7bbdd41a4090a6d",
     "semantic_hash": ""
   },
   "docs/adr/0016-claims-in-cloudkit-public-db.md": {
@@ -1104,45 +1104,99 @@
     "semantic_hash": ""
   },
   "docs/app-store/access-codes.md": {
-    "mtime": 1790733801.4211004,
-    "seen": 1790734268.987233,
-    "ast_hash": "ebc95a527e27e85d0b4867c334e842ac",
+    "mtime": 1792699452.0848713,
+    "seen": 1792702036.6857998,
+    "ast_hash": "62aee848c4b8dcbfe52bc0276a0ed582",
     "semantic_hash": ""
   },
   "docs/app-store/release.md": {
-    "mtime": 1790733803.0964499,
-    "seen": 1790734268.987233,
-    "ast_hash": "9dee46cd8e13090d99a052e418fe6b45",
+    "mtime": 1790855943.0751646,
+    "seen": 1790855946.825981,
+    "ast_hash": "fd51e1999fd6497d86362fcb0434ce7c",
     "semantic_hash": ""
   },
   "Systems Inspector/AccessCodeCloud.swift": {
-    "mtime": 1790737409.3366075,
-    "seen": 1790737423.062644,
-    "ast_hash": "90335c4bfafbee4e2c5ba21445ccabec",
+    "mtime": 1792698432.5929909,
+    "seen": 1792698445.0559502,
+    "ast_hash": "c92cfdd35ce7c9ba37cb9d22c7aea478",
     "semantic_hash": ""
   },
   "Systems Inspector/AccessCodeCoordinator.swift": {
-    "mtime": 1790734063.525945,
-    "seen": 1790734268.9871428,
-    "ast_hash": "9849dfd87e2bb6132a2a2a0f52bbe41c",
+    "mtime": 1792698423.582748,
+    "seen": 1792698445.0559502,
+    "ast_hash": "9a2321f0bccda6775ffe6f7ece58cb65",
     "semantic_hash": ""
   },
   "Systems Inspector/AccessCodeGate.swift": {
-    "mtime": 1790733778.8184383,
-    "seen": 1790734268.9871428,
-    "ast_hash": "c9c0fb36276003f0fb117b08ff035781",
+    "mtime": 1792698416.3242104,
+    "seen": 1792698445.055951,
+    "ast_hash": "5527a00b1da49cbe8db88012edc101d6",
     "semantic_hash": ""
   },
   "Systems Inspector/AccessCodeViewController.swift": {
-    "mtime": 1790733734.7327235,
-    "seen": 1790734268.987144,
-    "ast_hash": "38804b6ac0f29ffee226cb40fa88ea3b",
+    "mtime": 1792697876.5902636,
+    "seen": 1792697954.19035,
+    "ast_hash": "2674898e0d56bdaef5cf4866c2f2915a",
     "semantic_hash": ""
   },
   "Systems InspectorTests/AccessCodeGateTests.swift": {
-    "mtime": 1790733694.9819078,
-    "seen": 1790734268.987181,
-    "ast_hash": "ed1ab09059ea996c9840fa3ec59331ce",
+    "mtime": 1792698426.348869,
+    "seen": 1792698445.055986,
+    "ast_hash": "073b6d620ae63821235ab5ffbf51716e",
+    "semantic_hash": ""
+  },
+  "docs/adr/0017-delete-account-keeps-the-claim.md": {
+    "mtime": 1792697590.9091115,
+    "seen": 1792697954.1906948,
+    "ast_hash": "a4f00418ed0303bcf81a24dc2f3efed3",
+    "semantic_hash": ""
+  },
+  ".archify/architecture-runtime-20261006-105716/candidate.json": {
+    "mtime": 1791298767.523168,
+    "seen": 1792695690.216204,
+    "ast_hash": "163158cb185a2076598d47bfd7c16281",
+    "semantic_hash": ""
+  },
+  ".archify/architecture-runtime-20261006-105716/runtime.browser-check.json": {
+    "mtime": 1791298784.3623924,
+    "seen": 1792695690.216208,
+    "ast_hash": "e74609323a2102d68466ddbc751a4943",
+    "semantic_hash": ""
+  },
+  ".archify/architecture-runtime-20261006-105716/runtime.delivery.json": {
+    "mtime": 1791298783.243863,
+    "seen": 1792695690.21621,
+    "ast_hash": "f559bdf88adf792622ef18f00b93289f",
+    "semantic_hash": ""
+  },
+  ".archify/architecture-runtime-20261006-105716/runtime.finalize-summary.json": {
+    "mtime": 1791298784.4434896,
+    "seen": 1792695690.2162108,
+    "ast_hash": "171e65f07cff25fefb637736ef9e8445",
+    "semantic_hash": ""
+  },
+  ".archify/architecture-runtime-20261006-105716/runtime.finalize.json": {
+    "mtime": 1791298784.4345045,
+    "seen": 1792695690.216212,
+    "ast_hash": "9a62552fec160fbcab82dd10cb583313",
+    "semantic_hash": ""
+  },
+  ".archify/architecture-runtime-20261006-105716/runtime.html": {
+    "mtime": 1791298783.1735325,
+    "seen": 1792695690.2163,
+    "ast_hash": "2dc19738a6495b5608e14ea6be7c4098",
+    "semantic_hash": ""
+  },
+  "docs/adr/0018-knowing-the-code-is-the-claim.md": {
+    "mtime": 1792699454.5012515,
+    "seen": 1792702036.685799,
+    "ast_hash": "4454166f51919a0e8618a8ab9d5ccb95",
+    "semantic_hash": ""
+  },
+  "docs/adr/0019-security-answer-travels-with-the-session.md": {
+    "mtime": 1792701976.1912372,
+    "seen": 1792702036.6857998,
+    "ast_hash": "1f37fb2d98729f25848916ec01b657b4",
     "semantic_hash": ""
   }
 }

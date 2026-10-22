@@ -38,13 +38,28 @@ describe('createLoad', () => {
         ],
       })
     );
-    const names = (await load.listCustomers()).map((c) => c.name);
+    const names = (await load.listCustomers()).rows.map((c) => c.name);
     expect(names).toEqual(['Acme', 'Zed']);
+  });
+
+  it('keeps a cut-off customer list marked after sorting', async () => {
+    const load = createLoad(
+      createMemoryAdapter({
+        customers: [
+          { id: '2', name: 'Zed' },
+          { id: '1', name: 'Acme' },
+        ],
+        customersStoppedEarly: true,
+      })
+    );
+    const listed = await load.listCustomers();
+    expect(listed.stoppedEarly).toBe(true);
+    expect(listed.rows.map((c) => c.name)).toEqual(['Acme', 'Zed']);
   });
 
   it('returns an empty list when there are no customers', async () => {
     const load = createLoad(createMemoryAdapter({}));
-    await expect(load.listCustomers()).resolves.toEqual([]);
+    await expect(load.listCustomers()).resolves.toEqual({ rows: [], stoppedEarly: false });
   });
 
   it('throws when inspectionById is missing', async () => {
@@ -69,6 +84,20 @@ describe('createLoad', () => {
     const inspection = await load.inspectionById('i1');
     expect(inspection.customer).toEqual({ id: 'c1', name: 'Acme' });
     expect(inspection.items?.map((row) => row.id)).toEqual(['a', 'b']);
+    expect(inspection.itemsStoppedEarly).toBe(false);
+  });
+
+  it('marks an inspection when the item list stopped early', async () => {
+    const load = createLoad(
+      createMemoryAdapter({
+        inspections: [{ id: 'i1' }],
+        items: [item({ id: 'a', inspectionId: 'i1', sequenceNumber: 1 })],
+        itemsStoppedEarly: true,
+      })
+    );
+    const inspection = await load.inspectionById('i1');
+    expect(inspection.itemsStoppedEarly).toBe(true);
+    expect(inspection.items?.map((row) => row.id)).toEqual(['a']);
   });
 
   it('omits customer when the referenced customer is missing', async () => {
@@ -90,7 +119,7 @@ describe('createLoad', () => {
         items: [item({ id: 'a', inspectionId: 'i1' })],
       })
     );
-    const [inspection] = await load.listInspections();
+    const [inspection] = (await load.listInspections()).rows;
     expect(inspection.customer).toBeUndefined();
     expect(inspection.items).toBeUndefined();
   });
@@ -104,7 +133,7 @@ describe('createLoad', () => {
         ],
       })
     );
-    expect((await load.listInspections()).map((row) => row.id)).toEqual(['new', 'old']);
+    expect((await load.listInspections()).rows.map((row) => row.id)).toEqual(['new', 'old']);
   });
 
   it('filters inspectionsForCustomer and sorts by date descending', async () => {
@@ -117,7 +146,7 @@ describe('createLoad', () => {
         ],
       })
     );
-    expect((await load.inspectionsForCustomer('c1')).map((row) => row.id)).toEqual([
+    expect((await load.inspectionsForCustomer('c1')).rows.map((row) => row.id)).toEqual([
       'a-new',
       'a-old',
     ]);
@@ -129,6 +158,9 @@ describe('createLoad', () => {
         inspections: [{ id: 'i1', customerId: 'c2' }],
       })
     );
-    await expect(load.inspectionsForCustomer('c1')).resolves.toEqual([]);
+    await expect(load.inspectionsForCustomer('c1')).resolves.toEqual({
+      rows: [],
+      stoppedEarly: false,
+    });
   });
 });

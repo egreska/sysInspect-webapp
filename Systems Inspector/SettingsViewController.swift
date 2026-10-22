@@ -19,7 +19,7 @@ class SettingsViewController: UIViewController {
         ["iCloud Sync"],
         ["Inspector Name", "Company Information"],
         ["About", "Privacy Policy", "Help & Support"],
-        ["Backup Data", "Restore Data", "Clear All Data", "Logout"],
+        ["Backup Data", "Restore Data", "Delete Account", "Logout"],
         ["Clear Image Cache", "Performance Stats", "Release Memory"]
     ]
     
@@ -211,7 +211,7 @@ class SettingsViewController: UIViewController {
         privacyTextView.text = """
         Privacy Policy for Pallet Rack Safety
 
-        Last Updated: September 29, 2026
+        Last Updated: October 1, 2026
 
         1. Introduction
 
@@ -239,7 +239,7 @@ class SettingsViewController: UIViewController {
 
         7. Your Choices
 
-        You can edit or delete customers, inspections, and photos in the app. Clear All Data in Settings removes local data after you confirm it.
+        You can edit or delete customers, inspections, and photos in the app. Delete Account in Settings removes the account and its customers, inspections, photos, and site documents from this device and from iCloud.
 
         8. Changes to This Policy
 
@@ -417,44 +417,29 @@ class SettingsViewController: UIViewController {
     }
     
     private func releaseMemory() {
-        let beforeMemory = PerformanceOptimizer.shared.getMemoryUsage()
-        
         PerformanceOptimizer.shared.releaseUnusedResources()
-        
-        // Force garbage collection
-        autoreleasepool {
-            // Empty
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            let afterMemory = PerformanceOptimizer.shared.getMemoryUsage()
-            let freed = beforeMemory.used - afterMemory.used
-            
-            let alert = UIAlertController(
-                title: "Memory Released",
-                message: "Freed \(String(format: "%.1f", max(0, freed)))MB\n\nBefore: \(String(format: "%.1f", beforeMemory.used))MB\nAfter: \(String(format: "%.1f", afterMemory.used))MB",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            self?.present(alert, animated: true)
-            
-            // Reload table to update memory display
-            self?.tableView.reloadData()
-        }
+        tableView.reloadData()
+
+        let alert = UIAlertController(
+            title: "Photo Cache Cleared",
+            message: "The in-memory photo cache was cleared. Photos on disk were kept.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
     
-    private func clearAllData() {
+    private func deleteAccount() {
         let alert = UIAlertController(
-            title: "Clear All Data",
-            message: "This will permanently delete all customers, inspections, and settings. This action cannot be undone.",
+            title: "Delete Account",
+            message: "This permanently deletes this account and its customers, inspections, photos, and site documents from this device and from iCloud. This cannot be undone.",
             preferredStyle: .alert
         )
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
 
-        alert.addAction(UIAlertAction(title: "Clear All Data", style: .destructive) { [weak self] _ in
-            // Require password verification before proceeding
-            self?.verifyPasswordForDataDeletion()
+        alert.addAction(UIAlertAction(title: "Delete Account", style: .destructive) { [weak self] _ in
+            self?.verifyPasswordForAccountDeletion()
         })
 
         present(alert, animated: true)
@@ -491,7 +476,7 @@ class SettingsViewController: UIViewController {
             present(alert, animated: true)
         }
     
-    private func verifyPasswordForDataDeletion() {
+    private func verifyPasswordForAccountDeletion() {
         let alert = UIAlertController(
             title: "Verify Identity",
             message: "Enter your password to authorize this critical operation.",
@@ -505,7 +490,7 @@ class SettingsViewController: UIViewController {
         }
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
-            self?.showAlert(title: "Cancelled", message: "Data deletion was cancelled.")
+                self?.showAlert(title: "Cancelled", message: "Account deletion was cancelled.")
         })
         
         alert.addAction(UIAlertAction(title: "Verify", style: .default) { [weak self] _ in
@@ -520,12 +505,12 @@ class SettingsViewController: UIViewController {
                 await MainActor.run {
                     if isValid {
                         print("✅ Password verified for data deletion")
-                        self?.confirmClearAllData()
+                        self?.confirmDeleteAccount()
                     } else {
                         print("❌ Invalid password for data deletion")
                         self?.showAlert(
                             title: "Authentication Failed",
-                            message: "Invalid password. Data deletion cancelled for security."
+                            message: "Invalid password. Account deletion cancelled."
                         )
                     }
                 }
@@ -535,57 +520,43 @@ class SettingsViewController: UIViewController {
         present(alert, animated: true)
     }
     
-    private func confirmClearAllData() {
+    private func confirmDeleteAccount() {
         let alert = UIAlertController(
-            title: "Final Confirmation",
-            message: "Type DELETE in capital letters to permanently erase all data. This action cannot be undone.",
+            title: "Delete Account",
+            message: "Delete this account and all of its inspections? This cannot be undone.",
             preferredStyle: .alert
         )
 
-        alert.addTextField { textField in
-            textField.placeholder = "Type DELETE"
-            textField.autocapitalizationType = .allCharacters
-        }
-
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
-            self?.showAlert(title: "Cancelled", message: "Data deletion was cancelled.")
+            self?.showAlert(title: "Cancelled", message: "Account deletion was cancelled.")
         })
 
-        alert.addAction(UIAlertAction(title: "Delete All Data", style: .destructive) { [weak self] _ in
-            guard let confirmText = alert.textFields?.first?.text, confirmText == "DELETE" else {
-                self?.showAlert(title: "Cancelled", message: "Data deletion was cancelled. Confirmation text did not match.")
-                return
-            }
-
-            print("🗑️ Performing data deletion...")
-
-            UserManager.shared.wipeSession()
-            
-            // Perform the actual data deletion
-            #if DEBUG
-            CoreDataManager.shared.resetAllData()
-            #endif
-
-            // Clear user defaults
-            let defaults = UserDefaults.standard
-            let dictionary = defaults.dictionaryRepresentation()
-            dictionary.keys.forEach { key in
-                defaults.removeObject(forKey: key)
-            }
-            
-            // Clear image cache
-            ImageCacheManager.shared.clearMemoryCache()
-            ImageCacheManager.shared.clearDiskCache {
-                print("✅ All data cleared including caches")
-            }
-            
-            // Clear performance cache
-            PerformanceOptimizer.shared.releaseUnusedResources()
-
-            self?.showAlert(title: "Data Cleared", message: "All data has been successfully deleted. Please restart the app.")
+        alert.addAction(UIAlertAction(title: "Delete Account", style: .destructive) { [weak self] _ in
+            self?.performDeleteAccount()
         })
 
         present(alert, animated: true)
+    }
+
+    private func performDeleteAccount() {
+        Task {
+            let outcome = await AccessCodeCoordinator.shared.startDeleteAccount()
+            await MainActor.run {
+                switch outcome {
+                case .needsNetwork:
+                    self.showAlert(
+                        title: "Delete Account",
+                        message: "The account could not be deleted. Connect to the network and try again."
+                    )
+                case .failed:
+                    self.showAlert(title: "Delete Account", message: "The account could not be deleted.")
+                case .finishing:
+                    guard let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate,
+                          let window = sceneDelegate.window else { return }
+                    Task { await AccessCodeCoordinator.shared.recheck(in: window) }
+                }
+            }
+        }
     }
 
     private func showAlert(title: String, message: String) {
@@ -624,7 +595,7 @@ extension SettingsViewController: UITableViewDataSource {
         }
 
         // Customize appearance for Clear All Data
-        if settingName == "Clear All Data" {
+        if settingName == "Delete Account" {
             cell.textLabel?.textColor = .systemRed
         } else {
             cell.textLabel?.textColor = .label // Reset color for other cells
@@ -682,8 +653,8 @@ extension SettingsViewController: UITableViewDelegate {
             backupData()
         case "Restore Data":
             restoreData()
-        case "Clear All Data":
-            clearAllData()
+        case "Delete Account":
+            deleteAccount()
         case "Logout":
             showLogoutConfirmation()
         case "Clear Image Cache":

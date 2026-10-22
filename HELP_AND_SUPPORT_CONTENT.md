@@ -41,7 +41,7 @@ Open the Reports tab. Select the inspections you want, then tap Generate PDF Rep
 
 Inspector Name and Company Information are printed on reports. iCloud Sync shows the current sync status. Backup Data shares a copy of the database. Restore Data is not available in this version.
 
-Clear All Data deletes local data after you confirm it.
+Delete Account removes the account and its customers, inspections, photos, and site documents from this device and from iCloud. Confirm with your password. The access code stays with this Apple ID.
 
 Email support@skynet97.org for help.
 ```
@@ -64,6 +64,9 @@ This app cannot reset the account without that answer.
 
 **Can I change my email?**
 No. The email you used to create the account stays the login.
+
+**How do I delete my account?**
+Settings → Delete Account. Confirm with your password. This removes the account and its inspections from this device and from iCloud. The access code stays with this Apple ID, and you can create a new account.
 
 ## Data
 

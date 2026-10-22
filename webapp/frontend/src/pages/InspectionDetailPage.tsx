@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { load } from '../services/appLoad';
+import { LIST_STOPPED_EARLY } from '../services/load';
 import { ArrowLeft, FileText, AlertCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { importanceCounts, importancePhrase, isImmediate, MONITOR, NEEDS_IMMEDIATE_ATTENTION } from '../importance';
@@ -9,7 +10,7 @@ import { Issue } from '../issue';
 export default function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
 
-  const { data: inspection, isLoading } = useQuery({
+  const { data: inspection, isLoading, isError, error } = useQuery({
     queryKey: ['inspection', id],
     queryFn: () => load.inspectionById(id!),
     enabled: !!id,
@@ -17,6 +18,14 @@ export default function InspectionDetailPage() {
 
   if (isLoading) {
     return <div className="text-center py-12">Loading inspection...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-12">
+        {error instanceof Error ? error.message : 'Inspection not found'}
+      </div>
+    );
   }
 
   if (!inspection) {
@@ -106,6 +115,9 @@ export default function InspectionDetailPage() {
           <h3 className="text-lg font-semibold text-gray-900">
             Inspection Items ({inspection.items?.length || 0})
           </h3>
+          {inspection.itemsStoppedEarly && (
+            <p className="mt-2 text-sm text-amber-800">{LIST_STOPPED_EARLY}</p>
+          )}
         </div>
 
         <div className="divide-y">

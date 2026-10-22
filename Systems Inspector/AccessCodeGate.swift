@@ -13,6 +13,11 @@ enum AccessCodeRecordState: Equatable {
     case unreadable
 }
 
+enum ClaimResult: Equatable {
+    case accepted
+    case failed(AccessCodeRecordState)
+}
+
 enum AccessCodeNotice: Equatable {
     case notIssued
     case otherAppleID
@@ -24,6 +29,7 @@ enum AccessRoute: Equatable {
     case needNetwork
     case enterCode(AccessCodeNotice?)
     case waitingForSession
+    case deleteFinishing
     case login(canCreateAccount: Bool)
     case mainApp
 }
@@ -39,6 +45,26 @@ struct AccessResolution: Equatable {
     var cache: CachedEntitlement?
     var writeClaim: Bool
     var markSessionReady: Bool
+}
+
+func failedClaimResolution(
+    state: AccessCodeRecordState,
+    userRecordName: String,
+    code: String,
+    cache: CachedEntitlement?
+) -> AccessResolution {
+    let matching = cache?.userRecordName == userRecordName ? cache : nil
+    let kept = matching?.code == code ? nil : matching
+    switch state {
+    case .claimed(let owner, _) where owner != userRecordName:
+        return AccessResolution(route: .enterCode(.otherAppleID), cache: kept, writeClaim: false, markSessionReady: false)
+    case .retired:
+        return AccessResolution(route: .enterCode(.retired), cache: kept, writeClaim: false, markSessionReady: false)
+    case .missing:
+        return AccessResolution(route: .enterCode(.notIssued), cache: kept, writeClaim: false, markSessionReady: false)
+    case .issued, .unreadable, .claimed:
+        return AccessResolution(route: .needNetwork, cache: matching, writeClaim: false, markSessionReady: false)
+    }
 }
 
 func normalizedAccessCode(_ raw: String) -> String {
@@ -62,8 +88,12 @@ func resolveAccess(
     remote: AccessCodeRecordState?,
     codeUnderCheck: String?,
     localUserCount: Int?,
-    isLoggedIn: Bool
+    isLoggedIn: Bool,
+    deleteUnfinished: Bool = false
 ) -> AccessResolution {
+    if deleteUnfinished {
+        return AccessResolution(route: .deleteFinishing, cache: cache, writeClaim: false, markSessionReady: false)
+    }
     guard iCloudAvailable else {
         return AccessResolution(route: .signInToICloud, cache: nil, writeClaim: false, markSessionReady: false)
     }
@@ -175,6 +205,44 @@ private func resolution(
     markSessionReady: Bool
 ) -> AccessResolution {
     AccessResolution(route: route, cache: cache, writeClaim: writeClaim, markSessionReady: markSessionReady)
+}
+
+enum DeleteAccountStart {
+    case needsNetwork
+    case failed
+    case finishing
+}
+
+struct DeleteAccountProgress: Equatable, Codable {
+    var savedAt: Date
+    var saved: Bool
+    var exportAccepted: Bool
+}
+
+enum DeleteAccountProgressStore {
+    static let key = "deleteAccountUnfinished"
+
+    static func load(_ defaults: UserDefaults = .standard) -> DeleteAccountProgress? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(DeleteAccountProgress.self, from: data)
+    }
+
+    static func save(_ progress: DeleteAccountProgress?, _ defaults: UserDefaults = .standard) {
+        if let progress, let data = try? JSONEncoder().encode(progress) {
+            defaults.set(data, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+}
+
+func exportCoversDelete(savedAt: Date, started: Date, ended: Date?) -> Bool {
+    guard let ended else { return false }
+    return started >= savedAt && ended >= started
+}
+
+extension Notification.Name {
+    static let deleteAccountExportAccepted = Notification.Name("deleteAccountExportAccepted")
 }
 
 struct AccessCodeCache {

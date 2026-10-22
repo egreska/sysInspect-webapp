@@ -120,7 +120,7 @@ final class SettingsUITests: XCTestCase {
             // Then: Should show result alert
             let alert = app.alerts.firstMatch
             XCTAssertTrue(alert.waitForExistence(timeout: 5))
-            XCTAssertTrue(alert.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Memory Released' OR label CONTAINS 'Freed'")).firstMatch.exists)
+            XCTAssertTrue(alert.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Photos on disk were kept'")).firstMatch.exists)
             
             alert.buttons["OK"].tap()
         }
@@ -135,7 +135,7 @@ final class SettingsUITests: XCTestCase {
         }
         
         let table = app.tables.firstMatch
-        let clearDataCell = table.cells["Clear All Data"]
+        let clearDataCell = table.cells["Delete Account"]
         
         if clearDataCell.exists {
             // When: Tapping clear all data
@@ -147,8 +147,8 @@ final class SettingsUITests: XCTestCase {
             XCTAssertTrue(alert.staticTexts.containing(NSPredicate(format: "label CONTAINS 'permanently'")).firstMatch.exists)
             
             // Proceed to password verification
-            if alert.buttons["Clear All Data"].exists {
-                alert.buttons["Clear All Data"].tap()
+            if alert.buttons["Delete Account"].exists {
+                alert.buttons["Delete Account"].tap()
                 
                 // Should now show password prompt
                 alert = app.alerts["Verify Identity"]
@@ -171,7 +171,7 @@ final class SettingsUITests: XCTestCase {
         }
         
         let table = app.tables.firstMatch
-        let clearDataCell = table.cells["Clear All Data"]
+        let clearDataCell = table.cells["Delete Account"]
         
         if clearDataCell.exists {
             // When: Starting clear all data and cancelling

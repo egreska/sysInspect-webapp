@@ -38,30 +38,29 @@ class PasswordRecoveryManager {
         question: String,
         answer: String
     ) -> Bool {
-        let context = CoreDataManager.shared.context
-        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "email == %@", email.lowercased())
-        
+        setSecurityQuestion(for: email, question: question, answer: answer, in: loadedSharedContext())
+    }
+
+    func setSecurityQuestion(
+        for email: String,
+        question: String,
+        answer: String,
+        in context: NSManagedObjectContext?
+    ) -> Bool {
+        let normalized = email.lowercased()
+        guard let context, let user = fetchUser(email: normalized, in: context) else {
+            print("❌ User not found")
+            return false
+        }
+        let (hash, salt) = UserManager.shared.hashPasswordSecure(normalizedAnswer(answer))
+        user.securityQuestion = question
+        user.securityAnswerHash = hash
+        user.securityAnswerSalt = salt
         do {
-            let users = try context.fetch(fetchRequest)
-            guard users.first != nil else {
-                print("❌ User not found")
-                return false
-            }
-            
-            // Store question and hashed answer
-            let hashedAnswer = hashSecurityAnswer(answer)
-            
-            // Store in UserDefaults (could also add to User entity)
-            let questionKey = "securityQuestion_\(email.lowercased())"
-            let answerKey = "securityAnswer_\(email.lowercased())"
-            
-            UserDefaults.standard.set(question, forKey: questionKey)
-            UserDefaults.standard.set(hashedAnswer, forKey: answerKey)
-            
+            try context.save()
+            clearDefaults(for: normalized)
             print("✅ Security question set for \(email)")
             return true
-            
         } catch {
             print("❌ Error setting security question: \(error)")
             return false
@@ -70,35 +69,120 @@ class PasswordRecoveryManager {
     
     /// Get security question for a user
     func getSecurityQuestion(for email: String) -> String? {
-        let questionKey = "securityQuestion_\(email.lowercased())"
-        return UserDefaults.standard.string(forKey: questionKey)
+        getSecurityQuestion(for: email, in: loadedSharedContext())
+    }
+
+    func getSecurityQuestion(for email: String, in context: NSManagedObjectContext?) -> String? {
+        let normalized = email.lowercased()
+        if let context {
+            adoptPhoneAnswer(for: normalized, in: context)
+            if let question = fetchUser(email: normalized, in: context)?.securityQuestion {
+                return question
+            }
+        }
+        return UserDefaults.standard.string(forKey: "securityQuestion_\(normalized)")
     }
     
-    /// Verify security answer
+    /// Verify security answer. A locked email is refused before the answer is checked.
     func verifySecurityAnswer(for email: String, answer: String) -> Bool {
-        let answerKey = "securityAnswer_\(email.lowercased())"
-        
-        guard let storedHash = UserDefaults.standard.string(forKey: answerKey) else {
-            print("❌ No security answer found")
+        verifySecurityAnswer(for: email, answer: answer, in: loadedSharedContext())
+    }
+
+    func verifySecurityAnswer(for email: String, answer: String, in context: NSManagedObjectContext?) -> Bool {
+        let normalized = email.lowercased()
+        if AccountLockoutManager.shared.isAccountLocked(email: normalized) {
             return false
         }
-        
-        let providedHash = hashSecurityAnswer(answer)
-        let isValid = providedHash == storedHash
-        
-        if isValid {
-            print("✅ Security answer verified")
-        } else {
-            print("❌ Security answer incorrect")
+        if let context {
+            adoptPhoneAnswer(for: normalized, in: context)
+            if let user = fetchUser(email: normalized, in: context), let storedHash = user.securityAnswerHash {
+                return checkAnswer(answer, hash: storedHash, salt: user.securityAnswerSalt, email: normalized) {
+                    let (hash, salt) = UserManager.shared.hashPasswordSecure(normalizedAnswer(answer))
+                    user.securityAnswerHash = hash
+                    user.securityAnswerSalt = salt
+                    try? context.save()
+                }
+            }
         }
-        
-        return isValid
+        return checkAnswer(
+            answer,
+            hash: UserDefaults.standard.string(forKey: "securityAnswer_\(normalized)"),
+            salt: UserDefaults.standard.data(forKey: "securityAnswerSalt_\(normalized)"),
+            email: normalized
+        ) {
+            let (hash, salt) = UserManager.shared.hashPasswordSecure(normalizedAnswer(answer))
+            UserDefaults.standard.set(hash, forKey: "securityAnswer_\(normalized)")
+            UserDefaults.standard.set(salt, forKey: "securityAnswerSalt_\(normalized)")
+        }
+    }
+
+    func lockMessage(for email: String) -> String? {
+        let lockout = AccountLockoutManager.shared
+        guard lockout.isAccountLocked(email: email) else { return nil }
+        let remaining = lockout.formatRemainingTime(lockout.getRemainingLockoutTime(email: email))
+        return "Too many failed attempts. Try again in \(remaining)."
     }
     
+    func clearSecurityQuestion(for email: String) {
+        clearSecurityQuestion(for: email, in: loadedSharedContext())
+    }
+
+    func clearSecurityQuestion(for email: String, in context: NSManagedObjectContext?) {
+        let normalized = email.lowercased()
+        if let context, let user = fetchUser(email: normalized, in: context) {
+            user.securityQuestion = nil
+            user.securityAnswerHash = nil
+            user.securityAnswerSalt = nil
+            try? context.save()
+        }
+        clearDefaults(for: normalized)
+    }
+
     /// Check if user has security question set up
     func hasSecurityQuestion(for email: String) -> Bool {
-        let questionKey = "securityQuestion_\(email.lowercased())"
-        return UserDefaults.standard.string(forKey: questionKey) != nil
+        hasSecurityQuestion(for: email, in: loadedSharedContext())
+    }
+
+    func hasSecurityQuestion(for email: String, in context: NSManagedObjectContext?) -> Bool {
+        let normalized = email.lowercased()
+        if let context {
+            adoptPhoneAnswer(for: normalized, in: context)
+            if let user = fetchUser(email: normalized, in: context),
+               user.securityAnswerHash != nil || user.securityQuestion != nil {
+                return true
+            }
+        }
+        return UserDefaults.standard.string(forKey: "securityQuestion_\(normalized)") != nil
+    }
+
+    /// Copy a phone-only answer onto the Session once. A Session that already has an answer keeps it.
+    func adoptPhoneAnswers() {
+        guard let context = loadedSharedContext() else { return }
+        let request: NSFetchRequest<User> = User.fetchRequest()
+        guard let users = try? context.fetch(request) else { return }
+        for user in users {
+            guard let email = user.email else { continue }
+            adoptPhoneAnswer(for: email, in: context)
+        }
+    }
+
+    func adoptPhoneAnswer(for email: String, in context: NSManagedObjectContext) {
+        let normalized = email.lowercased()
+        guard let user = fetchUser(email: normalized, in: context) else { return }
+        if user.securityAnswerHash != nil {
+            clearDefaults(for: normalized)
+            return
+        }
+        guard let hash = UserDefaults.standard.string(forKey: "securityAnswer_\(normalized)") else { return }
+        user.securityQuestion = UserDefaults.standard.string(forKey: "securityQuestion_\(normalized)")
+        user.securityAnswerHash = hash
+        user.securityAnswerSalt = UserDefaults.standard.data(forKey: "securityAnswerSalt_\(normalized)")
+        do {
+            try context.save()
+            clearDefaults(for: normalized)
+        } catch {
+            print("❌ Error copying security answer: \(error)")
+        }
     }
     
     // MARK: - Password Reset
@@ -109,9 +193,15 @@ class PasswordRecoveryManager {
         newPassword: String,
         securityAnswer: String
     ) async -> (success: Bool, message: String) {
-        // Verify security answer first
+        if let locked = lockMessage(for: email) {
+            return (false, locked)
+        }
+
         guard verifySecurityAnswer(for: email, answer: securityAnswer) else {
             AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
+            if let locked = lockMessage(for: email) {
+                return (false, locked)
+            }
             return (false, "Security answer is incorrect.")
         }
 
@@ -128,10 +218,58 @@ class PasswordRecoveryManager {
     
     // MARK: - Helper Methods
     
-    private func hashSecurityAnswer(_ answer: String) -> String {
-        // Normalize answer (lowercase, trim whitespace) for comparison
-        let normalized = answer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let data = Data(normalized.utf8)
+    private func loadedSharedContext() -> NSManagedObjectContext? {
+        guard CoreDataManager.shared.isStoreLoaded else { return nil }
+        return CoreDataManager.shared.context
+    }
+
+    private func fetchUser(email: String, in context: NSManagedObjectContext) -> User? {
+        let request: NSFetchRequest<User> = User.fetchRequest()
+        request.predicate = NSPredicate(format: "email == %@", email)
+        request.fetchLimit = 1
+        return try? context.fetch(request).first
+    }
+
+    private func clearDefaults(for email: String) {
+        UserDefaults.standard.removeObject(forKey: "securityQuestion_\(email)")
+        UserDefaults.standard.removeObject(forKey: "securityAnswer_\(email)")
+        UserDefaults.standard.removeObject(forKey: "securityAnswerSalt_\(email)")
+    }
+
+    private func checkAnswer(
+        _ answer: String,
+        hash storedHash: String?,
+        salt storedSalt: Data?,
+        email: String,
+        upgrade: () -> Void
+    ) -> Bool {
+        guard let storedHash else {
+            print("❌ No security answer found")
+            return false
+        }
+        let secret = normalizedAnswer(answer)
+        let isValid = storedSalt.map {
+            UserManager.shared.verifyPasswordSecure(secret, hash: storedHash, salt: $0)
+        } ?? (legacyAnswerHash(answer) == storedHash)
+        if isValid {
+            if storedSalt == nil {
+                upgrade()
+            }
+            print("✅ Security answer verified")
+            return true
+        }
+        AccountLockoutManager.shared.recordFailedAttempt(email: email)
+        print("❌ Security answer incorrect")
+        return false
+    }
+
+    private func normalizedAnswer(_ answer: String) -> String {
+        answer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Old answers have no salt. One successful check replaces this hash.
+    private func legacyAnswerHash(_ answer: String) -> String {
+        let data = Data(normalizedAnswer(answer).utf8)
         let hash = SHA256.hash(data: data)
         return hash.compactMap { String(format: "%02x", $0) }.joined()
     }

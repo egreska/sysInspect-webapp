@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shouldFetchNextQueryPage } from './cloudkit';
+import { inspectionItemQueryFilters, queryHitPageGuard, shouldFetchNextQueryPage } from './cloudkit';
 
 describe('shouldFetchNextQueryPage', () => {
   it('continues when CloudKit omits moreComing but sends a continuation marker', () => {
@@ -24,5 +24,32 @@ describe('shouldFetchNextQueryPage', () => {
 
   it('stops on an empty response', () => {
     expect(shouldFetchNextQueryPage({})).toBe(false);
+  });
+});
+
+describe('inspectionItemQueryFilters', () => {
+  it('asks CloudKit for items linked to that inspection', () => {
+    const [filter] = inspectionItemQueryFilters('insp-1');
+    expect(filter).toEqual({
+      fieldName: 'CD_inspection',
+      comparator: 'EQUALS',
+      fieldValue: {
+        value: {
+          recordName: 'insp-1',
+          action: 'NONE',
+          zoneID: { zoneName: 'com.apple.coredata.cloudkit.zone' },
+        },
+        type: 'REFERENCE',
+      },
+    });
+  });
+});
+
+describe('queryHitPageGuard', () => {
+  it('is the guard only when CloudKit still has another page', () => {
+    const more = { continuationMarker: 'next' };
+    expect(queryHitPageGuard(50, more)).toBe(true);
+    expect(queryHitPageGuard(49, more)).toBe(false);
+    expect(queryHitPageGuard(50, { moreComing: false, continuationMarker: 'next' })).toBe(false);
   });
 });

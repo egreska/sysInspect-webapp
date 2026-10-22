@@ -108,6 +108,11 @@ final class AccessCodeViewController: UIViewController {
             codeField.isHidden = true
             actionButton.setTitle("Check Again", for: .normal)
             actionButton.accessibilityLabel = "Check Again"
+        case .deleteFinishing:
+            messageLabel.text = "Delete Account is still finishing. It completes when iCloud has accepted the deletions."
+            codeField.isHidden = true
+            actionButton.setTitle("Try Again", for: .normal)
+            actionButton.accessibilityLabel = "Try Again"
         case .login, .mainApp:
             break
         }

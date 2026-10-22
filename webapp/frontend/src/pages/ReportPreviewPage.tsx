@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { load } from '../services/appLoad';
+import { LIST_STOPPED_EARLY } from '../services/load';
 import { generatePDF } from '../services/pdfGenerator';
 import { ArrowLeft, Download, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
@@ -14,7 +15,7 @@ export default function ReportPreviewPage() {
   const [downloading, setDownloading] = useState(false);
   const [edited, setEdited] = useState<Inspection | null>(null);
 
-  const { data: inspection, isLoading } = useQuery({
+  const { data: inspection, isLoading, isError, error } = useQuery({
     queryKey: ['inspection', id],
     queryFn: () => load.inspectionById(id!),
     enabled: !!id,
@@ -65,6 +66,14 @@ export default function ReportPreviewPage() {
 
   if (isLoading) {
     return <div className="text-center py-12">Loading report preview...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-12">
+        {error instanceof Error ? error.message : 'Inspection not found'}
+      </div>
+    );
   }
 
   if (!inspection || !edited) {
@@ -145,6 +154,9 @@ export default function ReportPreviewPage() {
           <h3 className="text-lg font-semibold text-gray-900">
             Inspection Items ({items.length})
           </h3>
+          {edited.itemsStoppedEarly && (
+            <p className="mt-2 text-sm text-amber-800">{LIST_STOPPED_EARLY}</p>
+          )}
         </div>
 
         <div className="divide-y">

@@ -268,6 +268,11 @@ class ForgotPasswordViewController: UIViewController {
             return
         }
         
+        if let locked = PasswordRecoveryManager.shared.lockMessage(for: email) {
+            showAlert(title: "Account Locked", message: locked)
+            return
+        }
+
         // Check if user has security question set up
         if PasswordRecoveryManager.shared.hasSecurityQuestion(for: email) {
             if let question = PasswordRecoveryManager.shared.getSecurityQuestion(for: email) {

@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { importancePhrase, isImmediate } from '../importance';
 import type { Inspection, InspectionItem } from '../types';
 import { Issue } from '../issue';
+import { LIST_STOPPED_EARLY } from './load';
 
 const PAGE_WIDTH = 792;   // 11" landscape
 const PAGE_HEIGHT = 612;  // 8.5" landscape
@@ -112,6 +113,14 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
   doc.setTextColor(0);
   doc.text('Inspection Report', PAGE_WIDTH / 2, y + 20, { align: 'center' });
   y += 36;
+  if (inspection.itemsStoppedEarly) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(180, 80, 0);
+    doc.text(LIST_STOPPED_EARLY, MARGIN, y);
+    y += 16;
+    doc.setTextColor(0);
+  }
 
   // --- Customer info row ---
   doc.setFontSize(10);

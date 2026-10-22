@@ -107,7 +107,7 @@ You can filter and sort the inspection list on this screen before you generate.
 | Help & Support | User Guide, FAQ, Troubleshooting, and About. |
 | Backup Data | Shares a copy of the database through the share sheet. |
 | Restore Data | Not available in this version. |
-| Clear All Data | Deletes local data after confirmation. |
+| Delete Account | Removes the account and its inspections from this device and from iCloud. The access code stays with this Apple ID. |
 | Logout | Ends the session on this device. |
 | Clear Image Cache | Removes cached images. Photos may load again the next time you open them. |
 | Performance Stats | Shows a short memory summary. |

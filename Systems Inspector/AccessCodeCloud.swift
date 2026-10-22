@@ -21,8 +21,9 @@ protocol AccessCodeCloudClient {
     func accountAvailable() async -> Bool
     func userRecordName() async -> String?
     func fetch(code: String) async -> AccessCodeRecordState
-    func claim(code: String, userRecordName: String) async -> Bool
+    func claim(code: String, userRecordName: String) async -> ClaimResult
     func markSessionReady(code: String) async -> Bool
+    func clearSessionReady(code: String) async -> Bool
 }
 
 struct CloudKitAccessCodeClient: AccessCodeCloudClient {
@@ -59,42 +60,56 @@ struct CloudKitAccessCodeClient: AccessCodeCloudClient {
         }
     }
 
-    func claim(code: String, userRecordName: String) async -> Bool {
+    func claim(code: String, userRecordName: String) async -> ClaimResult {
         let database = container.publicCloudDatabase
         let recordID = CKRecord.ID(recordName: code)
         do {
             let record = try await database.record(for: recordID)
-            let status = record[AccessCodeCloudField.status] as? String
-            if status == AccessCodeCloudField.claimed,
-               record[AccessCodeCloudField.claimedUserRecordName] as? String == userRecordName {
-                return true
+            let current = state(from: record)
+            if case .claimed(let owner, _) = current, owner == userRecordName {
+                return .accepted
             }
-            guard status == AccessCodeCloudField.issued else { return false }
+            guard case .issued = current else { return .failed(current) }
             record[AccessCodeCloudField.status] = AccessCodeCloudField.claimed as CKRecordValue
             record[AccessCodeCloudField.claimedUserRecordName] = userRecordName as CKRecordValue
             record[AccessCodeCloudField.claimedAt] = Date() as CKRecordValue
-            record[AccessCodeCloudField.sessionReady] = NSNumber(value: false)
+            record[AccessCodeCloudField.sessionReady] = sessionReadyValue(false)
             _ = try await database.modifyRecords(saving: [record], deleting: [])
-            return true
+            return .accepted
         } catch {
             let current = await fetch(code: code)
             if case .claimed(let owner, _) = current, owner == userRecordName {
-                return true
+                return .accepted
             }
-            return false
+            if case .issued = current {
+                return .failed(.unreadable)
+            }
+            return .failed(current)
         }
     }
 
     func markSessionReady(code: String) async -> Bool {
+        await setSessionReady(code: code, ready: true)
+    }
+
+    func clearSessionReady(code: String) async -> Bool {
+        await setSessionReady(code: code, ready: false)
+    }
+
+    private func setSessionReady(code: String, ready: Bool) async -> Bool {
         let database = container.publicCloudDatabase
         do {
             let record = try await database.record(for: CKRecord.ID(recordName: code))
-            record[AccessCodeCloudField.sessionReady] = NSNumber(value: true)
+            record[AccessCodeCloudField.sessionReady] = sessionReadyValue(ready)
             _ = try await database.modifyRecords(saving: [record], deleting: [])
             return true
         } catch {
             return false
         }
+    }
+
+    private func sessionReadyValue(_ ready: Bool) -> NSNumber {
+        NSNumber(value: ready ? Int64(1) : Int64(0))
     }
 
     private func state(from record: CKRecord) -> AccessCodeRecordState {

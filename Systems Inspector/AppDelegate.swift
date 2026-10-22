@@ -67,6 +67,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             object: nil,
             queue: .main
         ) { _ in
+            PasswordRecoveryManager.shared.adoptPhoneAnswers()
             DispatchQueue.global(qos: .utility).async {
                 CoreDataManager.shared.migrateLocalPhotosToCloudKit()
             }

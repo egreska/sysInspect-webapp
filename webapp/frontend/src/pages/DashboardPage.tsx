@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { load } from '../services/appLoad';
+import { LIST_STOPPED_EARLY } from '../services/load';
 import { BarChart, Users, FileText, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, isThisMonth } from 'date-fns';
@@ -27,9 +28,9 @@ export default function DashboardPage() {
     refetchOnWindowFocus: true,
   });
 
-  const customers = Array.isArray(data) ? data : [];
+  const customers = data?.rows ?? [];
   const customerNames = new Map(customers.map((c) => [c.id, c.name]));
-  const inspections = (Array.isArray(allInspections) ? allInspections : []).map((i) => ({
+  const inspections = (allInspections?.rows ?? []).map((i) => ({
     ...i,
     customerName: i.customerId ? customerNames.get(i.customerId) : undefined,
   }));
@@ -91,6 +92,9 @@ export default function DashboardPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Customers</p>
               <p className="text-2xl font-bold text-gray-900">{customers.length}</p>
+              {data?.stoppedEarly && (
+                <p className="mt-2 text-sm text-amber-800">{LIST_STOPPED_EARLY}</p>
+              )}
             </div>
           </div>
         </div>
@@ -103,6 +107,9 @@ export default function DashboardPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Inspections</p>
               <p className="text-2xl font-bold text-gray-900">{inspections.length}</p>
+              {allInspections?.stoppedEarly && (
+                <p className="mt-2 text-sm text-amber-800">{LIST_STOPPED_EARLY}</p>
+              )}
             </div>
           </div>
         </div>

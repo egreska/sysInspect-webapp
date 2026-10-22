@@ -20,7 +20,7 @@ Create record type `AccessCode` in Development, then deploy the schema to Produc
 Security, on the Development schema before you deploy:
 
 - `_world`: no permissions. A person who is not signed into iCloud cannot read codes.
-- Signed-in iCloud users: Read and Write, so the app can fetch one record and write the Claim. Leave Query off if the role editor has it.
+- Signed-in iCloud users: Read and Write, so the app can fetch one record and write the Claim. Leave Query off if the role editor has it. Knowing the code is knowing the Claim, including after it is bound. The app will not replace an owner. A direct write can. Leave Write in place. The phone uses it to claim, to set `sessionReady`, and to clear it after Delete Account. Do not add a server for this.
 - The app fetches by record name only. It does not run a query that returns every Access Code.
 
 Deploy schema changes to Production before creating the records you will send to inspectors.
@@ -39,6 +39,8 @@ openssl rand -hex 16
 5. Save the record, then send the record name to that inspector. One code, one Inspector.
 
 A string that is not a record name is not an Access Code. The first Apple ID to claim an `issued` record becomes the Inspector. A different Apple ID is refused. The same Apple ID on another device is the same Inspector.
+
+Delete Account in the app removes that Session and its inspections. It does not Retire the code. The same Apple ID can create a new Session.
 
 ## Retire a code
 

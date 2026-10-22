@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { load } from '../services/appLoad';
+import { LIST_STOPPED_EARLY } from '../services/load';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Phone } from 'lucide-react';
 import { useState } from 'react';
@@ -12,7 +13,7 @@ export default function CustomersPage() {
   });
 
   // Ensure we always have an array (handles wrong routing / API returning HTML)
-  const customers = Array.isArray(data) ? data : [];
+  const customers = data?.rows ?? [];
   const filteredCustomers = customers.filter((customer) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -42,6 +43,9 @@ export default function CustomersPage() {
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Customers</h2>
           <p className="mt-2 text-gray-600">{customers.length} total customers</p>
+          {data?.stoppedEarly && (
+            <p className="mt-2 text-sm text-amber-800">{LIST_STOPPED_EARLY}</p>
+          )}
         </div>
       </div>
 

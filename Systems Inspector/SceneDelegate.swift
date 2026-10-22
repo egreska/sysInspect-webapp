@@ -56,6 +56,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             guard let window = self?.window else { return }
             Task { await AccessCodeCoordinator.shared.recheck(in: window) }
         }
+        NotificationCenter.default.addObserver(
+            forName: .deleteAccountExportAccepted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let window = self?.window else { return }
+            Task { await AccessCodeCoordinator.shared.recheck(in: window) }
+        }
         print("SceneDelegate: Made window key and visible")
         
         print("SceneDelegate: Final window state - isHidden: \(window?.isHidden ?? true), isKeyWindow: \(window?.isKeyWindow ?? false)")

@@ -26,6 +26,7 @@ export interface Inspection {
   customerId?: string;
   customer?: Customer;
   items?: InspectionItem[];
+  itemsStoppedEarly?: boolean;
   createdDate?: string;
 }
 

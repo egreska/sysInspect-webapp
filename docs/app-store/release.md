@@ -115,25 +115,68 @@ Camera use is described in the binary: photos of inspections and site documents.
 
 ## Review notes
 
-Paste this with the gated build. Replace the code with the Production record name from [access-codes.md](./access-codes.md).
+Paste this into Resolution Center and into App Review Information on the next submission. Attach the screen recording from the shot list below. The Production code is `cf6b58a0503cb0f634c45bf74047689d`.
 
 ```
 This app is intended for unlisted distribution. It is free. It should not appear in search, categories, charts, or recommendations. Please approve it for the public store so we can request the unlisted link.
 
-Sign in to iCloud on this device before opening the app. Enter this Access Code:
+Purpose and audience
+Pallet Rack Safety is a field tool for people who inspect warehouse storage racks. The inspector records a customer and site, walks the racks, notes each location, attaches photos, and produces a PDF or CSV report. It replaces collecting that inspection on paper and reassembling it later. The inspection stays with that inspector and can be sent as a report. It is for warehouse and safety inspectors who receive an access code from the company that issued the app. It is not a public consumer product.
 
-[PRODUCTION RECORD NAME]
+How to reach the main features
+A screen recording from a physical device, running the latest iOS, is attached. It starts at launch.
 
-The code is an AccessCode record in the Production public database of iCloud.SysInspectDB. Entering it binds the code to the Apple ID on this device. Then create the one account with any email and a password you choose.
+1. Sign in to iCloud on the device before opening the app.
+2. Enter this Access Code:
 
-There is no sample inspection. Create a customer, add a location, take or attach a photo, and generate a PDF.
+cf6b58a0503cb0f634c45bf74047689d
 
-A different Apple ID must not be able to use the same code. Signing out of iCloud leaves no Inspector on the device.
+The code is an AccessCode record in the Production public database of iCloud.SysInspectDB. Entering it binds the code to the Apple ID on this device.
+3. Create the one account with any email and a password you choose. There is no preset password and no sample file.
+4. Create a customer, add a location, take or attach a photo, and generate a PDF.
+5. Settings → Delete Account. Confirm with the password you just created. This removes that account and its inspections from the device and from iCloud. The same Apple ID can create a new account with this access code. A different Apple ID cannot use this code.
+
+Account registration, login, and deletion
+The recording shows Create Account, login, and Delete Account. Delete Account is in Settings. It requires the account password and a final confirmation. It removes the account and the customers, inspections, photos, and site documents that belong to it.
+
+User-generated content
+Inspections, photos, and notes are private to the signed-in Apple ID. There is no social feed, no sharing between inspectors, and no public profile. A report leaves the device only when the inspector uses the system share sheet. Content reporting and blocking do not apply.
+
+Paid content
+The app is free. There are no in-app purchases, subscriptions, or paid features. The access code is issued outside the app. It is not an Apple offer code.
+
+External services
+- Apple iCloud and CloudKit, container iCloud.SysInspectDB. This is core functionality. Inspections sync in the private database. Access-code claims are stored in the public database.
+- Firebase Analytics and Firebase Crashlytics. Diagnostics only. Events do not include customer names, photos, or report files.
+The app does not use a payment processor, a map provider, or an AI service.
+
+Regions
+The app functions the same in every territory where it is available. There are no regional differences in features or content.
+
+Regulated industry and third-party material
+The app records the inspector’s own observations. It does not certify a rack, does not provide engineering approval, and does not include standards text or other protected third-party material. No authorization documents are required.
+
+Signing out of iCloud leaves no Inspector on the device.
 
 Support: support@skynet97.org
 ```
 
 Sign-in information: required. There is no password to attach. The reviewer creates the Session after the code. Put a phone number Connect will accept in the review contact fields. The notes do not include one.
+
+### Screen recording
+
+Record this on a physical iPhone or iPad running the latest iOS, in one take. Start before tapping the icon. The device is already signed in to the Apple ID that holds `cf6b58a0503cb0f634c45bf74047689d`, and it has a network connection. Delete Account updates the access code record, so it cannot finish offline.
+
+1. Launch Pallet Rack Safety from the home screen.
+2. Enter the access code and continue.
+3. Create an account. Use any email, a password, and a security question.
+4. Add a customer.
+5. Add one inspection location, attach a photo, and save it.
+6. Generate a PDF, open the share sheet, and dismiss it without sending.
+7. Open Settings, tap Delete Account, confirm, enter the password, and confirm again.
+8. Show the app back at account creation for the same Apple ID.
+
+Do not show another person’s content, a purchase, or a real customer.
 
 ## After approval
 

@@ -1,0 +1,416 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Systems Inspector runtime",
+    "locale": "en",
+    "output": ".archify/architecture-runtime-20261006-105716/runtime.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/egreska/sysInspect-webapp.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "824da2d3b6982db02159a356d449c30418696cf4"
+    }
+  },
+  "components": [
+    {
+      "id": "inspector",
+      "type": "external",
+      "label": "Inspector",
+      "sublabel": "Apple ID",
+      "pos": [24, 224],
+      "size": [128, 72],
+      "sources": [
+        {
+          "path": "docs/adr/0015-inspector-is-apple-id.md",
+          "line": 3,
+          "end_line": 3,
+          "label": "Apple ID claims the code"
+        },
+        {
+          "path": "docs/adr/0014-unlisted-access-code.md",
+          "line": 3,
+          "end_line": 3,
+          "label": "Code entitles one inspector"
+        }
+      ]
+    },
+    {
+      "id": "iosApp",
+      "type": "frontend",
+      "label": "iOS app",
+      "sublabel": "UIKit scene",
+      "pos": [248, 224],
+      "size": [146, 72],
+      "sources": [
+        {
+          "path": "Systems Inspector/SceneDelegate.swift",
+          "line": 25,
+          "end_line": 47,
+          "label": "Splash then access route"
+        },
+        {
+          "path": "Systems Inspector/AppDelegate.swift",
+          "line": 17,
+          "end_line": 39,
+          "label": "Launch and Core Data"
+        }
+      ]
+    },
+    {
+      "id": "accessGate",
+      "type": "security",
+      "label": "Access gate",
+      "sublabel": "claim check",
+      "pos": [500, 224],
+      "size": [150, 72],
+      "sources": [
+        {
+          "path": "Systems Inspector/AccessCodeGate.swift",
+          "line": 57,
+          "end_line": 72,
+          "label": "iCloud required first"
+        },
+        {
+          "path": "Systems Inspector/AccessCodeGate.swift",
+          "line": 124,
+          "end_line": 168,
+          "label": "Claim decides the route"
+        },
+        {
+          "path": "Systems Inspector/AccessCodeCoordinator.swift",
+          "line": 22,
+          "end_line": 25,
+          "label": "First screen after splash"
+        }
+      ]
+    },
+    {
+      "id": "session",
+      "type": "security",
+      "label": "Session",
+      "sublabel": "local login",
+      "pos": [752, 224],
+      "size": [160, 72],
+      "sources": [
+        {
+          "path": "Systems Inspector/AccessCodeGate.swift",
+          "line": 155,
+          "end_line": 168,
+          "label": "Login or main app"
+        },
+        {
+          "path": "Systems Inspector/UserManager.swift",
+          "line": 250,
+          "end_line": 258,
+          "label": "Session id on device"
+        },
+        {
+          "path": "Systems Inspector/SceneDelegate.swift",
+          "line": 81,
+          "end_line": 90,
+          "label": "Logged-in root choice"
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "type": "frontend",
+      "label": "Inspection workspace",
+      "sublabel": "customers, reports",
+      "pos": [748, 408],
+      "size": [168, 72],
+      "sources": [
+        {
+          "path": "Systems Inspector/MainTabBarController.swift",
+          "line": 198,
+          "end_line": 230,
+          "label": "Customers and reports"
+        },
+        {
+          "path": "Systems Inspector/SceneDelegate.swift",
+          "line": 81,
+          "end_line": 86,
+          "label": "Main tab after login"
+        }
+      ]
+    },
+    {
+      "id": "coreData",
+      "type": "database",
+      "label": "Core Data",
+      "sublabel": "local store",
+      "pos": [1004, 408],
+      "size": [140, 72],
+      "sources": [
+        {
+          "path": "Systems Inspector/CoreDataManager.swift",
+          "line": 115,
+          "end_line": 167,
+          "label": "CloudKit-backed store"
+        },
+        {
+          "path": "Systems Inspector/SceneDelegate.swift",
+          "line": 93,
+          "end_line": 112,
+          "label": "Save on background"
+        },
+        {
+          "path": "Systems Inspector/Systems Inspector.entitlements",
+          "line": 6,
+          "end_line": 15,
+          "label": "iCloud.SysInspectDB"
+        }
+      ]
+    },
+    {
+      "id": "privateDb",
+      "type": "cloud",
+      "label": "Private database",
+      "sublabel": "inspections",
+      "pos": [1232, 408],
+      "size": [156, 72],
+      "sources": [
+        {
+          "path": "webapp/frontend/src/services/cloudkit.ts",
+          "line": 185,
+          "end_line": 185,
+          "label": "Core Data CloudKit zone"
+        },
+        {
+          "path": "webapp/frontend/src/services/cloudkit.ts",
+          "line": 380,
+          "end_line": 387,
+          "label": "Query private database"
+        },
+        {
+          "path": "docs/adr/0016-claims-in-cloudkit-public-db.md",
+          "line": 3,
+          "end_line": 3,
+          "label": "Inspections stay private"
+        }
+      ]
+    },
+    {
+      "id": "publicDb",
+      "type": "cloud",
+      "label": "Public claims",
+      "sublabel": "AccessCode",
+      "pos": [493, 28],
+      "size": [164, 72],
+      "sources": [
+        {
+          "path": "Systems Inspector/AccessCodeCloud.swift",
+          "line": 31,
+          "end_line": 33,
+          "label": "iCloud.SysInspectDB"
+        },
+        {
+          "path": "Systems Inspector/AccessCodeCloud.swift",
+          "line": 51,
+          "end_line": 77,
+          "label": "Fetch and claim"
+        },
+        {
+          "path": "docs/adr/0016-claims-in-cloudkit-public-db.md",
+          "line": 3,
+          "end_line": 3,
+          "label": "Public claim records"
+        }
+      ]
+    },
+    {
+      "id": "webApp",
+      "type": "frontend",
+      "label": "Web app",
+      "sublabel": "CloudKit JS",
+      "pos": [1232, 584],
+      "size": [156, 72],
+      "sources": [
+        {
+          "path": "webapp/frontend/src/App.tsx",
+          "line": 29,
+          "end_line": 50,
+          "label": "Signed-in inspection routes"
+        },
+        {
+          "path": "webapp/frontend/src/services/cloudKitAdapter.ts",
+          "line": 8,
+          "end_line": 32,
+          "label": "Load customers and inspections"
+        },
+        {
+          "path": "docs/webapp.md",
+          "line": 3,
+          "end_line": 3,
+          "label": "Browser CloudKit client"
+        }
+      ]
+    },
+    {
+      "id": "firebase",
+      "type": "external",
+      "label": "Firebase",
+      "sublabel": "Analytics, crashes",
+      "pos": [246, 28],
+      "size": [150, 72],
+      "sources": [
+        {
+          "path": "Systems Inspector/AppDelegate.swift",
+          "line": 20,
+          "end_line": 21,
+          "label": "Configure at launch"
+        },
+        {
+          "path": "Systems Inspector/AnalyticsManager.swift",
+          "line": 8,
+          "end_line": 13,
+          "label": "Analytics and Crashlytics"
+        },
+        {
+          "path": "Systems Inspector/AnalyticsManager.swift",
+          "line": 37,
+          "end_line": 53,
+          "label": "Events leave the device"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "On-device",
+      "wraps": ["iosApp", "accessGate", "session", "workspace", "coreData"],
+      "pad": 14
+    },
+    {
+      "kind": "security-group",
+      "label": "Public CloudKit",
+      "wraps": ["publicDb"],
+      "pad": 12
+    },
+    {
+      "kind": "security-group",
+      "label": "Private CloudKit",
+      "wraps": ["privateDb"],
+      "pad": 12
+    },
+    {
+      "kind": "region",
+      "label": "Browser",
+      "wraps": ["webApp"],
+      "pad": 12
+    }
+  ],
+  "connections": [
+    {
+      "id": "launch",
+      "from": "inspector",
+      "to": "iosApp",
+      "label": "launches",
+      "variant": "emphasis"
+    },
+    {
+      "id": "route",
+      "from": "iosApp",
+      "to": "accessGate",
+      "label": "checks code",
+      "variant": "emphasis"
+    },
+    {
+      "id": "claim",
+      "from": "accessGate",
+      "to": "session",
+      "label": "if claimed",
+      "variant": "emphasis"
+    },
+    {
+      "id": "enter",
+      "from": "session",
+      "to": "workspace",
+      "label": "if logged in",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "save",
+      "from": "workspace",
+      "to": "coreData",
+      "label": "persists",
+      "variant": "emphasis"
+    },
+    {
+      "id": "sync",
+      "from": "coreData",
+      "to": "privateDb",
+      "label": "syncs",
+      "variant": "emphasis"
+    },
+    {
+      "id": "entitle",
+      "from": "accessGate",
+      "to": "publicDb",
+      "label": "public fetch",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "telemetry",
+      "from": "iosApp",
+      "to": "firebase",
+      "label": "telemetry",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "read",
+      "from": "webApp",
+      "to": "privateDb",
+      "label": "JS read",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Identity",
+      "items": [
+        "The inspector is the Apple ID that claimed the access code",
+        "That Apple ID has one email-and-password session",
+        "Another Apple ID cannot take over a claimed code"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Access gate",
+      "items": [
+        "resolveAccess runs in the app; there is no license server",
+        "A cached claim can open the app until CloudKit is reachable again",
+        "Missing, retired, or another Apple ID stays on the code screen"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Inspection data",
+      "items": [
+        "Customers, inspections, and items save in the local Core Data store",
+        "NSPersistentCloudKitContainer mirrors that store to iCloud.SysInspectDB",
+        "The web app reads CD_Customer, CD_Inspection, and CD_InspectionItem in the Core Data zone"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Side channels",
+      "items": [
+        "Firebase Analytics and Crashlytics receive events from the iOS app",
+        "The web app reads private records and does not issue access codes",
+        "Reports are rendered in the iOS Reports tab and in the browser preview"
+      ]
+    }
+  ]
+}

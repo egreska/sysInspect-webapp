@@ -13,6 +13,8 @@ final class AccessCodeCoordinator {
     private let cloud: AccessCodeCloudClient
     private var cache: AccessCodeCache
     private var checking = false
+    private var pendingRecheck = false
+    private var windowForRecheck: UIWindow?
 
     init(cloud: AccessCodeCloudClient = CloudKitAccessCodeClient(), defaults: UserDefaults = .standard) {
         self.cloud = cloud
@@ -20,16 +22,31 @@ final class AccessCodeCoordinator {
     }
 
     func showInitial(in window: UIWindow) async {
+        windowForRecheck = window
+        await advanceUnfinishedDelete()
         let resolution = await evaluate(submittedCode: nil)
         apply(resolution, in: window, animated: true)
     }
 
     func recheck(in window: UIWindow) async {
+        windowForRecheck = window
         guard !accessCodeGateBypassed() else { return }
         guard !(window.rootViewController is SplashViewController) else { return }
-        guard !checking else { return }
+        guard !checking else {
+            pendingRecheck = true
+            return
+        }
+        await advanceUnfinishedDelete()
         let resolution = await evaluate(submittedCode: nil)
         apply(resolution, in: window, animated: false)
+    }
+
+    func startDeleteAccount() async -> DeleteAccountStart {
+        if let progress = DeleteAccountProgressStore.load(), progress.saved || progress.exportAccepted {
+            return .finishing
+        }
+        guard await cloud.accountAvailable() else { return .needsNetwork }
+        return await performLocalDelete()
     }
 
     func submit(code rawCode: String, in window: UIWindow) async {
@@ -50,10 +67,22 @@ final class AccessCodeCoordinator {
         cache.save(entitlement)
     }
 
+    func clearSessionReady() async -> Bool {
+        guard var entitlement = cache.load() else { return false }
+        guard await cloud.clearSessionReady(code: entitlement.code) else { return false }
+        entitlement.sessionReady = false
+        cache.save(entitlement)
+        return true
+    }
+
     func makeLoginViewController() -> LoginViewController {
         let controller = LoginViewController()
         if accessCodeGateBypassed() {
             controller.canCreateAccount = true
+            return controller
+        }
+        if DeleteAccountProgressStore.load() != nil {
+            controller.canCreateAccount = false
             return controller
         }
         let count = (try? CoreDataManager.shared.context.count(for: User.fetchRequest())) ?? 0
@@ -64,7 +93,13 @@ final class AccessCodeCoordinator {
 
     private func evaluate(submittedCode: String?) async -> AccessResolution {
         checking = true
-        defer { checking = false }
+        defer {
+            checking = false
+            if pendingRecheck, let windowForRecheck {
+                pendingRecheck = false
+                Task { await self.recheck(in: windowForRecheck) }
+            }
+        }
 
         let iCloudAvailable = await cloud.accountAvailable()
         let userRecordName = iCloudAvailable ? await cloud.userRecordName() : nil
@@ -93,17 +128,17 @@ final class AccessCodeCoordinator {
             remote: remote,
             codeUnderCheck: code,
             localUserCount: localUserCount(),
-            isLoggedIn: UserManager.shared.isUserLoggedIn()
+            isLoggedIn: UserManager.shared.isUserLoggedIn(),
+            deleteUnfinished: DeleteAccountProgressStore.load() != nil
         )
 
         if resolution.writeClaim, let code, let userRecordName {
-            let wrote = await cloud.claim(code: code, userRecordName: userRecordName)
-            if !wrote {
-                resolution = AccessResolution(
-                    route: .enterCode(.otherAppleID),
-                    cache: matching?.code == code ? nil : matching,
-                    writeClaim: false,
-                    markSessionReady: false
+            if case .failed(let state) = await cloud.claim(code: code, userRecordName: userRecordName) {
+                resolution = failedClaimResolution(
+                    state: state,
+                    userRecordName: userRecordName,
+                    code: code,
+                    cache: stored
                 )
             }
         }
@@ -146,7 +181,7 @@ final class AccessCodeCoordinator {
             let login = LoginViewController()
             login.canCreateAccount = canCreateAccount
             show(UINavigationController(rootViewController: login), in: window, animated: animated)
-        case .signInToICloud, .needNetwork, .enterCode, .waitingForSession:
+        case .signInToICloud, .needNetwork, .enterCode, .waitingForSession, .deleteFinishing:
             show(AccessCodeViewController(route: resolution.route), in: window, animated: animated)
         }
     }
@@ -159,6 +194,39 @@ final class AccessCodeCoordinator {
         UIView.transition(with: window, duration: 0.25, options: .transitionCrossDissolve) {
             window.rootViewController = controller
         }
+    }
+
+    private func advanceUnfinishedDelete() async {
+        guard let progress = DeleteAccountProgressStore.load() else { return }
+        if progress.exportAccepted {
+            guard await clearSessionReady() else { return }
+            DeleteAccountProgressStore.save(nil)
+            return
+        }
+        guard !progress.saved else { return }
+        guard await cloud.accountAvailable() else { return }
+        _ = await performLocalDelete()
+    }
+
+    /// shortcut: an export that finishes after the local save and before `saved` is written is picked up on the next export, when a later export runs.
+    private func performLocalDelete() async -> DeleteAccountStart {
+        let savedAt = DeleteAccountProgressStore.load()?.savedAt ?? Date()
+        let email = UserManager.shared.getCurrentUser()?.email
+        DeleteAccountProgressStore.save(DeleteAccountProgress(savedAt: savedAt, saved: false, exportAccepted: false))
+        guard CoreDataManager.shared.deleteSessionRecords() else {
+            DeleteAccountProgressStore.save(nil)
+            return .failed
+        }
+        DeleteAccountProgressStore.save(DeleteAccountProgress(savedAt: savedAt, saved: true, exportAccepted: false))
+        if let email {
+            PasswordRecoveryManager.shared.clearSecurityQuestion(for: email)
+        }
+        ["inspectorName", "companyName", "companyAddress", "companyCity", "companyState", "companyZipCode", "companyPhone"]
+            .forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        UserManager.shared.wipeSession()
+        ImageCacheManager.shared.clearMemoryCache()
+        ImageCacheManager.shared.clearDiskCache { }
+        return .finishing
     }
 
     private func localUserCount() -> Int? {

@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { load } from '../services/appLoad';
+import { LIST_STOPPED_EARLY } from '../services/load';
 import { ArrowLeft, MapPin, Phone, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   
-  const { data: customer, isLoading: loadingCustomer } = useQuery({
+  const { data: customer, isLoading: loadingCustomer, isError, error } = useQuery({
     queryKey: ['customer', id],
     queryFn: () => load.customerById(id!),
     enabled: !!id,
@@ -19,10 +20,18 @@ export default function CustomerDetailPage() {
     enabled: !!id,
   });
   // Ensure we always have an array (handles wrong routing / API returning HTML)
-  const inspections = Array.isArray(inspectionsData) ? inspectionsData : [];
+  const inspections = inspectionsData?.rows ?? [];
 
   if (loadingCustomer) {
     return <div className="text-center py-12">Loading customer...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-12">
+        {error instanceof Error ? error.message : 'Customer not found'}
+      </div>
+    );
   }
 
   if (!customer) {
@@ -91,6 +100,9 @@ export default function CustomerDetailPage() {
           <h3 className="text-lg font-semibold text-gray-900">
             Inspections ({inspections.length})
           </h3>
+          {inspectionsData?.stoppedEarly && (
+            <p className="mt-2 text-sm text-amber-800">{LIST_STOPPED_EARLY}</p>
+          )}
         </div>
         
         {loadingInspections ? (

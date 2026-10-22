@@ -3,7 +3,7 @@ import PublicDocument from '../components/PublicDocument';
 export default function PrivacyPage() {
   return (
     <PublicDocument title="Privacy Policy">
-      <p>Last Updated: September 29, 2026</p>
+      <p>Last Updated: October 1, 2026</p>
 
       <section>
         <h2 className="text-xl font-semibold mb-2">1. Introduction</h2>
@@ -47,8 +47,8 @@ export default function PrivacyPage() {
       <section>
         <h2 className="text-xl font-semibold mb-2">7. Your Choices</h2>
         <p>
-          You can edit or delete customers, inspections, and photos in the app. Clear All Data in Settings removes
-          local data after you confirm it.
+          You can edit or delete customers, inspections, and photos in the app. Delete Account in Settings removes
+          the account and its customers, inspections, photos, and site documents from this device and from iCloud.
         </p>
       </section>
 

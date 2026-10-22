@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "327ec9f9-e0d0-4679-bb4e-9d08f85d204d",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/egreska/Systems Inspector/.archify/architecture-runtime-20261006-105716/candidate.json",
+  "output": "/Users/egreska/Systems Inspector/.archify/architecture-runtime-20261006-105716/runtime.html",
+  "specification": {
+    "sha256": "2aa06c9b512e74f3c9489425137efbd5c093467a3a764c4387faef9d0aa2c0b3",
+    "bytes": 10463
+  },
+  "artifact": {
+    "sha256": "bc14c1ea4dda2685c9ab0e72fad56934b46144276087efd920179c2928a9e2b9",
+    "bytes": 773183
+  }
+}

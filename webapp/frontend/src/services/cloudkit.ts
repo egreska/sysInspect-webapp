@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { LIST_STOPPED_EARLY } from './load';
 
 /**
  * CloudKit JS Browser SDK Service
@@ -23,6 +24,17 @@ export function shouldFetchNextQueryPage(response: {
 }): boolean {
   if (response.moreComing === false) return false;
   return response.continuationMarker != null;
+}
+
+export const QUERY_PAGE_GUARD = 50;
+
+/** True when the page guard, not CloudKit, is what ends the list. */
+export function queryHitPageGuard(
+  pages: number,
+  response: { moreComing?: boolean; continuationMarker?: unknown },
+  maxPages = QUERY_PAGE_GUARD
+): boolean {
+  return pages >= maxPages && shouldFetchNextQueryPage(response);
 }
 
 declare global {
@@ -183,6 +195,24 @@ interface CloudKitError {
 
 /** Core Data + CloudKit zone (required for CD_ record types) */
 const ZONE = 'com.apple.coredata.cloudkit.zone';
+
+/** Items whose inspection reference is this record. */
+export function inspectionItemQueryFilters(inspectionId: string) {
+  return [
+    {
+      fieldName: 'CD_inspection',
+      comparator: 'EQUALS',
+      fieldValue: {
+        value: {
+          recordName: inspectionId,
+          action: 'NONE',
+          zoneID: { zoneName: ZONE },
+        },
+        type: 'REFERENCE',
+      },
+    },
+  ];
+}
 
 /**
  * Limit fields returned by CloudKit (smaller payloads, less data in browser memory).
@@ -383,12 +413,13 @@ export async function queryRecords(
   sortBy?: { fieldName: string; ascending: boolean },
   resultsLimit = 100,
   extras?: QueryRecordsExtras
-): Promise<CloudKitRecord[]> {
+): Promise<{ records: CloudKitRecord[]; stoppedEarly: boolean }> {
   const db = getContainer().privateCloudDatabase;
 
   const allRecords: CloudKitRecord[] = [];
   let marker: unknown = null;
   let pages = 0;
+  let stoppedEarly = false;
 
   do {
     pages += 1;
@@ -423,12 +454,16 @@ export async function queryRecords(
         }
       }
     }
-    if (!shouldFetchNextQueryPage(response) || pages >= 50) break;
+    if (!shouldFetchNextQueryPage(response)) break;
+    if (queryHitPageGuard(pages, response)) {
+      stoppedEarly = true;
+      break;
+    }
     marker = response.continuationMarker;
   } while (true);
 
   logger.debug(`[CloudKit] queryRecords(${recordType}): ${allRecords.length} records`);
-  return allRecords;
+  return { records: allRecords, stoppedEarly };
 }
 
 /**
@@ -457,12 +492,13 @@ export async function fetchRecord(
     : ['CD_Customer', 'CD_Inspection', 'CD_InspectionItem'];
 
   for (const rt of types) {
-    const records = await queryRecords(rt, [], undefined, 100);
+    const { records, stoppedEarly } = await queryRecords(rt, [], undefined, 100);
     const match = records.find((r) => r.recordName === recordName);
     if (match) {
       logger.debug(`[CloudKit] fetchRecord found record as ${rt} via query fallback`);
       return match;
     }
+    if (stoppedEarly) throw new Error(LIST_STOPPED_EARLY);
   }
   logger.warn(`[CloudKit] fetchRecord: not found in types ${types.join(', ')}`);
   return null;

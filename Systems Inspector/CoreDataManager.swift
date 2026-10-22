@@ -88,6 +88,7 @@ class CoreDataManager {
     // Store loading status
     private var storesLoaded = false
     private var storeLoadingError: Error?
+    private var deleteExportObserver: NSObjectProtocol?
     
     // Private initializer to enforce singleton pattern
     private init() {
@@ -104,6 +105,9 @@ class CoreDataManager {
     }
     
     deinit {
+        if let deleteExportObserver {
+            NotificationCenter.default.removeObserver(deleteExportObserver)
+        }
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -154,6 +158,23 @@ class CoreDataManager {
             }
         }
         
+        deleteExportObserver = NotificationCenter.default.addObserver(
+            forName: NSPersistentCloudKitContainer.eventChangedNotification,
+            object: container,
+            queue: .main
+        ) { note in
+            guard let event = note.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey] as? NSPersistentCloudKitContainer.Event else { return }
+            guard event.type == .export, event.error == nil else { return }
+            guard var progress = DeleteAccountProgressStore.load(),
+                  progress.saved,
+                  !progress.exportAccepted,
+                  exportCoversDelete(savedAt: progress.savedAt, started: event.startDate, ended: event.endDate)
+            else { return }
+            progress.exportAccepted = true
+            DeleteAccountProgressStore.save(progress)
+            NotificationCenter.default.post(name: .deleteAccountExportAccepted, object: nil)
+        }
+
         // Configure contexts
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
@@ -492,6 +513,30 @@ class CoreDataManager {
         }
     }
     
+    /// Deletes every record that belongs to the Session so CloudKit can export the deletions.
+    func deleteSessionRecords() -> Bool {
+        var deleted = false
+        context.performAndWait {
+            guard isStoreLoaded else { return }
+            let names = ["SiteDocument", "InspectionItem", "Inspection", "Customer", "CatalogName", "User"]
+            do {
+                for name in names {
+                    let request = NSFetchRequest<NSManagedObject>(entityName: name)
+                    request.includesPropertyValues = false
+                    let objects = try context.fetch(request)
+                    for object in objects {
+                        context.delete(object)
+                    }
+                }
+                deleted = saveContext()
+            } catch {
+                print("CoreDataManager: Failed to delete session records: \(error)")
+                deleted = false
+            }
+        }
+        return deleted
+    }
+
     // MARK: - Development helpers
     #if DEBUG
     func resetAllData() {

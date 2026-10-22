@@ -353,7 +353,7 @@ class UserManager {
     ///   - password: The plaintext password to hash
     ///   - salt: The salt to use (pass nil to generate a new one)
     /// - Returns: A tuple containing the hashed password and the salt used
-    private func hashPasswordSecure(_ password: String, salt: Data? = nil) -> (hash: String, salt: Data) {
+    func hashPasswordSecure(_ password: String, salt: Data? = nil) -> (hash: String, salt: Data) {
         let saltData = salt ?? generateSalt()
         let passwordData = Data(password.utf8)
         
