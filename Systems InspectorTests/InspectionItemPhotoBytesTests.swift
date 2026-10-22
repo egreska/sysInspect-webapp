@@ -4,6 +4,7 @@
 //
 
 import CoreData
+import UIKit
 import XCTest
 @testable import Systems_Inspector
 
@@ -46,6 +47,20 @@ final class InspectionItemPhotoBytesTests: XCTestCase {
         let item = InspectionItem(context: context)
         item.id = UUID()
         return item
+    }
+
+    private func jpegFile() throws -> URL {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+        let image = renderer.image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+        }
+        let data = try XCTUnwrap(image.jpegData(compressionQuality: 0.8))
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("si-photo-\(UUID().uuidString).jpg")
+        try data.write(to: url)
+        tempFiles.append(url)
+        return url
     }
 
     private func writeTempFile(_ data: Data) -> String {
@@ -113,6 +128,40 @@ final class InspectionItemPhotoBytesTests: XCTestCase {
         XCTAssertTrue(item.photoBytes().isEmpty)
         XCTAssertEqual(item.photoCount, 0)
         XCTAssertFalse(item.hasPhoto)
+    }
+
+    func testStoredBytesReleaseAnInAppFileAndLeaveAnUnreadableOne() throws {
+        let jpeg = try jpegFile()
+        let junk = writeTempFile(Data([0x00, 0x01]))
+        let item = makeItem()
+        item.setValue(jpeg.path, forKey: "photoURL")
+        item.setValue(junk, forKey: "photoURL2")
+
+        let remove = item.migrateLocalPhotoToCloudKit()
+
+        XCTAssertEqual(remove, [jpeg.path])
+        XCTAssertNotNil(item.value(forKey: "photoData"))
+        XCTAssertNil(item.value(forKey: "photoURL"))
+        XCTAssertEqual(item.value(forKey: "photoURL2") as? String, junk)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: jpeg.path))
+
+        InspectionItem.removeAppOwnedPhotoFiles(remove)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: jpeg.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: junk))
+    }
+
+    func testStoredBytesDoNotReleaseAFileOutsideTheApp() throws {
+        let outside = URL(fileURLWithPath: "/tmp/systems-inspector-outside-\(UUID().uuidString).bin")
+        try Data([0xAA]).write(to: outside)
+        tempFiles.append(outside)
+        let item = makeItem()
+        item.setValue(Data([0x01]), forKey: "photoData")
+        item.setValue(outside.path, forKey: "photoURL")
+
+        XCTAssertEqual(item.migrateLocalPhotoToCloudKit(), [])
+        XCTAssertNil(item.value(forKey: "photoURL"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outside.path))
+        XCTAssertEqual(item.appOwnedPhotoFilePaths(), [])
     }
 
     func testItemsWithLocalPhotoFilesFindsURLNotBlobOnly() throws {

@@ -7,7 +7,7 @@ export type Listed<T> = { rows: T[]; stoppedEarly: boolean };
 export type LoadAdapter = {
   customers(): Promise<Listed<Customer>>;
   customer(id: string): Promise<Customer | null>;
-  inspections(): Promise<Listed<Inspection>>;
+  inspections(customerId?: string): Promise<Listed<Inspection>>;
   inspection(id: string): Promise<Inspection | null>;
   items(inspectionId: string): Promise<Listed<InspectionItem>>;
 };
@@ -45,7 +45,7 @@ export function createLoad(adapter: LoadAdapter) {
     },
 
     async inspectionsForCustomer(customerId: string): Promise<Listed<Inspection>> {
-      const listed = await adapter.inspections();
+      const listed = await adapter.inspections(customerId);
       return {
         rows: sortInspectionsByDateDesc(
           listed.rows.filter((inspection) => inspection.customerId === customerId)

@@ -3,6 +3,7 @@
 //  Systems InspectorTests
 //
 
+import CloudKit
 import XCTest
 @testable import Systems_Inspector
 
@@ -90,6 +91,50 @@ final class AccessCodeGateTests: XCTestCase {
             isLoggedIn: true
         )
         XCTAssertEqual(resolution.route, .signInToICloud)
+        XCTAssertNil(resolution.cache)
+    }
+
+    func testTemporaryICloudFailureKeepsTheCachedClaim() {
+        XCTAssertEqual(accountCheck(from: .temporarilyUnavailable), .unknown)
+        XCTAssertEqual(accountCheck(from: .couldNotDetermine), .unknown)
+        XCTAssertEqual(accountCheck(from: .noAccount), .signedOut)
+        XCTAssertEqual(accountCheck(from: .restricted), .signedOut)
+
+        let cache = CachedEntitlement(code: "abc", userRecordName: pat, sessionReady: true)
+        let account = accessAccount(reach: .unknown, liveUserRecordName: nil, cache: cache)
+        XCTAssertTrue(account.iCloudAvailable)
+        XCTAssertEqual(account.userRecordName, pat)
+
+        let resolution = resolveAccess(
+            iCloudAvailable: account.iCloudAvailable,
+            userRecordName: account.userRecordName,
+            cache: cache,
+            reachedCloudKit: false,
+            remote: nil,
+            codeUnderCheck: cache.code,
+            localUserCount: 1,
+            isLoggedIn: true
+        )
+        XCTAssertEqual(resolution.route, .mainApp)
+        XCTAssertEqual(resolution.cache, cache)
+    }
+
+    func testTemporaryICloudFailureWithoutClaimNeedsNetwork() {
+        let account = accessAccount(reach: .unknown, liveUserRecordName: nil, cache: nil)
+        XCTAssertTrue(account.iCloudAvailable)
+        XCTAssertNil(account.userRecordName)
+
+        let resolution = resolveAccess(
+            iCloudAvailable: account.iCloudAvailable,
+            userRecordName: account.userRecordName,
+            cache: nil,
+            reachedCloudKit: false,
+            remote: nil,
+            codeUnderCheck: nil,
+            localUserCount: 0,
+            isLoggedIn: false
+        )
+        XCTAssertEqual(resolution.route, .needNetwork)
         XCTAssertNil(resolution.cache)
     }
 

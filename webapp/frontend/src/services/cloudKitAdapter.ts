@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger';
 import type { LoadAdapter } from './load';
-import { fetchRecord, inspectionItemQueryFilters, queryRecords } from './cloudkit';
+import { fetchRecord, inspectionItemQueryFilters, inspectionQueryFilters, queryRecords } from './cloudkit';
 import { decodeCustomer } from './customerCodec';
 import { decodeInspection } from './inspectionCodec';
 import { decodeInspectionItem } from './inspectionItemCodec';
@@ -22,9 +22,10 @@ export const cloudKitAdapter: LoadAdapter = {
     return decodeCustomer(record);
   },
 
-  async inspections() {
+  async inspections(customerId?: string) {
     try {
-      const { records, stoppedEarly } = await queryRecords('CD_Inspection');
+      const filters = customerId ? inspectionQueryFilters(customerId) : [];
+      const { records, stoppedEarly } = await queryRecords('CD_Inspection', filters);
       return { rows: records.map(decodeInspection), stoppedEarly };
     } catch (err) {
       logger.error('CloudKit inspections failed', err);

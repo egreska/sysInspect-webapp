@@ -7,7 +7,44 @@
 
 import CoreData
 import CloudKit
+import SQLite3
 import UIKit
+
+func copySQLiteStore(from storeURL: URL, to backupURL: URL) throws {
+    var source: OpaquePointer?
+    var destination: OpaquePointer?
+    defer {
+        sqlite3_close(source)
+        sqlite3_close(destination)
+    }
+    guard sqlite3_open_v2(storeURL.path, &source, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+        throw storeCopyError(source, fallback: "Could not open the database.")
+    }
+    guard sqlite3_open_v2(backupURL.path, &destination, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil) == SQLITE_OK else {
+        throw storeCopyError(destination, fallback: "Could not create the backup.")
+    }
+    guard let backup = sqlite3_backup_init(destination, "main", source, "main") else {
+        throw storeCopyError(destination, fallback: "Could not copy the database.")
+    }
+    let step = sqlite3_backup_step(backup, -1)
+    sqlite3_backup_finish(backup)
+    guard step == SQLITE_DONE else {
+        throw storeCopyError(destination, fallback: "Could not finish the backup.")
+    }
+    sqlite3_exec(destination, "PRAGMA journal_mode=DELETE", nil, nil, nil)
+    sqlite3_close(destination)
+    destination = nil
+    sqlite3_close(source)
+    source = nil
+    let fileManager = FileManager.default
+    try? fileManager.removeItem(at: URL(fileURLWithPath: backupURL.path + "-wal"))
+    try? fileManager.removeItem(at: URL(fileURLWithPath: backupURL.path + "-shm"))
+}
+
+private func storeCopyError(_ db: OpaquePointer?, fallback: String) -> NSError {
+    let message = db.map { String(cString: sqlite3_errmsg($0)) } ?? fallback
+    return NSError(domain: "StoreCopy", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+}
 
 // Define notification names for Core Data changes
 extension Notification.Name {
@@ -39,18 +76,14 @@ extension CoreDataManager {
                 let itemsWithLocalPhotos = try InspectionItem.itemsWithLocalPhotoFiles(in: backgroundContext)
                 print("🔄 Found \(itemsWithLocalPhotos.count) items with local photos to migrate")
                 
-                for item in itemsWithLocalPhotos {
-                    item.migrateLocalPhotoToCloudKit()
+                let paths = itemsWithLocalPhotos.flatMap { $0.migrateLocalPhotoToCloudKit() }
+                if backgroundContext.hasChanges {
+                    try backgroundContext.save()
                 }
-                
-                if !itemsWithLocalPhotos.isEmpty {
-                    // Save happens automatically in performBackgroundTask
-                    DispatchQueue.main.async {
-                        print("✅ Successfully migrated \(itemsWithLocalPhotos.count) photos to CloudKit")
-                    }
-                }
+                InspectionItem.removeAppOwnedPhotoFiles(paths)
                 
             } catch {
+                backgroundContext.rollback()
                 print("❌ Error migrating local photos: \(error)")
             }
         }
@@ -451,11 +484,6 @@ class CoreDataManager {
         }
     }
     
-    // MARK: - Data Migration
-    func migrateStoreIfNeeded(completion: @escaping (Bool) -> Void) {
-        completion(true)
-    }
-    
     // MARK: - Utility Methods
     func fetch<T: NSManagedObject>(_ request: NSFetchRequest<T>) -> [T] {
         guard isStoreLoaded else {
@@ -503,11 +531,12 @@ class CoreDataManager {
         let fileManager = FileManager.default
         let backupURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
             .appendingPathComponent("Systems_Inspector_backup_\(Date().timeIntervalSince1970).sqlite")
-        
+
         do {
-            try fileManager.copyItem(at: storeURL, to: backupURL)
+            try copySQLiteStore(from: storeURL, to: backupURL)
             return backupURL
         } catch {
+            try? fileManager.removeItem(at: backupURL)
             print("Failed to backup database: \(error)")
             return nil
         }

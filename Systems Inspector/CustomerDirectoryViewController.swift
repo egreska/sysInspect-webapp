@@ -399,19 +399,7 @@ extension CustomerDirectoryViewController: UITableViewDelegate {
         if indexPath.row == viewModel.customers.count && viewModel.hasMoreCustomers {
             return 60
         }
-        
-        guard indexPath.row < viewModel.customers.count else {
-            return 80
-        }
-        
-        let customer = viewModel.customers[indexPath.row]
-        guard let customerId = customer.id?.uuidString else {
-            return 80
-        }
-        
-        return PerformanceOptimizer.shared.getCellHeight(for: customerId) {
-            return 80 // Standard customer cell height
-        }
+        return 80
     }
     
     func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {

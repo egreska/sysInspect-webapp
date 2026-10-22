@@ -7,7 +7,6 @@
 
 import UIKit
 import MessageUI // Keep this import for mail composer actions
-import UniformTypeIdentifiers // For modern document picker
 
 class SettingsViewController: UIViewController {
 
@@ -345,22 +344,6 @@ class SettingsViewController: UIViewController {
         )
     }
 
-    private func showDocumentPicker() {
-        let documentPicker: UIDocumentPickerViewController
-        
-        if #available(iOS 14.0, *) {
-            // Use modern API for iOS 14+
-            documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [.data, .item])
-        } else {
-            // Fallback for older iOS versions
-            documentPicker = UIDocumentPickerViewController(documentTypes: ["com.systemsinspector.backup", "public.data"], in: .import)
-        }
-        
-        documentPicker.delegate = self
-        documentPicker.allowsMultipleSelection = false
-        present(documentPicker, animated: true)
-    }
-
     private func clearImageCache() {
         // First, get the cache size
         ImageCacheManager.shared.getCacheSize { [weak self] size in
@@ -666,17 +649,6 @@ extension SettingsViewController: UITableViewDelegate {
         default:
             break
         }
-    }
-}
-
-// MARK: - UIDocumentPickerDelegate
-extension SettingsViewController: UIDocumentPickerDelegate {
-    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        guard urls.first != nil else { return }
-        showAlert(
-            title: "Restore Data",
-            message: "Restore from backup is not available in this version."
-        )
     }
 }
 

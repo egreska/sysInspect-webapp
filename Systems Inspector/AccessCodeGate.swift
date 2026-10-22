@@ -47,6 +47,27 @@ struct AccessResolution: Equatable {
     var markSessionReady: Bool
 }
 
+enum AccountCheck: Equatable {
+    case signedIn
+    case signedOut
+    case unknown
+}
+
+func accessAccount(
+    reach: AccountCheck,
+    liveUserRecordName: String?,
+    cache: CachedEntitlement?
+) -> (iCloudAvailable: Bool, userRecordName: String?) {
+    switch reach {
+    case .signedOut:
+        return (false, nil)
+    case .signedIn:
+        return (true, liveUserRecordName)
+    case .unknown:
+        return (true, liveUserRecordName ?? cache?.userRecordName)
+    }
+}
+
 func failedClaimResolution(
     state: AccessCodeRecordState,
     userRecordName: String,

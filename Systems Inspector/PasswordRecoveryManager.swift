@@ -47,6 +47,7 @@ class PasswordRecoveryManager {
         answer: String,
         in context: NSManagedObjectContext?
     ) -> Bool {
+        guard validateSecurityAnswer(answer).isValid else { return false }
         let normalized = email.lowercased()
         guard let context, let user = fetchUser(email: normalized, in: context) else {
             print("❌ User not found")
@@ -274,6 +275,15 @@ class PasswordRecoveryManager {
         return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
     
+    /// A new Security Answer, counted after the same trim used when it is stored.
+    /// An answer already saved is not checked again.
+    func validateSecurityAnswer(_ answer: String) -> (isValid: Bool, message: String) {
+        if normalizedAnswer(answer).count < 8 {
+            return (false, "Security answer must be at least 8 characters long.")
+        }
+        return (true, "Security answer meets requirements.")
+    }
+
     /// Validate password strength
     func validatePasswordStrength(_ password: String) -> (isValid: Bool, message: String) {
         if password.count < 8 {

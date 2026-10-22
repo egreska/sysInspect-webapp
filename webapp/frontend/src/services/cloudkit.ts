@@ -196,6 +196,24 @@ interface CloudKitError {
 /** Core Data + CloudKit zone (required for CD_ record types) */
 const ZONE = 'com.apple.coredata.cloudkit.zone';
 
+/** Inspections whose customer reference is this record. */
+export function inspectionQueryFilters(customerId: string) {
+  return [
+    {
+      fieldName: 'CD_customer',
+      comparator: 'EQUALS',
+      fieldValue: {
+        value: {
+          recordName: customerId,
+          action: 'NONE',
+          zoneID: { zoneName: ZONE },
+        },
+        type: 'REFERENCE',
+      },
+    },
+  ];
+}
+
 /** Items whose inspection reference is this record. */
 export function inspectionItemQueryFilters(inspectionId: string) {
   return [

@@ -61,22 +61,52 @@ extension InspectionItem {
         (0..<Self.maxPhotoCount).compactMap { getPhotoSync(at: $0) }
     }
 
-    func migrateLocalPhotoToCloudKit() {
-        var packed: [(data: Data?, urlPath: String?)] = []
+    /// Paths of in-app files whose bytes are now on the item. The caller deletes them after a successful save.
+    func migrateLocalPhotoToCloudKit() -> [String] {
+        var remove: [String] = []
+        var storedBytes = false
         for index in 0..<Self.maxPhotoCount {
             let path = photoURLString(at: index)
             var data = photoData(at: index)
             if data == nil,
                let path,
-               FileManager.default.fileExists(atPath: path),
                let image = UIImage(contentsOfFile: path) {
                 data = image.jpegData(compressionQuality: 0.8)
             }
-            if data != nil || path != nil {
-                packed.append((data, path))
+            guard let data else { continue }
+            storedBytes = true
+            if let path, Self.isAppOwnedFile(path) {
+                remove.append(path)
             }
+            setValue(data, forKey: Self.photoDataKeys[index])
+            setValue(nil, forKey: Self.photoURLKeys[index])
         }
-        setPackedPhotos(packed)
+        if storedBytes {
+            clearPhotoCache()
+        }
+        return remove
+    }
+
+    func appOwnedPhotoFilePaths() -> [String] {
+        (0..<Self.maxPhotoCount).compactMap { index in
+            guard let path = photoURLString(at: index), Self.isAppOwnedFile(path) else { return nil }
+            return path
+        }
+    }
+
+    static func isAppOwnedFile(_ path: String) -> Bool {
+        let file = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
+        guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return false
+        }
+        let container = documents.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL.path
+        return file == container || file.hasPrefix(container + "/")
+    }
+
+    static func removeAppOwnedPhotoFiles(_ paths: [String]) {
+        for path in paths where isAppOwnedFile(path) {
+            try? FileManager.default.removeItem(atPath: path)
+        }
     }
 
     func clearPhotoCache() {
@@ -118,20 +148,6 @@ extension InspectionItem {
             return data
         }
         return nil
-    }
-
-    private func setPackedPhotos(_ photos: [(data: Data?, urlPath: String?)]) {
-        let limited = Array(photos.prefix(Self.maxPhotoCount))
-        for index in 0..<Self.maxPhotoCount {
-            if index < limited.count {
-                setValue(limited[index].data, forKey: Self.photoDataKeys[index])
-                setValue(limited[index].urlPath, forKey: Self.photoURLKeys[index])
-            } else {
-                setValue(nil, forKey: Self.photoDataKeys[index])
-                setValue(nil, forKey: Self.photoURLKeys[index])
-            }
-        }
-        clearPhotoCache()
     }
 
     private func getPhotoThumbnail(at index: Int, maxDimension: CGFloat = 300, completion: @escaping (UIImage?) -> Void) {

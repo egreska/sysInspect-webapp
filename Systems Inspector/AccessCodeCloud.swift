@@ -17,8 +17,22 @@ enum AccessCodeCloudField {
     static let retired = "retired"
 }
 
+func accountCheck(from status: CKAccountStatus) -> AccountCheck {
+    switch status {
+    case .available:
+        return .signedIn
+    case .noAccount, .restricted:
+        return .signedOut
+    case .couldNotDetermine, .temporarilyUnavailable:
+        return .unknown
+    @unknown default:
+        return .unknown
+    }
+}
+
 protocol AccessCodeCloudClient {
     func accountAvailable() async -> Bool
+    func inspectorAccount() async -> AccountCheck
     func userRecordName() async -> String?
     func fetch(code: String) async -> AccessCodeRecordState
     func claim(code: String, userRecordName: String) async -> ClaimResult
@@ -33,12 +47,16 @@ struct CloudKitAccessCodeClient: AccessCodeCloudClient {
         self.container = container
     }
 
-    func accountAvailable() async -> Bool {
+    func inspectorAccount() async -> AccountCheck {
         do {
-            return try await container.accountStatus() == .available
+            return accountCheck(from: try await container.accountStatus())
         } catch {
-            return false
+            return .unknown
         }
+    }
+
+    func accountAvailable() async -> Bool {
+        await inspectorAccount() == .signedIn
     }
 
     func userRecordName() async -> String? {

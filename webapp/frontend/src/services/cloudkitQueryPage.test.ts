@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { inspectionItemQueryFilters, queryHitPageGuard, shouldFetchNextQueryPage } from './cloudkit';
+import {
+  inspectionItemQueryFilters,
+  inspectionQueryFilters,
+  queryHitPageGuard,
+  shouldFetchNextQueryPage,
+} from './cloudkit';
 
 describe('shouldFetchNextQueryPage', () => {
   it('continues when CloudKit omits moreComing but sends a continuation marker', () => {
@@ -24,6 +29,24 @@ describe('shouldFetchNextQueryPage', () => {
 
   it('stops on an empty response', () => {
     expect(shouldFetchNextQueryPage({})).toBe(false);
+  });
+});
+
+describe('inspectionQueryFilters', () => {
+  it('asks CloudKit for inspections linked to that customer', () => {
+    const [filter] = inspectionQueryFilters('cust-1');
+    expect(filter).toEqual({
+      fieldName: 'CD_customer',
+      comparator: 'EQUALS',
+      fieldValue: {
+        value: {
+          recordName: 'cust-1',
+          action: 'NONE',
+          zoneID: { zoneName: 'com.apple.coredata.cloudkit.zone' },
+        },
+        type: 'REFERENCE',
+      },
+    });
   });
 });
 

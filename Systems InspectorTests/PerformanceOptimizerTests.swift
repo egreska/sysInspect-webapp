@@ -22,37 +22,6 @@ final class PerformanceOptimizerTests: XCTestCase {
         super.tearDown()
     }
 
-    func testGetCellHeightCalculatesFirstTime() {
-        let identifier = "test_cell_1"
-        var calculateCount = 0
-
-        let height = sut.getCellHeight(for: identifier) {
-            calculateCount += 1
-            return 100.0
-        }
-
-        XCTAssertEqual(height, 100.0)
-        XCTAssertEqual(calculateCount, 1)
-    }
-
-    func testGetCellHeightReturnsCachedValue() {
-        let identifier = "test_cell_2"
-        var calculateCount = 0
-
-        _ = sut.getCellHeight(for: identifier) {
-            calculateCount += 1
-            return 100.0
-        }
-
-        let height = sut.getCellHeight(for: identifier) {
-            calculateCount += 1
-            return 100.0
-        }
-
-        XCTAssertEqual(height, 100.0)
-        XCTAssertEqual(calculateCount, 1)
-    }
-
     func testStartAndEndTimingRecordsOperation() {
         let operation = "test_operation"
         sut.startTiming(operation)
@@ -102,14 +71,6 @@ final class PerformanceOptimizerTests: XCTestCase {
         let formatted = memory.formattedString
         XCTAssertFalse(formatted.isEmpty)
         XCTAssertTrue(formatted.contains("MB"))
-    }
-
-    func testPerformanceCellHeightCaching() {
-        measure {
-            for i in 1...100 {
-                _ = sut.getCellHeight(for: "cell_\(i)") { 80.0 }
-            }
-        }
     }
 
     func testPerformanceMetricsTracking() {

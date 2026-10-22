@@ -5,13 +5,11 @@
 
 import Foundation
 import CoreData
-import UIKit
 
-/// Customer fetch tuning, cell height memoization, and lightweight timing for Settings diagnostics.
+/// Customer fetch tuning and lightweight timing for Settings diagnostics.
 final class PerformanceOptimizer {
     static let shared = PerformanceOptimizer()
 
-    private var cellHeightCache: [String: CGFloat] = [:]
     private var metrics = PerformanceMetrics()
 
     private init() {}
@@ -39,20 +37,6 @@ final class PerformanceOptimizer {
         print("🚀 Optimized fetch request: limit=\(pageSize), offset=\(offset)")
         #endif
         return fetchRequest
-    }
-
-    // MARK: - Cell Height
-
-    func getCellHeight(
-        for identifier: String,
-        calculate: () -> CGFloat
-    ) -> CGFloat {
-        if let cached = cellHeightCache[identifier] {
-            return cached
-        }
-        let height = calculate()
-        cellHeightCache[identifier] = height
-        return height
     }
 
     // MARK: - Memory

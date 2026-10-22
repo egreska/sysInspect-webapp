@@ -346,8 +346,9 @@ class AccountCreationViewController: UIViewController {
             return
         }
         
-        if securityAnswer.count < 3 {
-            showAlert(title: "Error", message: "Security answer must be at least 3 characters long.")
+        let answerCheck = PasswordRecoveryManager.shared.validateSecurityAnswer(securityAnswer)
+        if !answerCheck.isValid {
+            showAlert(title: "Error", message: answerCheck.message)
             return
         }
 
@@ -401,10 +402,6 @@ class AccountCreationViewController: UIViewController {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
         return emailPredicate.evaluate(with: email)
-    }
-
-    private func isValidPassword(_ password: String) -> Bool {
-        return password.count >= 6
     }
 
     private func showAlert(title: String, message: String, completion: (() -> Void)? = nil) {

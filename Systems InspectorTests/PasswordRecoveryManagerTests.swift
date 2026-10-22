@@ -161,6 +161,47 @@ final class PasswordRecoveryManagerTests: XCTestCase {
     
     // MARK: - Security Answer Tests
     
+    func testNewSecurityAnswerMustBeEightCharactersAfterTrim() throws {
+        guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: CoreDataManager.self)]) else {
+            XCTFail("Missing Core Data model")
+            return
+        }
+        let container = NSPersistentContainer(name: "Systems_Inspector", managedObjectModel: model)
+        let description = NSPersistentStoreDescription()
+        description.type = NSInMemoryStoreType
+        description.shouldAddStoreAsynchronously = false
+        container.persistentStoreDescriptions = [description]
+        var loadError: Error?
+        container.loadPersistentStores { _, error in loadError = error }
+        XCTAssertNil(loadError)
+        let context = container.viewContext
+        let user = User(context: context)
+        user.id = UUID()
+        user.email = testEmail.lowercased()
+        user.isActive = true
+        try context.save()
+
+        let short = sut.validateSecurityAnswer("  fluffy  ")
+        XCTAssertFalse(short.isValid)
+        XCTAssertFalse(sut.setSecurityQuestion(
+            for: testEmail,
+            question: testQuestion,
+            answer: "  fluffy  ",
+            in: context
+        ))
+        XCTAssertNil(user.securityAnswerHash)
+
+        let long = sut.validateSecurityAnswer("  Fluffy12  ")
+        XCTAssertTrue(long.isValid)
+        XCTAssertTrue(sut.setSecurityQuestion(
+            for: testEmail,
+            question: testQuestion,
+            answer: "  Fluffy12  ",
+            in: context
+        ))
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy12", in: context))
+    }
+
     func testVerifySecurityAnswerCaseInsensitive() {
         // Given: Security question set with answer "Fluffy"
         let questionKey = "securityQuestion_\(testEmail.lowercased())"

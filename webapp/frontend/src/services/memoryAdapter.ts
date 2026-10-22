@@ -15,8 +15,10 @@ export function createMemoryAdapter(data: {
   return {
     customers: async () => ({ rows: customers.slice(), stoppedEarly: data.customersStoppedEarly === true }),
     customer: async (id) => customers.find((row) => row.id === id) ?? null,
-    inspections: async () => ({
-      rows: inspections.slice(),
+    inspections: async (customerId?: string) => ({
+      rows: customerId
+        ? inspections.filter((row) => row.customerId === customerId)
+        : inspections.slice(),
       stoppedEarly: data.inspectionsStoppedEarly === true,
     }),
     inspection: async (id) => inspections.find((row) => row.id === id) ?? null,

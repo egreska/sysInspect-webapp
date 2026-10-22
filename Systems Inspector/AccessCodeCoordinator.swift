@@ -101,9 +101,12 @@ final class AccessCodeCoordinator {
             }
         }
 
-        let iCloudAvailable = await cloud.accountAvailable()
-        let userRecordName = iCloudAvailable ? await cloud.userRecordName() : nil
         let stored = cache.load()
+        let reach = await cloud.inspectorAccount()
+        let liveName = reach == .signedOut ? nil : await cloud.userRecordName()
+        let account = accessAccount(reach: reach, liveUserRecordName: liveName, cache: stored)
+        let iCloudAvailable = account.iCloudAvailable
+        let userRecordName = account.userRecordName
         let matching = stored?.userRecordName == userRecordName ? stored : nil
         let code = submittedCode ?? matching?.code
 
@@ -213,10 +216,13 @@ final class AccessCodeCoordinator {
         let savedAt = DeleteAccountProgressStore.load()?.savedAt ?? Date()
         let email = UserManager.shared.getCurrentUser()?.email
         DeleteAccountProgressStore.save(DeleteAccountProgress(savedAt: savedAt, saved: false, exportAccepted: false))
+        let photoPaths = (try? InspectionItem.itemsWithLocalPhotoFiles(in: CoreDataManager.shared.context))?
+            .flatMap { $0.appOwnedPhotoFilePaths() } ?? []
         guard CoreDataManager.shared.deleteSessionRecords() else {
             DeleteAccountProgressStore.save(nil)
             return .failed
         }
+        InspectionItem.removeAppOwnedPhotoFiles(photoPaths)
         DeleteAccountProgressStore.save(DeleteAccountProgress(savedAt: savedAt, saved: true, exportAccepted: false))
         if let email {
             PasswordRecoveryManager.shared.clearSecurityQuestion(for: email)
