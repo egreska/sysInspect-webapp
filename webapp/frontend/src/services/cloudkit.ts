@@ -1,5 +1,4 @@
 import { logger } from '../utils/logger';
-import { LIST_STOPPED_EARLY } from './load';
 
 /**
  * CloudKit JS Browser SDK Service
@@ -487,6 +486,7 @@ export async function queryRecords(
 /**
  * Fetch a single record by recordName from the Private Database Core Data zone.
  * Tries CloudKit JS fetchRecords first; if that API rejects, scans the type via performQuery.
+ * A scan that stops early without the record returns null.
  */
 export async function fetchRecord(
   recordName: string,
@@ -516,7 +516,7 @@ export async function fetchRecord(
       logger.debug(`[CloudKit] fetchRecord found record as ${rt} via query fallback`);
       return match;
     }
-    if (stoppedEarly) throw new Error(LIST_STOPPED_EARLY);
+    if (stoppedEarly) break;
   }
   logger.warn(`[CloudKit] fetchRecord: not found in types ${types.join(', ')}`);
   return null;

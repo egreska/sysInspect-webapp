@@ -932,7 +932,7 @@ class InspectionItemDetailViewController: UIViewController {
             stackView.addArrangedSubview(commentsLabel)
         }
         
-        let photos = inspectionItem.getAllPhotosSync()
+        let photos = inspectionItem.photoBytes().compactMap { UIImage(data: $0) }
         if !photos.isEmpty {
             addSectionHeader(to: stackView, title: photos.count == 1 ? "Photo" : "Photos")
             let location = inspectionItem.location ?? "inspection item"

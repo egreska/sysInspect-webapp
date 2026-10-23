@@ -157,6 +157,21 @@ final class AccessCodeGateTests: XCTestCase {
         XCTAssertEqual(resolution.route, .needNetwork)
     }
 
+    func testMissingUserCountWaitsForTheSession() {
+        XCTAssertEqual(
+            loggedOutRoute(deleteUnfinished: false, localUserCount: nil, sessionReady: false),
+            .waitingForSession
+        )
+        let resolution = resolve(
+            remote: .claimed(userRecordName: pat, sessionReady: false),
+            code: "abc",
+            user: pat,
+            localUserCount: nil
+        )
+        XCTAssertEqual(resolution.route, .waitingForSession)
+        XCTAssertFalse(resolution.markSessionReady)
+    }
+
     func testSecondDeviceWaitsForTheSession() {
         let resolution = resolve(
             remote: .claimed(userRecordName: pat, sessionReady: true),
@@ -217,6 +232,31 @@ final class AccessCodeGateTests: XCTestCase {
         XCTAssertTrue(exportCoversDelete(savedAt: savedAt, started: savedAt, ended: savedAt.addingTimeInterval(1)))
     }
 
+    func testSessionReadyClearsOnlyWhenTheExportCoversTheDelete() {
+        let savedAt = Date(timeIntervalSince1970: 1_000)
+        XCTAssertFalse(deleteAccountExportCovers(
+            savedAt: savedAt,
+            exportStarted: savedAt.addingTimeInterval(-1),
+            exportEnded: savedAt,
+            exportFailed: false
+        ))
+        XCTAssertFalse(deleteAccountExportCovers(
+            savedAt: savedAt,
+            exportStarted: savedAt,
+            exportEnded: savedAt.addingTimeInterval(1),
+            exportFailed: true
+        ))
+        XCTAssertTrue(deleteAccountExportCovers(
+            savedAt: savedAt,
+            exportStarted: savedAt,
+            exportEnded: savedAt.addingTimeInterval(1),
+            exportFailed: false
+        ))
+        XCTAssertFalse(deleteAccountClearsSessionReady(exportCovers: false, clearSucceeded: true))
+        XCTAssertFalse(deleteAccountClearsSessionReady(exportCovers: true, clearSucceeded: false))
+        XCTAssertTrue(deleteAccountClearsSessionReady(exportCovers: true, clearSucceeded: true))
+    }
+
     func testDeletedSessionCanBeCreatedAgain() {
         let resolution = resolve(
             remote: .claimed(userRecordName: pat, sessionReady: false),
@@ -261,7 +301,7 @@ final class AccessCodeGateTests: XCTestCase {
         code: String,
         user: String,
         cache: CachedEntitlement? = nil,
-        localUserCount: Int = 0,
+        localUserCount: Int? = 0,
         isLoggedIn: Bool = false,
         deleteUnfinished: Bool = false
     ) -> AccessResolution {

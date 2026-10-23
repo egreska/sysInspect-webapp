@@ -14,6 +14,7 @@ import CryptoKit
 final class PasswordRecoveryManagerTests: XCTestCase {
     
     var sut: PasswordRecoveryManager!
+    private var container: NSPersistentContainer!
     let testEmail = "test@example.com"
     let testQuestion = "What was the name of your first pet?"
     let testAnswer = "Fluffy"
@@ -29,6 +30,7 @@ final class PasswordRecoveryManagerTests: XCTestCase {
     override func tearDown() {
         clearSecurityQuestion(for: testEmail)
         sut = nil
+        container = nil
         super.tearDown()
     }
     
@@ -48,6 +50,28 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         let email = testEmail.lowercased()
         UserDefaults.standard.set(testQuestion, forKey: "securityQuestion_\(email)")
         UserDefaults.standard.set(legacyHash(answer), forKey: "securityAnswer_\(email)")
+    }
+
+    private func makeUser() throws -> (NSManagedObjectContext, User) {
+        guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: CoreDataManager.self)]) else {
+            throw NSError(domain: "PasswordRecoveryManagerTests", code: 1)
+        }
+        let container = NSPersistentContainer(name: "Systems_Inspector", managedObjectModel: model)
+        let description = NSPersistentStoreDescription()
+        description.type = NSInMemoryStoreType
+        description.shouldAddStoreAsynchronously = false
+        container.persistentStoreDescriptions = [description]
+        var loadError: Error?
+        container.loadPersistentStores { _, error in loadError = error }
+        if let loadError { throw loadError }
+        self.container = container
+        let context = container.viewContext
+        let user = User(context: context)
+        user.id = UUID()
+        user.email = testEmail.lowercased()
+        user.isActive = true
+        try context.save()
+        return (context, user)
     }
     
     // MARK: - Security Question Tests
@@ -81,20 +105,21 @@ final class PasswordRecoveryManagerTests: XCTestCase {
     
     // MARK: - Set Security Question Tests
     
-    func testSetSecurityQuestionSuccess() {
-        // Given: A valid question and answer
-        
-        // When: Setting security question
-        // Note: This requires Core Data user to exist, so we'll test the storage mechanism
-        let questionKey = "securityQuestion_\(testEmail.lowercased())"
-        let answerKey = "securityAnswer_\(testEmail.lowercased())"
-        
-        UserDefaults.standard.set(testQuestion, forKey: questionKey)
-        UserDefaults.standard.set("someHash", forKey: answerKey)
-        
-        // Then: Should be retrievable
-        XCTAssertTrue(sut.hasSecurityQuestion(for: testEmail))
-        XCTAssertEqual(sut.getSecurityQuestion(for: testEmail), testQuestion)
+    func testSetSecurityQuestionSuccess() throws {
+        let (context, _) = try makeUser()
+        let email = testEmail.lowercased()
+        UserDefaults.standard.set(testQuestion, forKey: "securityQuestion_\(email)")
+
+        XCTAssertTrue(sut.setSecurityQuestion(
+            for: testEmail,
+            question: testQuestion,
+            answer: "Fluffy12",
+            in: context
+        ))
+
+        XCTAssertTrue(sut.hasSecurityQuestion(for: testEmail, in: context))
+        XCTAssertEqual(sut.getSecurityQuestion(for: testEmail, in: context), testQuestion)
+        XCTAssertNil(UserDefaults.standard.string(forKey: "securityQuestion_\(email)"))
     }
     
     // MARK: - Password Validation Tests
@@ -202,90 +227,63 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy12", in: context))
     }
 
-    func testVerifySecurityAnswerCaseInsensitive() {
-        // Given: Security question set with answer "Fluffy"
-        let questionKey = "securityQuestion_\(testEmail.lowercased())"
-        let answerKey = "securityAnswer_\(testEmail.lowercased())"
-        
-        // Create hash of lowercase answer
-        let normalized = testAnswer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let data = Data(normalized.utf8)
-        let hash = SHA256.hash(data: data)
-        let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-        
-        UserDefaults.standard.set(testQuestion, forKey: questionKey)
-        UserDefaults.standard.set(hashString, forKey: answerKey)
-        
-        // When: Verifying with different case
-        let isValid1 = sut.verifySecurityAnswer(for: testEmail, answer: "fluffy")
-        let isValid2 = sut.verifySecurityAnswer(for: testEmail, answer: "FLUFFY")
-        let isValid3 = sut.verifySecurityAnswer(for: testEmail, answer: "Fluffy")
-        
-        // Then: All should pass (case-insensitive)
-        XCTAssertTrue(isValid1, "Should accept lowercase")
-        XCTAssertTrue(isValid2, "Should accept uppercase")
-        XCTAssertTrue(isValid3, "Should accept mixed case")
-    }
-    
-    func testVerifySecurityAnswerTrimsWhitespace() {
-        // Given: Security question with answer
-        let questionKey = "securityQuestion_\(testEmail.lowercased())"
-        let answerKey = "securityAnswer_\(testEmail.lowercased())"
-        
-        let normalized = testAnswer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let data = Data(normalized.utf8)
-        let hash = SHA256.hash(data: data)
-        let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-        
-        UserDefaults.standard.set(testQuestion, forKey: questionKey)
-        UserDefaults.standard.set(hashString, forKey: answerKey)
-        
-        // When: Verifying with whitespace
-        let isValid = sut.verifySecurityAnswer(for: testEmail, answer: "  fluffy  ")
-        
-        // Then: Should pass (whitespace trimmed)
-        XCTAssertTrue(isValid, "Should trim whitespace from answer")
-    }
-    
-    func testVerifySecurityAnswerWrongAnswer() {
-        // Given: Security question set
-        let questionKey = "securityQuestion_\(testEmail.lowercased())"
-        let answerKey = "securityAnswer_\(testEmail.lowercased())"
-        
-        let normalized = testAnswer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let data = Data(normalized.utf8)
-        let hash = SHA256.hash(data: data)
-        let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-        
-        UserDefaults.standard.set(testQuestion, forKey: questionKey)
-        UserDefaults.standard.set(hashString, forKey: answerKey)
-        
-        // When: Verifying wrong answer
-        let isValid = sut.verifySecurityAnswer(for: testEmail, answer: "WrongAnswer")
-        
-        // Then: Should fail
-        XCTAssertFalse(isValid, "Should reject wrong answer")
+    func testVerifySecurityAnswerCaseInsensitive() throws {
+        let (context, user) = try makeUser()
+        user.securityQuestion = testQuestion
+        user.securityAnswerHash = legacyHash(testAnswer)
+        try context.save()
+
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "FLUFFY", in: context))
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "Fluffy", in: context))
     }
 
-    func testLegacyAnswerIsSavedWithSaltAfterOneMatch() {
-        storeLegacyAnswer(testAnswer)
+    func testVerifySecurityAnswerTrimsWhitespace() throws {
+        let (context, user) = try makeUser()
+        user.securityQuestion = testQuestion
+        user.securityAnswerHash = legacyHash(testAnswer)
+        try context.save()
 
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy"))
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "  fluffy  ", in: context))
+    }
+
+    func testVerifySecurityAnswerWrongAnswer() throws {
+        let (context, user) = try makeUser()
+        user.securityQuestion = testQuestion
+        user.securityAnswerHash = legacyHash(testAnswer)
+        try context.save()
+
+        XCTAssertFalse(sut.verifySecurityAnswer(for: testEmail, answer: "WrongAnswer", in: context))
+    }
+
+    func testLegacyAnswerIsSavedWithSaltAfterOneMatch() throws {
+        let (context, user) = try makeUser()
+        user.securityQuestion = testQuestion
+        user.securityAnswerHash = legacyHash(testAnswer)
+        try context.save()
+
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
 
         let email = testEmail.lowercased()
-        let salt = UserDefaults.standard.data(forKey: "securityAnswerSalt_\(email)")
-        let stored = UserDefaults.standard.string(forKey: "securityAnswer_\(email)")
-        XCTAssertNotNil(salt)
-        XCTAssertNotEqual(stored, legacyHash(testAnswer))
-        XCTAssertTrue(UserManager.shared.verifyPasswordSecure("fluffy", hash: stored!, salt: salt!))
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "  FLUFFY "))
+        XCTAssertNotNil(user.securityAnswerSalt)
+        XCTAssertNotEqual(user.securityAnswerHash, legacyHash(testAnswer))
+        XCTAssertNil(UserDefaults.standard.data(forKey: "securityAnswerSalt_\(email)"))
+        XCTAssertTrue(UserManager.shared.verifyPasswordSecure(
+            "fluffy",
+            hash: user.securityAnswerHash!,
+            salt: user.securityAnswerSalt!
+        ))
+        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "  FLUFFY ", in: context))
         XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: testEmail), 0)
     }
 
-    func testLockedResetDoesNotCheckOrUpgradeTheAnswer() async {
-        storeLegacyAnswer(testAnswer)
+    func testLockedResetDoesNotCheckOrUpgradeTheAnswer() async throws {
+        let (context, user) = try makeUser()
+        user.securityQuestion = testQuestion
+        user.securityAnswerHash = legacyHash(testAnswer)
+        try context.save()
         for _ in 1...5 {
-            XCTAssertFalse(sut.verifySecurityAnswer(for: testEmail, answer: "nope"))
+            XCTAssertFalse(sut.verifySecurityAnswer(for: testEmail, answer: "nope", in: context))
         }
 
         let result = await sut.resetPassword(
@@ -296,12 +294,8 @@ final class PasswordRecoveryManagerTests: XCTestCase {
 
         XCTAssertFalse(result.success)
         XCTAssertTrue(result.message.contains("Too many failed attempts"))
-        let email = testEmail.lowercased()
-        XCTAssertNil(UserDefaults.standard.data(forKey: "securityAnswerSalt_\(email)"))
-        XCTAssertEqual(
-            UserDefaults.standard.string(forKey: "securityAnswer_\(email)"),
-            legacyHash(testAnswer)
-        )
+        XCTAssertNil(user.securityAnswerSalt)
+        XCTAssertEqual(user.securityAnswerHash, legacyHash(testAnswer))
     }
     
     func testPhoneAnswerCopiesOntoTheSessionOnce() throws {
@@ -353,22 +347,15 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         }
     }
     
-    func testPerformanceSecurityAnswerVerification() {
-        // Setup
-        let questionKey = "securityQuestion_\(testEmail.lowercased())"
-        let answerKey = "securityAnswer_\(testEmail.lowercased())"
-        
-        let normalized = testAnswer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let data = Data(normalized.utf8)
-        let hash = SHA256.hash(data: data)
-        let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-        
-        UserDefaults.standard.set(testQuestion, forKey: questionKey)
-        UserDefaults.standard.set(hashString, forKey: answerKey)
-        
-        _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer)
+    func testPerformanceSecurityAnswerVerification() throws {
+        let (context, user) = try makeUser()
+        user.securityQuestion = testQuestion
+        user.securityAnswerHash = legacyHash(testAnswer)
+        try context.save()
+
+        _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer, in: context)
         measure {
-            _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer)
+            _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer, in: context)
         }
     }
 }

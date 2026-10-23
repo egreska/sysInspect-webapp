@@ -57,10 +57,6 @@ extension InspectionItem {
         getPhotoThumbnail(at: 0, maxDimension: maxDimension, completion: completion)
     }
 
-    func getAllPhotosSync() -> [UIImage] {
-        (0..<Self.maxPhotoCount).compactMap { getPhotoSync(at: $0) }
-    }
-
     /// Paths of in-app files whose bytes are now on the item. The caller deletes them after a successful save.
     func migrateLocalPhotoToCloudKit() -> [String] {
         var remove: [String] = []

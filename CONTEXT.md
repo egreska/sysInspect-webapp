@@ -65,7 +65,7 @@ A secret that travels with the Session and resets its password. The question tex
 _Avoid_: recovery code, backup password, Access Code, Session password
 
 **LastUser**:
-The user id of the last account that held a Session on this device, used for Face ID after logout. Not logged in; not Session.
+The user id of the last account that held a Session on this device, used for Face ID after logout. It is not the Session: logout keeps it, and Delete Account ends it.
 _Avoid_: currentUserEmail, session email, remembered login, Face ID as Session
 
 **Inspector**:
@@ -85,5 +85,5 @@ An Access Code whose Claim has been ended. It cannot be Claimed again. Inspectio
 _Avoid_: revoked, expired, suspended, reusable code, remote wipe, permanent ban, Delete Account
 
 **Delete Account**:
-The end of a Session, including the customers, inspections, photos, and site documents that belong to it, including their iCloud copies. It stays unfinished until iCloud has accepted those deletions. The Claim remains. The same Inspector can start a new Session only after that.
+The end of the Session on this device: its customers, inspections, photos, site documents, Manufacturer, WireDeckManufacturer, and DeckType catalogs, the company and inspector names on Reports, the Security Answer, and LastUser, including iCloud copies of those records. It stays unfinished until iCloud has accepted the deletions; the Claim remains, and the same Inspector can start a new Session only after that.
 _Avoid_: Clear All Data, wipe, logout, Retire

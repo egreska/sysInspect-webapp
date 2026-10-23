@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { createLoad } from './load';
+import { cloudKitAdapter } from './cloudKitAdapter';
 import {
+  initCloudKit,
   inspectionItemQueryFilters,
   inspectionQueryFilters,
   queryHitPageGuard,
@@ -65,6 +68,44 @@ describe('inspectionItemQueryFilters', () => {
         type: 'REFERENCE',
       },
     });
+  });
+});
+
+describe('fetchRecord scan', () => {
+  it('reports a missing customer when the by-id scan stops early', async () => {
+    const previous = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = {
+      CloudKit: {
+        configure() {},
+        getDefaultContainer() {
+          return {
+            setUpAuth: async () => null,
+            whenUserSignsIn: Promise.resolve(null),
+            whenUserSignsOut: Promise.resolve(),
+            privateCloudDatabase: {
+              performQuery: async () => ({
+                records: [{ recordName: 'someone-else', recordType: 'CD_Customer', fields: {} }],
+                continuationMarker: 'next',
+              }),
+            },
+          };
+        },
+        getContainer() {
+          throw new Error('unused');
+        },
+      },
+      __CLOUDKIT_RUNTIME_CONFIG__: {
+        containerId: 'iCloud.test',
+        apiToken: 'token',
+      },
+    };
+    try {
+      await initCloudKit();
+      const load = createLoad(cloudKitAdapter);
+      await expect(load.customerById('missing-customer')).rejects.toThrow('Customer not found');
+    } finally {
+      (globalThis as { window?: unknown }).window = previous;
+    }
   });
 });
 

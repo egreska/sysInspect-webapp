@@ -4,40 +4,14 @@
 //
 
 import Foundation
-import CoreData
 
-/// Customer fetch tuning and lightweight timing for Settings diagnostics.
+/// Lightweight timing for Settings diagnostics, plus memory snapshots.
 final class PerformanceOptimizer {
     static let shared = PerformanceOptimizer()
 
     private var metrics = PerformanceMetrics()
 
     private init() {}
-
-    // MARK: - Core Data
-
-    func optimizedCustomerFetchRequest(
-        pageSize: Int,
-        offset: Int,
-        userId: UUID
-    ) -> NSFetchRequest<Customer> {
-        let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        fetchRequest.predicate = NSPredicate(format: "userId == %@", userId as CVarArg)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-        fetchRequest.fetchLimit = pageSize
-        fetchRequest.fetchOffset = offset
-        fetchRequest.fetchBatchSize = pageSize
-        fetchRequest.propertiesToFetch = [
-            "id", "name", "site", "contactName",
-            "phone", "address", "city", "state",
-            "zipCode", "userId", "createdDate"
-        ]
-        fetchRequest.returnsObjectsAsFaults = true
-        #if DEBUG
-        print("🚀 Optimized fetch request: limit=\(pageSize), offset=\(offset)")
-        #endif
-        return fetchRequest
-    }
 
     // MARK: - Memory
 

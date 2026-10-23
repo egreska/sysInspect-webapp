@@ -46,7 +46,7 @@ enum InspectionItemIntake {
             importance: Importance(stored: item.importance),
             comments: item.comments,
             issues: item.recordedIssues(),
-            photos: item.getAllPhotosSync(),
+            photos: item.photoBytes().compactMap { UIImage(data: $0) },
             photosChanged: false
         )
     }

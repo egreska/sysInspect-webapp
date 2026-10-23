@@ -7,6 +7,53 @@
 import Combine
 import CoreData
 
+enum SessionCustomerQuery {
+    case page(offset: Int)
+    case search(String)
+}
+
+private let sessionCustomerPageSize = 20
+
+private func sessionUserPredicate(userId: UUID) -> NSPredicate {
+    NSPredicate(format: "userId == %@", userId as CVarArg)
+}
+
+func fetchSessionCustomers(
+    _ query: SessionCustomerQuery,
+    userId: UUID,
+    in context: NSManagedObjectContext
+) throws -> (customers: [Customer], total: Int?) {
+    let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
+    fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+    let userPredicate = sessionUserPredicate(userId: userId)
+    switch query {
+    case .page(let offset):
+        fetchRequest.predicate = userPredicate
+        fetchRequest.fetchLimit = sessionCustomerPageSize
+        fetchRequest.fetchOffset = offset
+        fetchRequest.fetchBatchSize = sessionCustomerPageSize
+        fetchRequest.propertiesToFetch = [
+            "id", "name", "site", "contactName",
+            "phone", "address", "city", "state",
+            "zipCode", "userId", "createdDate"
+        ]
+        fetchRequest.returnsObjectsAsFaults = true
+        let countRequest = NSFetchRequest<Customer>(entityName: "Customer")
+        countRequest.predicate = userPredicate
+        let total = try context.count(for: countRequest)
+        return (customers: try context.fetch(fetchRequest), total: total)
+    case .search(let searchText):
+        let searchPredicate = NSPredicate(
+            format: "name CONTAINS[cd] %@ OR site CONTAINS[cd] %@ OR contactName CONTAINS[cd] %@ OR phone CONTAINS[cd] %@ OR address CONTAINS[cd] %@ OR city CONTAINS[cd] %@ OR state CONTAINS[cd] %@ OR zipCode CONTAINS[cd] %@",
+            searchText, searchText, searchText, searchText, searchText, searchText, searchText, searchText
+        )
+        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [searchPredicate, userPredicate])
+        fetchRequest.fetchBatchSize = 50
+        fetchRequest.fetchLimit = 500
+        return (customers: try context.fetch(fetchRequest), total: nil)
+    }
+}
+
 class CustomerDirectoryViewModel {
     // MARK: - Properties
     @Published var customers: [Customer] = []
@@ -16,7 +63,6 @@ class CustomerDirectoryViewModel {
     private var originalCustomers: [Customer] = []
     
     // MARK: - Pagination Properties
-    private let pageSize = 20
     private var currentPage = 0
     private var isLoadingMore = false
     @Published var hasMoreCustomers = true
@@ -54,20 +100,14 @@ class CustomerDirectoryViewModel {
         isLoadingMore = true
         if isFirstPage { isLoading = true }
         let page = currentPage
-        let fetchRequest = PerformanceOptimizer.shared.optimizedCustomerFetchRequest(
-            pageSize: pageSize,
-            offset: page * pageSize,
-            userId: currentUserID
-        )
+        let offset = page * sessionCustomerPageSize
         PerformanceOptimizer.shared.startTiming("fetchCustomers")
         coreDataManager.performBackgroundTask { [weak self] context in
             guard let self = self else { return }
             do {
-                let countRequest = NSFetchRequest<Customer>(entityName: "Customer")
-                countRequest.predicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-                let total = try context.count(for: countRequest)
-                let result = try context.fetch(fetchRequest)
-                let objectIDs = result.map(\.objectID)
+                let fetched = try fetchSessionCustomers(.page(offset: offset), userId: currentUserID, in: context)
+                let objectIDs = fetched.customers.map(\.objectID)
+                let total = fetched.total ?? 0
                 DispatchQueue.main.async {
                     let mainContext = self.coreDataManager.context
                     let newCustomers = objectIDs.compactMap { try? mainContext.existingObject(with: $0) as? Customer }
@@ -123,25 +163,10 @@ class CustomerDirectoryViewModel {
         // Disable pagination during search
         hasMoreCustomers = false
         
-        let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        
-        // Create a predicate to filter by name, site, contact name, phone, address, city, state, or zip code
-        let searchPredicate = NSPredicate(
-            format: "name CONTAINS[cd] %@ OR site CONTAINS[cd] %@ OR contactName CONTAINS[cd] %@ OR phone CONTAINS[cd] %@ OR address CONTAINS[cd] %@ OR city CONTAINS[cd] %@ OR state CONTAINS[cd] %@ OR zipCode CONTAINS[cd] %@",
-            searchText, searchText, searchText, searchText, searchText, searchText, searchText, searchText
-        )
-        
-        // Combine with user ID predicate
-        let userPredicate = NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [searchPredicate, userPredicate])
-
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-        fetchRequest.fetchBatchSize = 50
-        fetchRequest.fetchLimit = 500  // Limit search results for performance
-        
         do {
             errorMessage = nil
-            customers = try coreDataManager.context.fetch(fetchRequest)
+            let fetched = try fetchSessionCustomers(.search(searchText), userId: currentUserID, in: coreDataManager.context)
+            customers = fetched.customers
             #if DEBUG
             print("🔍 Search returned \(customers.count) results")
             #endif

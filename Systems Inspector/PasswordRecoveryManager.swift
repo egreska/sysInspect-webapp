@@ -74,14 +74,10 @@ class PasswordRecoveryManager {
     }
 
     func getSecurityQuestion(for email: String, in context: NSManagedObjectContext?) -> String? {
+        guard let context else { return nil }
         let normalized = email.lowercased()
-        if let context {
-            adoptPhoneAnswer(for: normalized, in: context)
-            if let question = fetchUser(email: normalized, in: context)?.securityQuestion {
-                return question
-            }
-        }
-        return UserDefaults.standard.string(forKey: "securityQuestion_\(normalized)")
+        adoptPhoneAnswer(for: normalized, in: context)
+        return fetchUser(email: normalized, in: context)?.securityQuestion
     }
     
     /// Verify security answer. A locked email is refused before the answer is checked.
@@ -94,26 +90,16 @@ class PasswordRecoveryManager {
         if AccountLockoutManager.shared.isAccountLocked(email: normalized) {
             return false
         }
-        if let context {
-            adoptPhoneAnswer(for: normalized, in: context)
-            if let user = fetchUser(email: normalized, in: context), let storedHash = user.securityAnswerHash {
-                return checkAnswer(answer, hash: storedHash, salt: user.securityAnswerSalt, email: normalized) {
-                    let (hash, salt) = UserManager.shared.hashPasswordSecure(normalizedAnswer(answer))
-                    user.securityAnswerHash = hash
-                    user.securityAnswerSalt = salt
-                    try? context.save()
-                }
-            }
+        guard let context else { return false }
+        adoptPhoneAnswer(for: normalized, in: context)
+        guard let user = fetchUser(email: normalized, in: context), let storedHash = user.securityAnswerHash else {
+            return false
         }
-        return checkAnswer(
-            answer,
-            hash: UserDefaults.standard.string(forKey: "securityAnswer_\(normalized)"),
-            salt: UserDefaults.standard.data(forKey: "securityAnswerSalt_\(normalized)"),
-            email: normalized
-        ) {
+        return checkAnswer(answer, hash: storedHash, salt: user.securityAnswerSalt, email: normalized) {
             let (hash, salt) = UserManager.shared.hashPasswordSecure(normalizedAnswer(answer))
-            UserDefaults.standard.set(hash, forKey: "securityAnswer_\(normalized)")
-            UserDefaults.standard.set(salt, forKey: "securityAnswerSalt_\(normalized)")
+            user.securityAnswerHash = hash
+            user.securityAnswerSalt = salt
+            try? context.save()
         }
     }
 
@@ -145,15 +131,11 @@ class PasswordRecoveryManager {
     }
 
     func hasSecurityQuestion(for email: String, in context: NSManagedObjectContext?) -> Bool {
+        guard let context else { return false }
         let normalized = email.lowercased()
-        if let context {
-            adoptPhoneAnswer(for: normalized, in: context)
-            if let user = fetchUser(email: normalized, in: context),
-               user.securityAnswerHash != nil || user.securityQuestion != nil {
-                return true
-            }
-        }
-        return UserDefaults.standard.string(forKey: "securityQuestion_\(normalized)") != nil
+        adoptPhoneAnswer(for: normalized, in: context)
+        guard let user = fetchUser(email: normalized, in: context) else { return false }
+        return user.securityAnswerHash != nil || user.securityQuestion != nil
     }
 
     /// Copy a phone-only answer onto the Session once. A Session that already has an answer keeps it.

@@ -294,6 +294,7 @@ final class InspectionItemIntakeTests: XCTestCase {
         )
 
         let form = InspectionItemIntake.formState(from: item)
+        XCTAssertEqual(form.photos.count, item.photoBytes().compactMap { UIImage(data: $0) }.count)
         XCTAssertEqual(form.location, "Aisle")
         XCTAssertEqual(form.bayNumber, "B2")
         XCTAssertEqual(form.importance, .needsImmediateAttention)
@@ -301,6 +302,20 @@ final class InspectionItemIntakeTests: XCTestCase {
         XCTAssertTrue(form.issues.contains(damage))
         XCTAssertEqual(form.photos.count, 1)
         XCTAssertFalse(form.photosChanged)
+    }
+
+    func testHydrateSkipsABlobThatIsNotAnImage() throws {
+        let item = InspectionItem(context: context)
+        item.id = UUID()
+        item.setValue(Data([0x01, 0x02]), forKey: "photoData")
+        let data = try XCTUnwrap(pixelImage().jpegData(compressionQuality: 0.8))
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("si-hydrate-\(UUID().uuidString).jpg")
+        try data.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        item.setValue(url.path, forKey: "photoURL")
+
+        XCTAssertEqual(InspectionItemIntake.formState(from: item).photos.count, 0)
     }
 
     func testHydrateCriticalBecomesImmediateAndSaveWritesTheGlossaryPhrase() {

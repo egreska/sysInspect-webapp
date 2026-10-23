@@ -3,6 +3,7 @@
 //  Systems Inspector
 //
 
+import CoreData
 import Foundation
 
 enum AccessCodeRecordState: Equatable {
@@ -113,7 +114,12 @@ func resolveAccess(
     deleteUnfinished: Bool = false
 ) -> AccessResolution {
     if deleteUnfinished {
-        return AccessResolution(route: .deleteFinishing, cache: cache, writeClaim: false, markSessionReady: false)
+        return AccessResolution(
+            route: loggedOutRoute(deleteUnfinished: true, localUserCount: localUserCount, sessionReady: false),
+            cache: cache,
+            writeClaim: false,
+            markSessionReady: false
+        )
     }
     guard iCloudAvailable else {
         return AccessResolution(route: .signInToICloud, cache: nil, writeClaim: false, markSessionReady: false)
@@ -203,6 +209,17 @@ func resolveAccess(
     }
 }
 
+func loggedOutRoute(
+    deleteUnfinished: Bool,
+    localUserCount: Int?,
+    sessionReady: Bool
+) -> AccessRoute {
+    if deleteUnfinished {
+        return .deleteFinishing
+    }
+    return destination(isLoggedIn: false, localUserCount: localUserCount, sessionReady: sessionReady)
+}
+
 private func destination(isLoggedIn: Bool, localUserCount: Int?, sessionReady: Bool) -> AccessRoute {
     if isLoggedIn {
         return .mainApp
@@ -260,6 +277,58 @@ enum DeleteAccountProgressStore {
 func exportCoversDelete(savedAt: Date, started: Date, ended: Date?) -> Bool {
     guard let ended else { return false }
     return started >= savedAt && ended >= started
+}
+
+let deleteAccountEntityNames = ["SiteDocument", "InspectionItem", "Inspection", "Customer", "CatalogName", "User"]
+
+let deleteAccountProfileKeys = [
+    "inspectorName", "companyName", "companyAddress", "companyCity", "companyState", "companyZipCode", "companyPhone"
+]
+
+func deleteAccountRecords(in context: NSManagedObjectContext) -> Bool {
+    var deleted = false
+    context.performAndWait {
+        do {
+            for name in deleteAccountEntityNames {
+                let request = NSFetchRequest<NSManagedObject>(entityName: name)
+                request.includesPropertyValues = false
+                for object in try context.fetch(request) {
+                    context.delete(object)
+                }
+            }
+            if context.hasChanges {
+                try context.save()
+            }
+            deleted = true
+        } catch {
+            deleted = false
+        }
+    }
+    return deleted
+}
+
+func clearDeleteAccountProfile(email: String?, defaults: UserDefaults) {
+    if let email {
+        let normalized = email.lowercased()
+        defaults.removeObject(forKey: "securityQuestion_\(normalized)")
+        defaults.removeObject(forKey: "securityAnswer_\(normalized)")
+        defaults.removeObject(forKey: "securityAnswerSalt_\(normalized)")
+    }
+    deleteAccountProfileKeys.forEach { defaults.removeObject(forKey: $0) }
+}
+
+func deleteAccountExportCovers(
+    savedAt: Date,
+    exportStarted: Date,
+    exportEnded: Date?,
+    exportFailed: Bool
+) -> Bool {
+    guard !exportFailed else { return false }
+    return exportCoversDelete(savedAt: savedAt, started: exportStarted, ended: exportEnded)
+}
+
+func deleteAccountClearsSessionReady(exportCovers: Bool, clearSucceeded: Bool) -> Bool {
+    exportCovers && clearSucceeded
 }
 
 extension Notification.Name {

@@ -197,15 +197,14 @@ class CoreDataManager {
             queue: .main
         ) { note in
             guard let event = note.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey] as? NSPersistentCloudKitContainer.Event else { return }
-            guard event.type == .export, event.error == nil else { return }
-            guard var progress = DeleteAccountProgressStore.load(),
-                  progress.saved,
-                  !progress.exportAccepted,
-                  exportCoversDelete(savedAt: progress.savedAt, started: event.startDate, ended: event.endDate)
-            else { return }
-            progress.exportAccepted = true
-            DeleteAccountProgressStore.save(progress)
-            NotificationCenter.default.post(name: .deleteAccountExportAccepted, object: nil)
+            guard event.type == .export else { return }
+            Task { @MainActor in
+                await AccessCodeCoordinator.shared.noteDeleteAccountExport(
+                    started: event.startDate,
+                    ended: event.endDate,
+                    failed: event.error != nil
+                )
+            }
         }
 
         // Configure contexts
@@ -542,30 +541,6 @@ class CoreDataManager {
         }
     }
     
-    /// Deletes every record that belongs to the Session so CloudKit can export the deletions.
-    func deleteSessionRecords() -> Bool {
-        var deleted = false
-        context.performAndWait {
-            guard isStoreLoaded else { return }
-            let names = ["SiteDocument", "InspectionItem", "Inspection", "Customer", "CatalogName", "User"]
-            do {
-                for name in names {
-                    let request = NSFetchRequest<NSManagedObject>(entityName: name)
-                    request.includesPropertyValues = false
-                    let objects = try context.fetch(request)
-                    for object in objects {
-                        context.delete(object)
-                    }
-                }
-                deleted = saveContext()
-            } catch {
-                print("CoreDataManager: Failed to delete session records: \(error)")
-                deleted = false
-            }
-        }
-        return deleted
-    }
-
     // MARK: - Development helpers
     #if DEBUG
     func resetAllData() {

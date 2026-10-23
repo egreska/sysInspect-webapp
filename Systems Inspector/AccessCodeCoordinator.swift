@@ -60,11 +60,24 @@ final class AccessCodeCoordinator {
         apply(resolution, in: window, animated: true)
     }
 
-    func markSessionReady() async {
+    func localUserRowExists() async {
         guard var entitlement = cache.load() else { return }
         guard await cloud.markSessionReady(code: entitlement.code) else { return }
         entitlement.sessionReady = true
         cache.save(entitlement)
+    }
+
+    func showLoggedOut(in window: UIWindow) {
+        let route = loggedOutRoute(
+            deleteUnfinished: DeleteAccountProgressStore.load() != nil,
+            localUserCount: localUserCount(),
+            sessionReady: cache.load()?.sessionReady == true
+        )
+        apply(
+            AccessResolution(route: route, cache: nil, writeClaim: false, markSessionReady: false),
+            in: window,
+            animated: true
+        )
     }
 
     func clearSessionReady() async -> Bool {
@@ -75,19 +88,9 @@ final class AccessCodeCoordinator {
         return true
     }
 
-    func makeLoginViewController() -> LoginViewController {
+    func makeBypassLoginViewController() -> LoginViewController {
         let controller = LoginViewController()
-        if accessCodeGateBypassed() {
-            controller.canCreateAccount = true
-            return controller
-        }
-        if DeleteAccountProgressStore.load() != nil {
-            controller.canCreateAccount = false
-            return controller
-        }
-        let count = (try? CoreDataManager.shared.context.count(for: User.fetchRequest())) ?? 0
-        let sessionReady = cache.load()?.sessionReady == true
-        controller.canCreateAccount = count == 0 && !sessionReady
+        controller.canCreateAccount = true
         return controller
     }
 
@@ -199,10 +202,36 @@ final class AccessCodeCoordinator {
         }
     }
 
+    func noteDeleteAccountExport(started: Date, ended: Date?, failed: Bool) async {
+        guard var progress = DeleteAccountProgressStore.load(), progress.saved else { return }
+        if !progress.exportAccepted {
+            guard deleteAccountExportCovers(
+                savedAt: progress.savedAt,
+                exportStarted: started,
+                exportEnded: ended,
+                exportFailed: failed
+            ) else { return }
+            progress.exportAccepted = true
+            DeleteAccountProgressStore.save(progress)
+        }
+        let cleared = deleteAccountClearsSessionReady(
+            exportCovers: true,
+            clearSucceeded: await clearSessionReady()
+        )
+        if cleared {
+            DeleteAccountProgressStore.save(nil)
+        }
+        NotificationCenter.default.post(name: .deleteAccountExportAccepted, object: nil)
+    }
+
     private func advanceUnfinishedDelete() async {
         guard let progress = DeleteAccountProgressStore.load() else { return }
         if progress.exportAccepted {
-            guard await clearSessionReady() else { return }
+            let cleared = deleteAccountClearsSessionReady(
+                exportCovers: true,
+                clearSucceeded: await clearSessionReady()
+            )
+            guard cleared else { return }
             DeleteAccountProgressStore.save(nil)
             return
         }
@@ -218,7 +247,8 @@ final class AccessCodeCoordinator {
         DeleteAccountProgressStore.save(DeleteAccountProgress(savedAt: savedAt, saved: false, exportAccepted: false))
         let photoPaths = (try? InspectionItem.itemsWithLocalPhotoFiles(in: CoreDataManager.shared.context))?
             .flatMap { $0.appOwnedPhotoFilePaths() } ?? []
-        guard CoreDataManager.shared.deleteSessionRecords() else {
+        guard CoreDataManager.shared.isStoreLoaded,
+              deleteAccountRecords(in: CoreDataManager.shared.context) else {
             DeleteAccountProgressStore.save(nil)
             return .failed
         }
@@ -227,8 +257,7 @@ final class AccessCodeCoordinator {
         if let email {
             PasswordRecoveryManager.shared.clearSecurityQuestion(for: email)
         }
-        ["inspectorName", "companyName", "companyAddress", "companyCity", "companyState", "companyZipCode", "companyPhone"]
-            .forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        clearDeleteAccountProfile(email: email, defaults: .standard)
         UserManager.shared.wipeSession()
         ImageCacheManager.shared.clearMemoryCache()
         ImageCacheManager.shared.clearDiskCache { }

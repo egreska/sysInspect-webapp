@@ -91,7 +91,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if UserManager.shared.isUserLoggedIn() {
             root = MainTabBarController()
         } else {
-            root = UINavigationController(rootViewController: AccessCodeCoordinator.shared.makeLoginViewController())
+            root = UINavigationController(rootViewController: AccessCodeCoordinator.shared.makeBypassLoginViewController())
         }
         UIView.transition(with: window, duration: 0.25, options: .transitionCrossDissolve) {
             window.rootViewController = root
