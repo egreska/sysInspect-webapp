@@ -3,7 +3,6 @@
 //  Systems Inspector
 //
 
-import CoreData
 import Foundation
 
 enum AccessCodeRecordState: Equatable {
@@ -134,19 +133,12 @@ func resolveAccess(
     }
 
     guard reachedCloudKit, let remote else {
-        if let matchingCache, matchingCache.code == code {
-            return resolution(
-                route: destination(
-                    isLoggedIn: isLoggedIn,
-                    localUserCount: localUserCount,
-                    sessionReady: matchingCache.sessionReady
-                ),
-                cache: matchingCache,
-                writeClaim: false,
-                markSessionReady: false
-            )
-        }
-        return AccessResolution(route: .needNetwork, cache: matchingCache, writeClaim: false, markSessionReady: false)
+        return offlineResolution(
+            isLoggedIn: isLoggedIn,
+            localUserCount: localUserCount,
+            matchingCache: matchingCache,
+            code: code
+        )
     }
 
     switch remote {
@@ -165,19 +157,12 @@ func resolveAccess(
             markSessionReady: false
         )
     case .unreadable:
-        if let matchingCache, matchingCache.code == code {
-            return resolution(
-                route: destination(
-                    isLoggedIn: isLoggedIn,
-                    localUserCount: localUserCount,
-                    sessionReady: matchingCache.sessionReady
-                ),
-                cache: matchingCache,
-                writeClaim: false,
-                markSessionReady: false
-            )
-        }
-        return AccessResolution(route: .needNetwork, cache: matchingCache, writeClaim: false, markSessionReady: false)
+        return offlineResolution(
+            isLoggedIn: isLoggedIn,
+            localUserCount: localUserCount,
+            matchingCache: matchingCache,
+            code: code
+        )
     case .issued:
         let entitlement = CachedEntitlement(code: code, userRecordName: userRecordName, sessionReady: false)
         return resolution(
@@ -220,6 +205,27 @@ func loggedOutRoute(
     return destination(isLoggedIn: false, localUserCount: localUserCount, sessionReady: sessionReady)
 }
 
+private func offlineResolution(
+    isLoggedIn: Bool,
+    localUserCount: Int?,
+    matchingCache: CachedEntitlement?,
+    code: String
+) -> AccessResolution {
+    if let matchingCache, matchingCache.code == code {
+        return resolution(
+            route: destination(
+                isLoggedIn: isLoggedIn,
+                localUserCount: localUserCount,
+                sessionReady: matchingCache.sessionReady
+            ),
+            cache: matchingCache,
+            writeClaim: false,
+            markSessionReady: false
+        )
+    }
+    return AccessResolution(route: .needNetwork, cache: matchingCache, writeClaim: false, markSessionReady: false)
+}
+
 private func destination(isLoggedIn: Bool, localUserCount: Int?, sessionReady: Bool) -> AccessRoute {
     if isLoggedIn {
         return .mainApp
@@ -243,96 +249,6 @@ private func resolution(
     markSessionReady: Bool
 ) -> AccessResolution {
     AccessResolution(route: route, cache: cache, writeClaim: writeClaim, markSessionReady: markSessionReady)
-}
-
-enum DeleteAccountStart {
-    case needsNetwork
-    case failed
-    case finishing
-}
-
-struct DeleteAccountProgress: Equatable, Codable {
-    var savedAt: Date
-    var saved: Bool
-    var exportAccepted: Bool
-}
-
-enum DeleteAccountProgressStore {
-    static let key = "deleteAccountUnfinished"
-
-    static func load(_ defaults: UserDefaults = .standard) -> DeleteAccountProgress? {
-        guard let data = defaults.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(DeleteAccountProgress.self, from: data)
-    }
-
-    static func save(_ progress: DeleteAccountProgress?, _ defaults: UserDefaults = .standard) {
-        if let progress, let data = try? JSONEncoder().encode(progress) {
-            defaults.set(data, forKey: key)
-        } else {
-            defaults.removeObject(forKey: key)
-        }
-    }
-}
-
-func exportCoversDelete(savedAt: Date, started: Date, ended: Date?) -> Bool {
-    guard let ended else { return false }
-    return started >= savedAt && ended >= started
-}
-
-let deleteAccountEntityNames = ["SiteDocument", "InspectionItem", "Inspection", "Customer", "CatalogName", "User"]
-
-let deleteAccountProfileKeys = [
-    "inspectorName", "companyName", "companyAddress", "companyCity", "companyState", "companyZipCode", "companyPhone"
-]
-
-func deleteAccountRecords(in context: NSManagedObjectContext) -> Bool {
-    var deleted = false
-    context.performAndWait {
-        do {
-            for name in deleteAccountEntityNames {
-                let request = NSFetchRequest<NSManagedObject>(entityName: name)
-                request.includesPropertyValues = false
-                for object in try context.fetch(request) {
-                    context.delete(object)
-                }
-            }
-            if context.hasChanges {
-                try context.save()
-            }
-            deleted = true
-        } catch {
-            deleted = false
-        }
-    }
-    return deleted
-}
-
-func clearDeleteAccountProfile(email: String?, defaults: UserDefaults) {
-    if let email {
-        let normalized = email.lowercased()
-        defaults.removeObject(forKey: "securityQuestion_\(normalized)")
-        defaults.removeObject(forKey: "securityAnswer_\(normalized)")
-        defaults.removeObject(forKey: "securityAnswerSalt_\(normalized)")
-    }
-    deleteAccountProfileKeys.forEach { defaults.removeObject(forKey: $0) }
-}
-
-func deleteAccountExportCovers(
-    savedAt: Date,
-    exportStarted: Date,
-    exportEnded: Date?,
-    exportFailed: Bool
-) -> Bool {
-    guard !exportFailed else { return false }
-    return exportCoversDelete(savedAt: savedAt, started: exportStarted, ended: exportEnded)
-}
-
-func deleteAccountClearsSessionReady(exportCovers: Bool, clearSucceeded: Bool) -> Bool {
-    exportCovers && clearSucceeded
-}
-
-extension Notification.Name {
-    static let deleteAccountExportAccepted = Notification.Name("deleteAccountExportAccepted")
 }
 
 struct AccessCodeCache {

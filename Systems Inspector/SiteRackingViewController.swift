@@ -969,16 +969,15 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
 
     private func addDocument(data: Data, filename: String, contentType: String) {
         guard documents.count < Customer.maxSiteDocumentCount else { return }
-        guard data.count <= Customer.maxSiteDocumentBytes else {
+        switch Customer.acceptance(data: data, contentType: contentType) {
+        case .allowed:
+            documents.append(SiteDocumentFile(id: nil, filename: filename, contentType: contentType, data: data))
+            rebuild()
+        case .tooLarge:
             presentAlert("Each file must be 10 MB or smaller.")
-            return
-        }
-        guard Customer.allowedContentTypes.contains(contentType) else {
+        case .wrongType:
             presentAlert("Use a photo or PDF.")
-            return
         }
-        documents.append(SiteDocumentFile(id: nil, filename: filename, contentType: contentType, data: data))
-        rebuild()
     }
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {

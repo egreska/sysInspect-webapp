@@ -55,18 +55,6 @@ public struct ReportHeader {
         self.companyZipCode = companyZipCode
         self.inspectorName = inspectorName
     }
-
-    public static func fromUserDefaults(_ defaults: UserDefaults = .standard) -> ReportHeader {
-        ReportHeader(
-            companyName: defaults.string(forKey: "companyName") ?? "",
-            companyAddress: defaults.string(forKey: "companyAddress") ?? "",
-            companyPhone: defaults.string(forKey: "companyPhone") ?? "",
-            companyCity: defaults.string(forKey: "companyCity") ?? "",
-            companyState: defaults.string(forKey: "companyState") ?? "",
-            companyZipCode: defaults.string(forKey: "companyZipCode") ?? "",
-            inspectorName: defaults.string(forKey: "inspectorName") ?? "Inspector Name"
-        )
-    }
 }
 
 struct ReportRequest {

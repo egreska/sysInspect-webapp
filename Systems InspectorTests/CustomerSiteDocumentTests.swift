@@ -66,6 +66,62 @@ final class CustomerSiteDocumentTests: XCTestCase {
         XCTAssertEqual(customer.documentFiles()[0].data, original)
     }
 
+    func testAcceptance() {
+        let exact = Data(count: Customer.maxSiteDocumentBytes)
+        XCTAssertEqual(Customer.acceptance(data: exact, contentType: "public.pdf"), .allowed)
+        XCTAssertEqual(Customer.acceptance(data: exact, contentType: "public.jpeg"), .allowed)
+        XCTAssertEqual(Customer.acceptance(data: exact, contentType: "public.png"), .allowed)
+        XCTAssertEqual(
+            Customer.acceptance(data: Data(count: Customer.maxSiteDocumentBytes + 1), contentType: "public.pdf"),
+            .tooLarge
+        )
+        XCTAssertEqual(Customer.acceptance(data: Data([1]), contentType: "public.data"), .wrongType)
+        XCTAssertEqual(
+            Customer.acceptance(data: Data(count: Customer.maxSiteDocumentBytes + 1), contentType: "public.data"),
+            .tooLarge
+        )
+    }
+
+    func testReplaceStoresExactlyTenMegabytes() {
+        let customer = makeCustomer()
+        customer.replaceDocuments([
+            SiteDocumentFile(id: nil, filename: "full.pdf", contentType: "public.pdf", data: Data(count: Customer.maxSiteDocumentBytes))
+        ], userId: UUID())
+        XCTAssertEqual(customer.documentFiles().map(\.filename), ["full.pdf"])
+        XCTAssertEqual(customer.documentFiles()[0].data.count, Customer.maxSiteDocumentBytes)
+    }
+
+    func testReplaceDropsAnOversizedFile() {
+        let customer = makeCustomer()
+        customer.replaceDocuments([
+            SiteDocumentFile(id: nil, filename: "big.pdf", contentType: "public.pdf", data: Data(count: Customer.maxSiteDocumentBytes + 1))
+        ], userId: UUID())
+        XCTAssertEqual(customer.documentFiles(), [])
+    }
+
+    func testReplaceDropsAWrongType() {
+        let customer = makeCustomer()
+        customer.replaceDocuments([
+            SiteDocumentFile(id: nil, filename: "notes.txt", contentType: "public.data", data: Data([1]))
+        ], userId: UUID())
+        XCTAssertEqual(customer.documentFiles(), [])
+    }
+
+    func testRefusedFileDoesNotTakeASlot() {
+        let customer = makeCustomer()
+        let refused = SiteDocumentFile(
+            id: nil,
+            filename: "big.pdf",
+            contentType: "public.pdf",
+            data: Data(count: Customer.maxSiteDocumentBytes + 1)
+        )
+        let allowed = (0..<5).map { i in
+            SiteDocumentFile(id: nil, filename: "f\(i).pdf", contentType: "public.pdf", data: Data([UInt8(i)]))
+        }
+        customer.replaceDocuments([refused] + allowed, userId: UUID())
+        XCTAssertEqual(customer.documentFiles().map(\.filename), ["f0.pdf", "f1.pdf", "f2.pdf", "f3.pdf", "f4.pdf"])
+    }
+
     func testMissingIdDeletesDocument() {
         let customer = makeCustomer()
         customer.replaceDocuments([

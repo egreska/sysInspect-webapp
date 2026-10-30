@@ -1,0 +1,25 @@
+{
+  "runs": [
+    {
+      "date": "2026-06-01T20:29:27.595771+00:00",
+      "input_tokens": 854463,
+      "output_tokens": 0,
+      "files": 109
+    },
+    {
+      "date": "2026-09-01T17:37:25.859993+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 10,
+      "note": "ADR semantic re-extract (0001-0010)"
+    },
+    {
+      "date": "2026-09-18T03:20:07.322777+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 69
+    }
+  ],
+  "total_input_tokens": 854463,
+  "total_output_tokens": 0
+}

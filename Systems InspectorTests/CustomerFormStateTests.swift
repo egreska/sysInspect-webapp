@@ -29,4 +29,16 @@ final class CustomerFormStateTests: XCTestCase {
         form.name = "Acme"
         XCTAssertTrue(form.isValid)
     }
+
+    func testSiteRackingSubtitleUsesTheSiteRackingLine() {
+        var form = CustomerFormState()
+        form.siteRacking.uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: "Interlake")])
+        form.siteDocuments = [
+            SiteDocumentFile(id: nil, filename: "a.pdf", contentType: "public.pdf", data: Data([1]))
+        ]
+        XCTAssertEqual(
+            form.siteRackingSubtitle,
+            form.siteRacking.customerLine(documentCount: form.siteDocuments.count)
+        )
+    }
 }

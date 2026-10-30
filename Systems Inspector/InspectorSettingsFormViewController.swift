@@ -92,7 +92,7 @@ final class InspectorSettingsFormViewController: UIViewController {
         let nameField = makeTextField(
             placeholder: "Your Name",
             accessibilityLabel: "Your Name",
-            text: UserDefaults.standard.string(forKey: "inspectorName"),
+            text: ReportNames.shared.storedInspectorName(),
             capitalization: .words,
             contentType: .name
         )
@@ -103,38 +103,39 @@ final class InspectorSettingsFormViewController: UIViewController {
     }
 
     private func buildCompanyForm() {
+        let company = ReportNames.shared.storedCompany()
         let companyName = makeTextField(
             placeholder: "Company Name",
             accessibilityLabel: "Company Name",
-            text: UserDefaults.standard.string(forKey: "companyName"),
+            text: company.name,
             capitalization: .words,
             contentType: .organizationName
         )
         let street = makeTextField(
             placeholder: "Street Address",
             accessibilityLabel: "Street Address",
-            text: UserDefaults.standard.string(forKey: "companyAddress"),
+            text: company.street,
             capitalization: .words,
             contentType: .streetAddressLine1
         )
         let city = makeTextField(
             placeholder: "City",
             accessibilityLabel: "City",
-            text: UserDefaults.standard.string(forKey: "companyCity"),
+            text: company.city,
             capitalization: .words,
             contentType: .addressCity
         )
         let state = makeTextField(
             placeholder: "State",
             accessibilityLabel: "State",
-            text: UserDefaults.standard.string(forKey: "companyState"),
+            text: company.state,
             capitalization: .allCharacters,
             contentType: .addressState
         )
         let zip = makeTextField(
             placeholder: "ZIP Code",
             accessibilityLabel: "ZIP Code",
-            text: UserDefaults.standard.string(forKey: "companyZipCode"),
+            text: company.zip,
             capitalization: .none,
             contentType: .postalCode
         )
@@ -142,7 +143,7 @@ final class InspectorSettingsFormViewController: UIViewController {
         let phone = makeTextField(
             placeholder: "Phone Number",
             accessibilityLabel: "Phone Number",
-            text: UserDefaults.standard.string(forKey: "companyPhone"),
+            text: company.phone,
             capitalization: .none,
             contentType: .telephoneNumber
         )
@@ -323,23 +324,22 @@ final class InspectorSettingsFormViewController: UIViewController {
     @objc private func saveTapped() {
         switch form {
         case .inspectorName:
-            let name = textFields.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            guard !name.isEmpty else {
+            let name = textFields.first?.text ?? ""
+            guard ReportNames.shared.saveInspectorName(name) else {
                 dismiss(animated: true)
                 return
             }
-            UserDefaults.standard.set(name, forKey: "inspectorName")
         case .companyInformation:
             let values = textFields.map { $0.text ?? "" }
             guard values.count == 6 else { return }
-            if !values[0].isEmpty {
-                UserDefaults.standard.set(values[0], forKey: "companyName")
-            }
-            UserDefaults.standard.set(values[1], forKey: "companyAddress")
-            UserDefaults.standard.set(values[2], forKey: "companyCity")
-            UserDefaults.standard.set(values[3], forKey: "companyState")
-            UserDefaults.standard.set(values[4], forKey: "companyZipCode")
-            UserDefaults.standard.set(values[5], forKey: "companyPhone")
+            ReportNames.shared.saveCompany(
+                name: values[0],
+                street: values[1],
+                city: values[2],
+                state: values[3],
+                zip: values[4],
+                phone: values[5]
+            )
         }
         HapticManager.success()
         onSaved()

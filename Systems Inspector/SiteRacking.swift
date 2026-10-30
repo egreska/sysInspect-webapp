@@ -384,6 +384,18 @@ struct SiteRacking: Codable, Equatable {
             && !rowSpacersRecorded
     }
 
+    func customerLine(documentCount: Int) -> String {
+        if isEmpty && documentCount == 0 { return "Not set" }
+        let manufacturer = uprights.rows.first(where: \.hasManufacturer)?.manufacturer
+            ?? beams.rows.first(where: \.hasManufacturer)?.manufacturer
+            ?? decks.rows.first(where: \.hasManufacturer)?.manufacturer
+        if let manufacturer, documentCount > 0 { return "\(documentCount) documents · \(manufacturer)" }
+        if let manufacturer { return manufacturer }
+        if documentCount == 1 { return "1 document" }
+        if documentCount > 1 { return "\(documentCount) documents" }
+        return "Configured"
+    }
+
     func validationMessage() -> String? {
         if uprightsRecorded && !beamsRecorded {
             return "Beams are required when Upright Frames are recorded."

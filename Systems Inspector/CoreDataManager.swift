@@ -199,7 +199,7 @@ class CoreDataManager {
             guard let event = note.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey] as? NSPersistentCloudKitContainer.Event else { return }
             guard event.type == .export else { return }
             Task { @MainActor in
-                await AccessCodeCoordinator.shared.noteDeleteAccountExport(
+                await DeleteAccount.shared.noteExport(
                     started: event.startDate,
                     ended: event.endDate,
                     failed: event.error != nil

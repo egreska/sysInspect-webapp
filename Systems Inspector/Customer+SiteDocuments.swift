@@ -7,9 +7,21 @@ import CoreData
 import Foundation
 
 extension Customer {
+    enum SiteDocumentAcceptance: Equatable {
+        case allowed
+        case tooLarge
+        case wrongType
+    }
+
     static let maxSiteDocumentCount = 5
     static let allowedContentTypes: Set<String> = ["public.jpeg", "public.png", "public.pdf"]
     static let maxSiteDocumentBytes = 10 * 1024 * 1024
+
+    static func acceptance(data: Data, contentType: String) -> SiteDocumentAcceptance {
+        if data.count > maxSiteDocumentBytes { return .tooLarge }
+        if !allowedContentTypes.contains(contentType) { return .wrongType }
+        return .allowed
+    }
 
     func documentFiles() -> [SiteDocumentFile] {
         let docs = (siteDocuments as? Set<SiteDocument>) ?? []
@@ -25,13 +37,19 @@ extension Customer {
     }
 
     func replaceDocuments(_ files: [SiteDocumentFile], userId: UUID) {
-        let limited = Array(files.prefix(Self.maxSiteDocumentCount))
-        let keepIds = Set(limited.compactMap(\.id))
         let existing = (siteDocuments as? Set<SiteDocument>) ?? []
+        let existingIds = Set(existing.compactMap(\.id))
+        let accepted = files.filter { file in
+            if let id = file.id, existingIds.contains(id) { return true }
+            return Self.acceptance(data: file.data, contentType: file.contentType) == .allowed
+        }
+        let limited = Array(accepted.prefix(Self.maxSiteDocumentCount))
+        let keepIds = Set(limited.compactMap(\.id))
         let context = managedObjectContext
         for doc in existing where doc.id == nil || !keepIds.contains(doc.id!) {
             context?.delete(doc)
         }
+        context?.processPendingChanges() // A deleted document stays on the relationship until this runs.
         let remaining = (siteDocuments as? Set<SiteDocument>) ?? []
         for (index, file) in limited.enumerated() {
             if let id = file.id, let doc = remaining.first(where: { $0.id == id }) {

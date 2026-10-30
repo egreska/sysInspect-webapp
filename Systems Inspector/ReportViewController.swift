@@ -545,7 +545,7 @@ class ReportViewController: UIViewController {
                 sortCriteria: selectedSortCriteria,
                 layoutOptions: layoutOptions,
                 dateRangeDescription: dateRangeDescriptionFromFilters(),
-                header: ReportHeader.fromUserDefaults(),
+                header: ReportNames.shared.header(),
                 generator: reportGenerator
             ) { [weak self] result in
                 guard let self else { return }
@@ -570,7 +570,7 @@ class ReportViewController: UIViewController {
                 format: .csv,
                 sortCriteria: selectedSortCriteria,
                 dateRangeDescription: dateRangeDescriptionFromFilters(),
-                header: ReportHeader.fromUserDefaults(),
+                header: ReportNames.shared.header(),
                 generator: reportGenerator
             ) { [weak self] result in
                 guard let self else { return }

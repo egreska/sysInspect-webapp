@@ -336,4 +336,39 @@ final class SiteRackingTests: XCTestCase {
         spec.safetyClips.neededCount = "12"
         XCTAssertEqual(spec.safetyClipsSummary, "Present · 12 needed")
     }
+
+    func testCustomerLine() {
+        XCTAssertEqual(SiteRacking.empty.customerLine(documentCount: 0), "Not set")
+        XCTAssertEqual(SiteRacking.empty.customerLine(documentCount: 1), "1 document")
+        XCTAssertEqual(SiteRacking.empty.customerLine(documentCount: 3), "3 documents")
+
+        var uprightWins = SiteRacking.empty
+        uprightWins.uprights = SiteRackingSection(rows: [
+            UprightSpec(manufacturer: "  "),
+            UprightSpec(manufacturer: "  Upright Co  ")
+        ])
+        uprightWins.beams = SiteRackingSection(rows: [BeamSpec(manufacturer: "Beam Co")])
+        uprightWins.decks = SiteRackingSection(rows: [DeckSpec(manufacturer: "Deck Co", type: "")])
+        XCTAssertEqual(uprightWins.customerLine(documentCount: 0), "  Upright Co  ")
+        XCTAssertEqual(uprightWins.customerLine(documentCount: 1), "1 documents ·   Upright Co  ")
+        XCTAssertEqual(uprightWins.customerLine(documentCount: 2), "2 documents ·   Upright Co  ")
+
+        var beamWins = SiteRacking.empty
+        beamWins.uprights = SiteRackingSection(rows: [UprightSpec(manufacturer: " ")])
+        beamWins.beams = SiteRackingSection(rows: [BeamSpec(manufacturer: "Beam Co")])
+        beamWins.decks = SiteRackingSection(rows: [DeckSpec(manufacturer: "Deck Co", type: "")])
+        XCTAssertEqual(beamWins.customerLine(documentCount: 0), "Beam Co")
+
+        var deckWins = SiteRacking.empty
+        deckWins.decks = SiteRackingSection(rows: [DeckSpec(manufacturer: "Deck Co", type: "")])
+        XCTAssertEqual(deckWins.customerLine(documentCount: 0), "Deck Co")
+
+        var clips = SiteRacking.empty
+        clips.safetyClips.present = true
+        XCTAssertEqual(clips.customerLine(documentCount: 0), "Configured")
+
+        var bars = SiteRacking.empty
+        bars.crossBars = SiteRackingSection(rows: [CrossBarSpec(manufacturer: "Bar Co")])
+        XCTAssertEqual(bars.customerLine(documentCount: 0), "Configured")
+    }
 }

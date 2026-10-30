@@ -37,7 +37,7 @@ Optional installed-equipment profile on a Customer: Site Information, Load Infor
 _Avoid_: inventory, rack layout, Issue, Inspection snapshot, DamageComponent
 
 **SiteDocument**:
-An optional photo or PDF on a Customer. At most five. Callers ask for bytes and filename, not storage slots or file URLs.
+An optional photo or PDF of at most 10 MB on a Customer. At most five. Callers ask for bytes and filename, not storage slots or file URLs.
 _Avoid_: attachment, blueprint entity, Customer photo, packed document tuples
 
 **Manufacturer**:
@@ -70,14 +70,22 @@ _Avoid_: currentUserEmail, session email, remembered login, Face ID as Session
 
 **Inspector**:
 The Apple ID entitled by one Access Code. The same Apple ID on another device is the same Inspector. A different Apple ID is not. An Inspector has one Session.
-_Avoid_: email, Session, company, device
+_Avoid_: email, Session, company, device, beta tester
+
+**Inspector Name**:
+The name this device prints on Reports. It does not travel with the Session. Logout keeps it, and Delete Account forgets it.
+_Avoid_: inspector information, username, Apple ID
+
+**Company Information**:
+The company name, address, and phone this device prints on Reports. They are not a shared company account, and they do not travel with the Session. Logout keeps them, and Delete Account forgets them.
+_Avoid_: Customer, company account, shared company
 
 **Access Code**:
-A credential the company creates for exactly one Inspector before any Claim. Whoever has the code holds its Claim, including after it is bound to an Apple ID. Distinct from the password on a Session.
+A credential issued for exactly one Inspector before any Claim. Whoever has the code holds its Claim, including after it is bound to an Apple ID. Distinct from the password on a Session.
 _Avoid_: promo code, offer code, Apple redemption code, license key, company code, device license
 
 **Claim**:
-The binding of one Access Code to one Inspector. It follows the code.
+The binding of one Access Code to one Inspector. It follows the code. sessionReady records that a Session exists for that Claim. Until that record is updated, the Claim does not yet say so.
 _Avoid_: redemption, login, registration, Session
 
 **Retired**:
@@ -85,5 +93,5 @@ An Access Code whose Claim has been ended. It cannot be Claimed again. Inspectio
 _Avoid_: revoked, expired, suspended, reusable code, remote wipe, permanent ban, Delete Account
 
 **Delete Account**:
-The end of the Session on this device: its customers, inspections, photos, site documents, Manufacturer, WireDeckManufacturer, and DeckType catalogs, the company and inspector names on Reports, the Security Answer, and LastUser, including iCloud copies of those records. It stays unfinished until iCloud has accepted the deletions; the Claim remains, and the same Inspector can start a new Session only after that.
+The end of the Session on this device: its customers, inspections, photos, site documents, Manufacturer, WireDeckManufacturer, and DeckType catalogs, the company and inspector names on Reports, the Security Answer, and LastUser, including iCloud copies of those records. It stays unfinished until iCloud has accepted the deletions and sessionReady on the Claim is cleared. The Claim remains. The same Inspector can start a new Session only after that. Another phone on that Inspector keeps its Session until those records disappear.
 _Avoid_: Clear All Data, wipe, logout, Retire

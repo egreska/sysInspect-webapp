@@ -60,7 +60,6 @@ class SettingsViewController: UIViewController {
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "SettingCell")
     }
 
     // MARK: - Settings Actions
@@ -520,13 +519,13 @@ class SettingsViewController: UIViewController {
 
     private func performDeleteAccount() {
         Task {
-            let outcome = await AccessCodeCoordinator.shared.startDeleteAccount()
+            let outcome = await DeleteAccount.shared.start()
             await MainActor.run {
                 switch outcome {
-                case .needsNetwork:
+                case .notSignedIn:
                     self.showAlert(
                         title: "Delete Account",
-                        message: "The account could not be deleted. Connect to the network and try again."
+                        message: "Sign in to iCloud in Settings. Pallet Rack Safety uses that Apple ID as the inspector."
                     )
                 case .failed:
                     self.showAlert(title: "Delete Account", message: "The account could not be deleted.")
@@ -557,7 +556,8 @@ extension SettingsViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell", for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "SettingCell")
+            ?? UITableViewCell(style: .value1, reuseIdentifier: "SettingCell")
         let settingName = sectionItems[indexPath.section][indexPath.row]
 
         cell.textLabel?.text = settingName
@@ -568,10 +568,9 @@ extension SettingsViewController: UITableViewDataSource {
             cell.detailTextLabel?.text = CoreDataManager.shared.currentCloudKitSyncStatus.displayString
             cell.accessoryType = .none
         } else if settingName == "Inspector Name" {
-            let inspectorName = UserDefaults.standard.string(forKey: "inspectorName") ?? "Not Set"
-            cell.detailTextLabel?.text = inspectorName
+            cell.detailTextLabel?.text = ReportNames.shared.settingsInspectorName()
         } else if settingName == "Company Information" {
-            cell.detailTextLabel?.text = UserDefaults.standard.string(forKey: "companyName") ?? "Not Set"
+            cell.detailTextLabel?.text = ReportNames.shared.settingsCompanyName()
         }
 
         // Customize appearance for Clear All Data

@@ -85,7 +85,7 @@ class InspectionFormViewModel: NSObject {
         let newInspection = Inspection(context: context)
         newInspection.id = UUID()
         newInspection.date = Date()
-        newInspection.inspectorName = UserDefaults.standard.string(forKey: "inspectorName") ?? "Inspector Name"
+        newInspection.inspectorName = ReportNames.shared.inspectorNameToStamp()
         newInspection.customer = customer
 
         if let currentUserID = UserManager.shared.sessionUserId {
@@ -103,19 +103,3 @@ class InspectionFormViewModel: NSObject {
     }
 }
 
-enum UserDefaultsKeys: String {
-    case inspectorName = "inspectorName"
-    case companyName = "companyName"
-    case companyAddress = "companyAddress"
-    case companyPhone = "companyPhone"
-}
-
-extension UserDefaults {
-    func string(for key: UserDefaultsKeys) -> String? {
-        return string(forKey: key.rawValue)
-    }
-
-    func set(_ value: String, for key: UserDefaultsKeys) {
-        set(value, forKey: key.rawValue)
-    }
-}
