@@ -16,6 +16,7 @@ class UserManager {
     
     private let coreDataManager: CoreDataManager
     private var defaults: UserDefaults
+    private(set) var secrets: SessionSecretStore = KeychainSessionSecretStore()
 
     private enum SessionKeys {
         static let sessionUserId = "currentUserID"
@@ -42,63 +43,89 @@ class UserManager {
         migrateLegacySessionKeysIfNeeded()
         sessionUserId = storedSessionUserId
     }
+
+    func use(secrets: SessionSecretStore) {
+        self.secrets = secrets
+    }
     
     // MARK: - User Creation
-    func createUser(email: String, password: String) async -> Bool {
-        // Ensure Core Data stores are loaded first
+    func createUser(
+        email: String,
+        password: String,
+        securityQuestion: String,
+        securityAnswer: String
+    ) async -> Bool {
         return await withCheckedContinuation { continuation in
             coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self = self else {
+                guard let self else {
                     continuation.resume(returning: false)
                     return
                 }
-                
                 if !success {
                     print("❌ Error: Core Data stores failed to load")
                     continuation.resume(returning: false)
                     return
                 }
-                
-                let result = self.performUserCreation(email: email, password: password)
+                let result = self.performUserCreation(
+                    email: email,
+                    password: password,
+                    securityQuestion: securityQuestion,
+                    securityAnswer: securityAnswer
+                )
                 continuation.resume(returning: result)
             }
         }
     }
     
-    private func performUserCreation(email: String, password: String) -> Bool {
+    private func performUserCreation(
+        email: String,
+        password: String,
+        securityQuestion: String,
+        securityAnswer: String
+    ) -> Bool {
         let context = CoreDataManager.shared.context
-        
         if userExists(email: email) {
             print("❌ Error creating user: User already exists with this email.")
             return false
         }
-        
+        let answer = SessionSecretRules.normalizedAnswer(securityAnswer)
+        guard !securityQuestion.isEmpty,
+              answer.count >= 8,
+              let passwordRecord = hashPasswordSecure(password),
+              let answerRecord = hashPasswordSecure(answer) else {
+            return false
+        }
+
+        let user = User(context: context)
+        let userId = UUID()
+        user.id = userId
+        user.userId = userId
+        user.createdDate = Date()
+        user.lastLoginDate = Date()
+        user.isActive = true
+        user.email = email.lowercased()
+
+        var secret = SessionSecret()
+        secret.passwordHash = passwordRecord.hash
+        secret.passwordSalt = passwordRecord.salt
+        secret.passwordIterations = SessionSecretRules.iterations
+        secret.securityQuestion = securityQuestion
+        secret.securityAnswerHash = answerRecord.hash
+        secret.securityAnswerSalt = answerRecord.salt
+        secret.securityAnswerIterations = SessionSecretRules.iterations
+        guard secrets.save(secret, userId: userId) else {
+            context.delete(user)
+            return false
+        }
+
         do {
-            let user = User(context: context)
-            
-            // ENSURE all critical fields are set since they're now optional in the model
-            user.id = UUID()
-            user.userId = user.id
-            user.createdDate = Date()
-            user.lastLoginDate = Date()
-            user.isActive = true
-            
-            user.email = email.lowercased()
-            applyPassword(password, to: user)
-            
             try context.save()
-            print("✅ Local user created successfully")
-            
-            // Log account creation
             AnalyticsManager.shared.logAccountCreated()
-
-            if let userId = user.id {
-                startSession(userId: userId)
-            }
-
+            startSession(userId: userId)
             return true
-            
         } catch {
+            secrets.delete(userId: userId)
+            context.delete(user)
             print("❌ Error creating user: \(error)")
             return false
         }
@@ -106,94 +133,60 @@ class UserManager {
 
     
     // MARK: - User Authentication
-    func authenticateUser(email: String, password: String) async -> Bool {
+    func authenticateUser(email: String, password: String) async -> LoginResult {
         // Ensure Core Data stores are loaded first
         return await withCheckedContinuation { continuation in
             coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self = self else {
-                    continuation.resume(returning: false)
+                guard let self else {
+                    continuation.resume(returning: .failure)
                     return
                 }
-                
                 if !success {
                     print("❌ Error: Core Data stores failed to load")
-                    continuation.resume(returning: false)
+                    continuation.resume(returning: .failure)
                     return
                 }
-                
-                let result = self.performAuthentication(email: email, password: password)
-                continuation.resume(returning: result)
+                continuation.resume(returning: self.performAuthentication(email: email, password: password))
             }
         }
     }
     
-    private func performAuthentication(email: String, password: String) -> Bool {
-        // Check if account is locked
+    private func performAuthentication(email: String, password: String) -> LoginResult {
         if AccountLockoutManager.shared.isAccountLocked(email: email) {
-            let remainingTime = AccountLockoutManager.shared.getRemainingLockoutTime(email: email)
-            let formattedTime = AccountLockoutManager.shared.formatRemainingTime(remainingTime)
-            print("⛔ Account locked for \(email). Remaining time: \(formattedTime)")
-            return false
+            return .failure
         }
-        
+
         let context = CoreDataManager.shared.context
         let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
-        
+
         do {
-            let users = try context.fetch(fetchRequest)
-            guard let user = users.first else {
-                print("❌ User not found")
+            guard let user = try context.fetch(fetchRequest).first else {
                 AccountLockoutManager.shared.recordFailedAttempt(email: email)
-                return false
+                return .failure
             }
-            
-            var authenticationSuccessful = false
-            var needsMigration = false
-            if passwordMatches(password, user: user) {
-                authenticationSuccessful = true
-                needsMigration = user.passwordSalt == nil
+            absorbSyncedSecrets(for: user, defaults: defaults, in: context)
+            guard let userId = user.id,
+                  secrets.load(userId: userId)?.hasPassword == true else {
+                return .waiting
             }
-            
-            if authenticationSuccessful {
-                // Clear any lockout data on successful login
-                AccountLockoutManager.shared.recordSuccessfulLogin(email: email)
-                
-                // Migrate to secure hashing if using legacy password
-                if needsMigration {
-                    print("🔄 Migrating password to secure hashing...")
-                    applyPassword(password, to: user)
-                    print("✅ Password migrated to secure hashing")
-                }
-                
-                // Update last login date
-                user.lastLoginDate = Date()
-                try context.save()
-                
-                if let userId = user.id {
-                    startSession(userId: userId)
-                }
-                
-                print("✅ Authentication successful")
-                
-                // Log successful login
-                AnalyticsManager.shared.logLogin(method: "password", success: true)
-                AnalyticsManager.shared.setUserID(user.id?.uuidString ?? "unknown")
-                
-                return true
-            } else {
-                print("❌ Authentication failed - invalid password")
+            guard passwordMatches(password, user: user, in: context) else {
                 AccountLockoutManager.shared.recordFailedAttempt(email: email)
-                
-                // Log failed login
                 AnalyticsManager.shared.logLogin(method: "password", success: false)
+                return .failure
             }
-            
+
+            AccountLockoutManager.shared.recordSuccessfulLogin(email: email)
+            user.lastLoginDate = Date()
+            try context.save()
+            startSession(userId: userId)
+            AnalyticsManager.shared.logLogin(method: "password", success: true)
+            AnalyticsManager.shared.setUserID(userId.uuidString)
+            return .success
         } catch {
             print("❌ Error during authentication: \(error.localizedDescription)")
+            return .failure
         }
-        
-        return false
     }
     
     // MARK: - User Queries
@@ -322,76 +315,162 @@ class UserManager {
         let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
         guard let user = try? context.fetch(fetchRequest).first else { return false }
-        return passwordMatches(password, user: user)
+        return passwordMatches(password, user: user, in: context)
+    }
+
+    func passwordAvailability(forEmail email: String, in context: NSManagedObjectContext) -> PasswordAvailability {
+        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
+        fetchRequest.fetchLimit = 1
+        guard let user = try? context.fetch(fetchRequest).first else { return .noUser }
+        absorbSyncedSecrets(for: user, defaults: defaults, in: context)
+        guard let userId = user.id, secrets.load(userId: userId)?.hasPassword == true else {
+            return .waiting
+        }
+        return .ready
+    }
+
+    func absorbSyncedSecrets(for user: User, defaults: UserDefaults, in context: NSManagedObjectContext) {
+        guard let userId = user.id else { return }
+        var secret = secrets.load(userId: userId) ?? SessionSecret()
+        var dirty = false
+        if secret.passwordHash == nil, let hash = user.passwordHash {
+            secret.passwordHash = hash
+            secret.passwordSalt = user.passwordSalt
+            secret.passwordIterations = user.passwordSalt == nil ? nil : SessionSecretRules.iterations
+            dirty = true
+        }
+        if !secret.hasSecurityAnswer {
+            if let hash = user.securityAnswerHash {
+                secret.securityQuestion = user.securityQuestion
+                secret.securityAnswerHash = hash
+                secret.securityAnswerSalt = user.securityAnswerSalt
+                secret.securityAnswerIterations = user.securityAnswerSalt == nil ? nil : SessionSecretRules.iterations
+                dirty = true
+            } else if let email = user.email?.lowercased(),
+                      let hash = defaults.string(forKey: "securityAnswer_\(email)") {
+                secret.securityQuestion = defaults.string(forKey: "securityQuestion_\(email)")
+                secret.securityAnswerHash = hash
+                secret.securityAnswerSalt = defaults.data(forKey: "securityAnswerSalt_\(email)")
+                secret.securityAnswerIterations = secret.securityAnswerSalt == nil ? nil : SessionSecretRules.iterations
+                dirty = true
+            }
+        }
+        if dirty, !secrets.save(secret, userId: userId) {
+            return
+        }
+        let hadColumns = user.passwordHash != nil
+            || user.passwordSalt != nil
+            || user.securityQuestion != nil
+            || user.securityAnswerHash != nil
+            || user.securityAnswerSalt != nil
+        if hadColumns {
+            user.passwordHash = nil
+            user.passwordSalt = nil
+            user.securityQuestion = nil
+            user.securityAnswerHash = nil
+            user.securityAnswerSalt = nil
+            try? context.save()
+        }
+        if let email = user.email?.lowercased() {
+            defaults.removeObject(forKey: "securityQuestion_\(email)")
+            defaults.removeObject(forKey: "securityAnswer_\(email)")
+            defaults.removeObject(forKey: "securityAnswerSalt_\(email)")
+        }
     }
     
     // MARK: - Password Helpers
-    
-    /// Legacy password hashing (kept for migration purposes only)
+
     private func hashPasswordLegacy(_ password: String) -> String {
-        let inputData = Data(password.utf8)
-        let hashed = SHA256.hash(data: inputData)
+        let hashed = SHA256.hash(data: Data(password.utf8))
         return hashed.compactMap { String(format: "%02x", $0) }.joined()
     }
-    
-    /// Generate a cryptographically secure random salt
-    private func generateSalt() -> Data {
+
+    private func generateSalt() -> Data? {
         var bytes = [UInt8](repeating: 0, count: 32)
-        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        
-        guard status == errSecSuccess else {
-            // Fallback to less secure but still random salt
-            print("Warning: Using fallback salt generation")
-            return Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+            return nil
         }
-        
         return Data(bytes)
     }
-    
-    /// Securely hash a password using PBKDF2 with a salt
-    /// - Parameters:
-    ///   - password: The plaintext password to hash
-    ///   - salt: The salt to use (pass nil to generate a new one)
-    /// - Returns: A tuple containing the hashed password and the salt used
-    func hashPasswordSecure(_ password: String, salt: Data? = nil) -> (hash: String, salt: Data) {
-        let saltData = salt ?? generateSalt()
-        let passwordData = Data(password.utf8)
-        
-        // Use PBKDF2 with 100,000 iterations (industry standard)
+
+    func hashPasswordSecure(_ password: String, salt: Data? = nil) -> (hash: String, salt: Data)? {
+        guard let saltData = salt ?? generateSalt() else { return nil }
         guard let derivedKey = try? PBKDF2.deriveKey(
-            password: passwordData,
+            password: Data(password.utf8),
             salt: saltData,
-            iterations: 100_000,
+            iterations: SessionSecretRules.iterations,
             keyLength: 32
         ) else {
-            // Fallback to basic SHA256 if PBKDF2 fails (shouldn't happen)
-            print("Warning: PBKDF2 failed, using fallback hashing")
-            let combined = saltData + passwordData
-            let hash = SHA256.hash(data: combined)
-            let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-            return (hashString, saltData)
+            return nil
         }
-        
         return (derivedKey.base64EncodedString(), saltData)
     }
     
-    func applyPassword(_ password: String, to user: User) {
-        let (hash, salt) = hashPasswordSecure(password)
-        user.passwordHash = hash
-        user.passwordSalt = salt
+    @discardableResult
+    func applyPassword(_ password: String, to user: User) -> Bool {
+        guard let userId = user.id else { return false }
+        let existing = secrets.load(userId: userId) ?? SessionSecret()
+        guard storePassword(password, userId: userId, preserving: existing) else { return false }
+        user.passwordHash = nil
+        user.passwordSalt = nil
+        return true
     }
 
-    func verifyPasswordSecure(_ password: String, hash: String, salt: Data) -> Bool {
-        let computedHash = hashPasswordSecure(password, salt: salt)
-        return computedHash.hash == hash
-    }
-
-    func passwordMatches(_ password: String, user: User) -> Bool {
-        if let storedSalt = user.passwordSalt,
-           let storedHash = user.passwordHash {
-            return verifyPasswordSecure(password, hash: storedHash, salt: storedSalt)
+    func verifyPasswordSecure(
+        _ password: String,
+        hash: String,
+        salt: Data,
+        iterations: Int = SessionSecretRules.iterations
+    ) -> Bool {
+        guard let derivedKey = try? PBKDF2.deriveKey(
+            password: Data(password.utf8),
+            salt: salt,
+            iterations: iterations,
+            keyLength: 32
+        ) else {
+            return false
         }
-        return user.passwordHash == hashPasswordLegacy(password)
+        return hashesMatch(derivedKey.base64EncodedString(), hash)
+    }
+
+    func passwordMatches(_ password: String, user: User, in context: NSManagedObjectContext) -> Bool {
+        absorbSyncedSecrets(for: user, defaults: defaults, in: context)
+        guard let userId = user.id,
+              let secret = secrets.load(userId: userId),
+              let storedHash = secret.passwordHash else {
+            return false
+        }
+        let matches: Bool
+        if let salt = secret.passwordSalt, let iterations = secret.passwordIterations {
+            matches = verifyPasswordSecure(password, hash: storedHash, salt: salt, iterations: iterations)
+        } else {
+            matches = hashesMatch(storedHash, hashPasswordLegacy(password))
+        }
+        if matches, secret.passwordIterations == nil {
+            _ = storePassword(password, userId: userId, preserving: secret)
+        }
+        return matches
+    }
+
+    private func storePassword(_ password: String, userId: UUID, preserving secret: SessionSecret) -> Bool {
+        guard let record = hashPasswordSecure(password) else { return false }
+        var updated = secret
+        updated.passwordHash = record.hash
+        updated.passwordSalt = record.salt
+        updated.passwordIterations = SessionSecretRules.iterations
+        return secrets.save(updated, userId: userId)
+    }
+
+    func hashesMatch(_ lhs: String, _ rhs: String) -> Bool {
+        let left = Array(lhs.utf8)
+        let right = Array(rhs.utf8)
+        guard left.count == right.count else { return false }
+        var difference: UInt8 = 0
+        for index in left.indices {
+            difference |= left[index] ^ right[index]
+        }
+        return difference == 0
     }
     
     func replacePassword(email: String, newPassword: String) async -> Bool {
@@ -422,9 +501,8 @@ class UserManager {
                 print("❌ User not found: \(email)")
                 return false
             }
-            applyPassword(newPassword, to: user)
+            guard applyPassword(newPassword, to: user) else { return false }
             try context.save()
-            print("✅ Password replaced for \(email)")
             return true
         } catch {
             print("❌ Error replacing password: \(error.localizedDescription)")
@@ -462,20 +540,29 @@ class UserManager {
                 print("❌ User not found: \(email)")
                 return false
             }
-            let oldPasswordVerified = passwordMatches(oldPassword, user: user)
-            guard oldPasswordVerified else {
-                print("❌ Old password did not match")
+            guard passwordMatches(oldPassword, user: user, in: context) else {
                 return false
             }
-            applyPassword(newPassword, to: user)
+            guard applyPassword(newPassword, to: user) else { return false }
             try context.save()
-            print("✅ Password changed successfully for \(email) using secure hashing")
             return true
         } catch {
             print("❌ Error changing password: \(error.localizedDescription)")
             return false
         }
     }
+}
+
+enum LoginResult: Equatable {
+    case success
+    case failure
+    case waiting
+}
+
+enum PasswordAvailability: Equatable {
+    case noUser
+    case waiting
+    case ready
 }
 
 // MARK: - PBKDF2 Key Derivation

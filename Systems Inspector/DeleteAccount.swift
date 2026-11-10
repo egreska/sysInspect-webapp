@@ -156,6 +156,17 @@ final class DeleteAccount {
         var deleted = false
         context.performAndWait {
             do {
+                let users = try context.fetch(NSFetchRequest<User>(entityName: "User"))
+                for user in users {
+                    if let id = user.id {
+                        UserManager.shared.secrets.delete(userId: id)
+                    }
+                    if let email = user.email?.lowercased() {
+                        defaults.removeObject(forKey: "securityQuestion_\(email)")
+                        defaults.removeObject(forKey: "securityAnswer_\(email)")
+                        defaults.removeObject(forKey: "securityAnswerSalt_\(email)")
+                    }
+                }
                 for name in names {
                     let request = NSFetchRequest<NSManagedObject>(entityName: name)
                     request.includesPropertyValues = false

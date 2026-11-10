@@ -21,6 +21,7 @@ final class PasswordRecoveryManagerTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
+        UserManager.shared.use(secrets: MemorySessionSecretStore())
         sut = PasswordRecoveryManager.shared
         
         // Clear any existing security questions
@@ -265,13 +266,16 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
 
         let email = testEmail.lowercased()
-        XCTAssertNotNil(user.securityAnswerSalt)
-        XCTAssertNotEqual(user.securityAnswerHash, legacyHash(testAnswer))
+        let secret = UserManager.shared.secrets.load(userId: user.id!)
+        XCTAssertNil(user.securityAnswerHash)
+        XCTAssertNil(user.securityAnswerSalt)
+        XCTAssertNotNil(secret?.securityAnswerSalt)
+        XCTAssertNotEqual(secret?.securityAnswerHash, legacyHash(testAnswer))
         XCTAssertNil(UserDefaults.standard.data(forKey: "securityAnswerSalt_\(email)"))
         XCTAssertTrue(UserManager.shared.verifyPasswordSecure(
             "fluffy",
-            hash: user.securityAnswerHash!,
-            salt: user.securityAnswerSalt!
+            hash: secret!.securityAnswerHash!,
+            salt: secret!.securityAnswerSalt!
         ))
         XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "  FLUFFY ", in: context))
         XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: testEmail), 0)
@@ -294,8 +298,11 @@ final class PasswordRecoveryManagerTests: XCTestCase {
 
         XCTAssertFalse(result.success)
         XCTAssertTrue(result.message.contains("Too many failed attempts"))
+        let secret = UserManager.shared.secrets.load(userId: user.id!)
+        XCTAssertNil(user.securityAnswerHash)
         XCTAssertNil(user.securityAnswerSalt)
-        XCTAssertEqual(user.securityAnswerHash, legacyHash(testAnswer))
+        XCTAssertEqual(secret?.securityAnswerHash, legacyHash(testAnswer))
+        XCTAssertNil(secret?.securityAnswerIterations)
     }
     
     func testPhoneAnswerCopiesOntoTheSessionOnce() throws {
@@ -322,16 +329,20 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         sut.adoptPhoneAnswer(for: testEmail, in: context)
 
         let email = testEmail.lowercased()
-        XCTAssertEqual(user.securityQuestion, testQuestion)
-        XCTAssertEqual(user.securityAnswerHash, legacyHash(testAnswer))
-        XCTAssertNil(user.securityAnswerSalt)
+        let secret = UserManager.shared.secrets.load(userId: user.id!)
+        XCTAssertNil(user.securityQuestion)
+        XCTAssertNil(user.securityAnswerHash)
+        XCTAssertEqual(secret?.securityQuestion, testQuestion)
+        XCTAssertEqual(secret?.securityAnswerHash, legacyHash(testAnswer))
+        XCTAssertNil(secret?.securityAnswerIterations)
         XCTAssertNil(UserDefaults.standard.string(forKey: "securityAnswer_\(email)"))
         XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
-        XCTAssertNotNil(user.securityAnswerSalt)
-        let kept = user.securityAnswerHash
+        let upgraded = UserManager.shared.secrets.load(userId: user.id!)
+        XCTAssertNotNil(upgraded?.securityAnswerSalt)
+        let kept = upgraded?.securityAnswerHash
         UserDefaults.standard.set(legacyHash("other"), forKey: "securityAnswer_\(email)")
         sut.adoptPhoneAnswer(for: testEmail, in: context)
-        XCTAssertEqual(user.securityAnswerHash, kept)
+        XCTAssertEqual(UserManager.shared.secrets.load(userId: user.id!)?.securityAnswerHash, kept)
         XCTAssertNil(UserDefaults.standard.string(forKey: "securityAnswer_\(email)"))
     }
 

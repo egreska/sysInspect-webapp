@@ -76,7 +76,13 @@ final class DeleteAccountTests: XCTestCase {
     }
 
     func testCommittedWipeKeepsSessionReadyAndStaysFinishing() async throws {
+        let store = MemorySessionSecretStore()
+        UserManager.shared.use(secrets: store)
         try seedAccount()
+        let userId = try XCTUnwrap(UserManager.shared.sessionUserId)
+        var secret = SessionSecret()
+        secret.passwordHash = "stored-hash"
+        XCTAssertTrue(store.save(secret, userId: userId))
 
         let outcome = await module.start()
 
@@ -91,6 +97,7 @@ final class DeleteAccountTests: XCTestCase {
         XCTAssertNil(isolated.defaults.string(forKey: "securityQuestion_delete@example.com"))
         XCTAssertNil(isolated.defaults.string(forKey: "securityAnswer_delete@example.com"))
         XCTAssertNil(isolated.defaults.data(forKey: "securityAnswerSalt_delete@example.com"))
+        XCTAssertNil(store.load(userId: userId))
         let names = ReportNames(defaults: isolated.defaults)
         let company = names.storedCompany()
         XCTAssertNil(names.storedInspectorName())

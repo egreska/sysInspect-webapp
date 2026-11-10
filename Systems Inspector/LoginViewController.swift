@@ -359,16 +359,23 @@ class LoginViewController: UIViewController {
             await MainActor.run {
                 self.isAuthenticating = false
                 
-                if authResult {
+                switch authResult {
+                case .success:
                     HapticManager.success()
                     Task {
                         await self.performSuccessfulLogin()
                     }
-                } else {
+                case .waiting:
+                    HapticManager.error()
+                    self.showActivityIndicator(false)
+                    self.showAlert(
+                        title: SessionSecretMessage.waitingTitle,
+                        message: SessionSecretMessage.waiting
+                    )
+                case .failure:
                     HapticManager.error()
                     self.showActivityIndicator(false)
                     
-                    // Show remaining attempts
                     let remainingAttempts = AccountLockoutManager.shared.getRemainingAttempts(email: email)
                     if remainingAttempts > 0 {
                         self.showAlert(
@@ -381,6 +388,7 @@ class LoginViewController: UIViewController {
                             message: "Too many failed login attempts. Your account has been locked for 15 minutes for security."
                         )
                     }
+                }
                 }
             }
         }

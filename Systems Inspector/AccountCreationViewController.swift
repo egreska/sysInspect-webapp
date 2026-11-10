@@ -362,29 +362,19 @@ class AccountCreationViewController: UIViewController {
         print("🔄 Starting account creation for: \(email)")
 
         Task {
-            let success = await UserManager.shared.createUser(email: email, password: password)
+            let success = await UserManager.shared.createUser(
+                email: email,
+                password: password,
+                securityQuestion: securityQuestion,
+                securityAnswer: securityAnswer
+            )
             
             if success {
                 await ClaimCheck.shared.sessionExists()
-                // Set security question
-                let securitySuccess = PasswordRecoveryManager.shared.setSecurityQuestion(
-                    for: email,
-                    question: securityQuestion,
-                    answer: securityAnswer
-                )
-                
                 await MainActor.run {
                     self.showActivityIndicator(false)
-                    if securitySuccess {
-                        print("✅ Account creation and security question set successfully")
-                        self.showAlert(title: "Account Created", message: "Your account has been successfully created with password recovery!") {
-                            self.navigationController?.popViewController(animated: true)
-                        }
-                    } else {
-                        print("⚠️ Account created but security question failed")
-                        self.showAlert(title: "Account Created", message: "Your account was created, but password recovery setup failed. You can still login.") {
-                            self.navigationController?.popViewController(animated: true)
-                        }
+                    self.showAlert(title: "Account Created", message: "Your account has been successfully created with password recovery!") {
+                        self.navigationController?.popViewController(animated: true)
                     }
                 }
             } else {

@@ -61,7 +61,7 @@ The logged-in user's id on iOS, owned by UserManager. Entity `userId` attributes
 _Avoid_: CoreDataManager.currentUserID, PasswordRecoveryManager hashing, duplicate PBKDF2, UserDefaults Session keys outside UserManager, LastUser
 
 **Security Answer**:
-A secret that travels with the Session and resets its password. The question text is only the prompt. A wrong guess counts toward that phone's email lock. A correct one ends that lock.
+A secret that travels with the Session to the Inspector's other phones and resets its password. It is not an inspection record. The question text is only the prompt. A wrong guess counts toward that phone's email lock. A correct one ends that lock.
 _Avoid_: recovery code, backup password, Access Code, Session password
 
 **LastUser**:

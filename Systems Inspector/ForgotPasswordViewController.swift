@@ -273,21 +273,19 @@ class ForgotPasswordViewController: UIViewController {
             return
         }
 
-        // Check if user has security question set up
-        if PasswordRecoveryManager.shared.hasSecurityQuestion(for: email) {
-            if let question = PasswordRecoveryManager.shared.getSecurityQuestion(for: email) {
-                currentEmail = email
-                securityQuestionLabel.text = question
-                
-                // Show security question section
-                UIView.animate(withDuration: 0.3) {
-                    self.securityQuestionContainerView.isHidden = false
-                    self.checkEmailButton.isEnabled = false
-                    self.checkEmailButton.alpha = 0.5
-                    self.emailTextField.isEnabled = false
-                }
+        switch PasswordRecoveryManager.shared.recoveryState(for: email) {
+        case .waiting:
+            showAlert(title: SessionSecretMessage.waitingTitle, message: SessionSecretMessage.waiting)
+        case .question(let question):
+            currentEmail = email
+            securityQuestionLabel.text = question
+            UIView.animate(withDuration: 0.3) {
+                self.securityQuestionContainerView.isHidden = false
+                self.checkEmailButton.isEnabled = false
+                self.checkEmailButton.alpha = 0.5
+                self.emailTextField.isEnabled = false
             }
-        } else {
+        case .unavailable:
             showAlert(
                 title: "Security Question Not Set",
                 message: "This account doesn't have a security question set up. Please contact support or create a new account."

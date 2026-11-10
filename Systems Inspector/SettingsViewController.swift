@@ -217,7 +217,7 @@ class SettingsViewController: UIViewController {
 
         2. Information You Enter
 
-        You enter account details, customers, inspections, Issues, photos, and site documents. The app stores a hash of your password on this device, not the password itself.
+        You enter account details, customers, inspections, Issues, photos, and site documents. The app stores a verifier for your password in iCloud Keychain for this Apple ID. It does not store the password itself, and the verifier is not part of the inspection data.
 
         3. Where Data Is Stored
 
