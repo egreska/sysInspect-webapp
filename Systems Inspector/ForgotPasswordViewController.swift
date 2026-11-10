@@ -109,7 +109,7 @@ class ForgotPasswordViewController: UIViewController {
     private let resetPasswordButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Reset Password", for: .normal)
-        button.backgroundColor = UIColor.systemGreen
+        button.backgroundColor = AppTheme.primary
         button.setTitleColor(AppTheme.primaryContrast, for: .normal)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -188,7 +188,7 @@ class ForgotPasswordViewController: UIViewController {
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
             titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
             
-            instructionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            instructionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
             instructionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
             instructionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
             
@@ -197,7 +197,7 @@ class ForgotPasswordViewController: UIViewController {
             emailTextField.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
             emailTextField.heightAnchor.constraint(equalToConstant: 44),
             
-            checkEmailButton.topAnchor.constraint(equalTo: emailTextField.bottomAnchor, constant: 20),
+            checkEmailButton.topAnchor.constraint(equalTo: emailTextField.bottomAnchor, constant: 16),
             checkEmailButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
             checkEmailButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
             checkEmailButton.heightAnchor.constraint(equalToConstant: 50),
@@ -211,17 +211,17 @@ class ForgotPasswordViewController: UIViewController {
             securityQuestionLabel.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
             securityQuestionLabel.trailingAnchor.constraint(equalTo: securityQuestionContainerView.trailingAnchor),
             
-            securityAnswerTextField.topAnchor.constraint(equalTo: securityQuestionLabel.bottomAnchor, constant: 12),
+            securityAnswerTextField.topAnchor.constraint(equalTo: securityQuestionLabel.bottomAnchor, constant: 16),
             securityAnswerTextField.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
             securityAnswerTextField.trailingAnchor.constraint(equalTo: securityQuestionContainerView.trailingAnchor),
             securityAnswerTextField.heightAnchor.constraint(equalToConstant: 44),
             
-            newPasswordTextField.topAnchor.constraint(equalTo: securityAnswerTextField.bottomAnchor, constant: 20),
+            newPasswordTextField.topAnchor.constraint(equalTo: securityAnswerTextField.bottomAnchor, constant: 16),
             newPasswordTextField.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
             newPasswordTextField.trailingAnchor.constraint(equalTo: securityQuestionContainerView.trailingAnchor),
             newPasswordTextField.heightAnchor.constraint(equalToConstant: 44),
             
-            confirmPasswordTextField.topAnchor.constraint(equalTo: newPasswordTextField.bottomAnchor, constant: 12),
+            confirmPasswordTextField.topAnchor.constraint(equalTo: newPasswordTextField.bottomAnchor, constant: 16),
             confirmPasswordTextField.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
             confirmPasswordTextField.trailingAnchor.constraint(equalTo: securityQuestionContainerView.trailingAnchor),
             confirmPasswordTextField.heightAnchor.constraint(equalToConstant: 44),

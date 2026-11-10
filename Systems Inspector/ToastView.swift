@@ -18,6 +18,7 @@ final class ToastView: UIView {
         toast.translatesAutoresizingMaskIntoConstraints = false
         toast.messageLabel.text = message
         toast.messageLabel.font = AppTheme.font(.subheadline)
+        toast.messageLabel.adjustsFontForContentSizeCategory = true
         toast.messageLabel.textColor = AppTheme.primaryContrast
         toast.messageLabel.numberOfLines = 2
         toast.backgroundColor = UIColor(white: 0.15, alpha: 0.98)
@@ -28,6 +29,7 @@ final class ToastView: UIView {
             toast.actionButton.setTitle(title, for: .normal)
             toast.actionButton.setTitleColor(.systemYellow, for: .normal)
             toast.actionButton.titleLabel?.font = AppTheme.fontMedium(.subheadline)
+            toast.actionButton.titleLabel?.adjustsFontForContentSizeCategory = true
             toast.actionButton.addTarget(toast, action: #selector(toast.actionTapped), for: .touchUpInside)
         } else {
             toast.actionButton.isHidden = true
@@ -40,9 +42,9 @@ final class ToastView: UIView {
         
         NSLayoutConstraint.activate([
             toast.messageLabel.leadingAnchor.constraint(equalTo: toast.leadingAnchor, constant: 16),
-            toast.messageLabel.topAnchor.constraint(equalTo: toast.topAnchor, constant: 12),
-            toast.messageLabel.bottomAnchor.constraint(equalTo: toast.bottomAnchor, constant: -12),
-            toast.actionButton.leadingAnchor.constraint(equalTo: toast.messageLabel.trailingAnchor, constant: 12),
+            toast.messageLabel.topAnchor.constraint(equalTo: toast.topAnchor, constant: 16),
+            toast.messageLabel.bottomAnchor.constraint(equalTo: toast.bottomAnchor, constant: -16),
+            toast.actionButton.leadingAnchor.constraint(equalTo: toast.messageLabel.trailingAnchor, constant: 16),
             toast.actionButton.trailingAnchor.constraint(equalTo: toast.trailingAnchor, constant: -16),
             toast.actionButton.centerYAnchor.constraint(equalTo: toast.messageLabel.centerYAnchor)
         ])
@@ -55,10 +57,11 @@ final class ToastView: UIView {
             toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24)
         ])
         toast.alpha = 0
-        UIView.animate(withDuration: 0.25) { toast.alpha = 1 }
+        let fade = UIAccessibility.isReduceMotionEnabled ? 0 : 0.25
+        UIView.animate(withDuration: fade) { toast.alpha = 1 }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-            UIView.animate(withDuration: 0.25, animations: { toast.alpha = 0 }) { _ in
+            UIView.animate(withDuration: fade, animations: { toast.alpha = 0 }) { _ in
                 toast.removeFromSuperview()
             }
         }
@@ -66,7 +69,8 @@ final class ToastView: UIView {
     
     @objc private func actionTapped() {
         actionHandler?()
-        UIView.animate(withDuration: 0.2, animations: { self.alpha = 0 }) { _ in
+        let fade = UIAccessibility.isReduceMotionEnabled ? 0 : 0.2
+        UIView.animate(withDuration: fade, animations: { self.alpha = 0 }) { _ in
             self.removeFromSuperview()
         }
     }

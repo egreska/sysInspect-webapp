@@ -140,6 +140,12 @@ class CustomerDirectoryViewController: UIViewController {
         guard let created = customer.createdDate else { return false }
         return Date().timeIntervalSince(created) <= pendingSyncTimeWindow
     }
+
+    private func inspectionCount(for customer: Customer) -> Int {
+        guard let userId = UserManager.shared.sessionUserId,
+              let context = customer.managedObjectContext else { return 0 }
+        return (try? sessionInspectionCount(for: customer, userId: userId, in: context)) ?? 0
+    }
     
     @objc private func cloudKitSyncStatusChanged() {
         tableView.reloadData()
@@ -268,7 +274,8 @@ extension CustomerDirectoryViewController: UITableViewDataSource {
         }
         let customer = viewModel.customers[indexPath.row]
         let showPendingSync = shouldShowPendingSyncBadge(for: customer)
-        cell.configure(with: customer, showPendingSync: showPendingSync)
+        let inspectionCount = inspectionCount(for: customer)
+        cell.configure(with: customer, inspectionCount: inspectionCount, showPendingSync: showPendingSync)
         return cell
     }
     
@@ -399,7 +406,7 @@ extension CustomerDirectoryViewController: UITableViewDelegate {
         if indexPath.row == viewModel.customers.count && viewModel.hasMoreCustomers {
             return 60
         }
-        return 80
+        return UITableView.automaticDimension
     }
     
     func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -528,7 +535,7 @@ class LoadingCell: UITableViewCell {
             activityIndicator.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             
             loadingLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            loadingLabel.leadingAnchor.constraint(equalTo: activityIndicator.trailingAnchor, constant: 12),
+            loadingLabel.leadingAnchor.constraint(equalTo: activityIndicator.trailingAnchor, constant: 8),
             loadingLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
         ])
     }
@@ -581,15 +588,18 @@ class CustomerCell: UITableViewCell {
         // Configure labels (Dynamic Type)
         companyNameLabel.font = .preferredFont(forTextStyle: .headline)
         companyNameLabel.adjustsFontForContentSizeCategory = true
+        companyNameLabel.numberOfLines = 0
         companyNameLabel.translatesAutoresizingMaskIntoConstraints = false
         
         siteLabel.font = .preferredFont(forTextStyle: .subheadline)
         siteLabel.adjustsFontForContentSizeCategory = true
+        siteLabel.numberOfLines = 0
         siteLabel.textColor = AppTheme.textSecondary
         siteLabel.translatesAutoresizingMaskIntoConstraints = false
         
         contactNameLabel.font = .preferredFont(forTextStyle: .subheadline)
         contactNameLabel.adjustsFontForContentSizeCategory = true
+        contactNameLabel.numberOfLines = 0
         contactNameLabel.textColor = AppTheme.textSecondary
         contactNameLabel.translatesAutoresizingMaskIntoConstraints = false
         
@@ -624,6 +634,7 @@ class CustomerCell: UITableViewCell {
             
             contactNameLabel.topAnchor.constraint(equalTo: siteLabel.bottomAnchor, constant: 2),
             contactNameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            contactNameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
             
             inspectionCountLabel.topAnchor.constraint(equalTo: contactNameLabel.bottomAnchor, constant: 4),
             inspectionCountLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -638,7 +649,7 @@ class CustomerCell: UITableViewCell {
         ])
     }
     
-    func configure(with customer: Customer, showPendingSync: Bool = false) {
+    func configure(with customer: Customer, inspectionCount: Int, showPendingSync: Bool = false) {
         companyNameLabel.text = customer.name ?? "Unknown Company"
         
         // Show site if available
@@ -646,6 +657,7 @@ class CustomerCell: UITableViewCell {
             siteLabel.text = "Site: \(site)"
             siteLabel.isHidden = false
         } else {
+            siteLabel.text = nil
             siteLabel.isHidden = true
         }
         
@@ -654,10 +666,10 @@ class CustomerCell: UITableViewCell {
             contactNameLabel.text = "Contact: \(contactName)"
             contactNameLabel.isHidden = false
         } else {
+            contactNameLabel.text = nil
             contactNameLabel.isHidden = true
         }
         
-        let inspectionCount = customer.inspections?.count ?? 0
         inspectionCountLabel.text = "\(inspectionCount) inspection\(inspectionCount == 1 ? "" : "s")"
 
         let dateString = DateFormatters.format(customer.createdDate ?? Date(), using: DateFormatters.short)

@@ -29,11 +29,12 @@ class IssueSelectionViewController: UIViewController {
         view.backgroundColor = .systemBackground
 
         navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(cancelTapped))
-        let doneSymbol = UIImage.SymbolConfiguration(hierarchicalColor: .systemGreen)
-        let doneImage = UIImage(systemName: "checkmark", withConfiguration: doneSymbol)?
-            .withRenderingMode(.alwaysOriginal)
-        let doneItem = UIBarButtonItem(image: doneImage, style: .done, target: self, action: #selector(doneTapped))
-        doneItem.tintColor = .systemGreen
+        let doneItem = UIBarButtonItem(
+            image: UIImage(systemName: "checkmark"),
+            style: .done,
+            target: self,
+            action: #selector(doneTapped)
+        )
         doneItem.accessibilityLabel = "Done"
         navigationItem.rightBarButtonItem = doneItem
 

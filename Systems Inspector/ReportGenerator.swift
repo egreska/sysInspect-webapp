@@ -518,7 +518,7 @@ class ReportGenerator {
         
         // Get current inspector name from settings, not from saved inspection
         let currentInspectorName = header.inspectorName
-        let inspector = "Inspector: \(currentInspectorName)"
+        let inspector = "Inspector Name: \(currentInspectorName)"
         
         let infoY = yPosition + 25
         
@@ -795,13 +795,13 @@ class ReportGenerator {
             csvString += "# Company: \(header.companyName)\n"
         }
         if !header.inspectorName.isEmpty {
-            csvString += "# Inspector: \(header.inspectorName)\n"
+            csvString += "# Inspector Name: \(header.inspectorName)\n"
         }
         if let rangeDesc = dateRangeDescription {
             csvString += "# Date range: \(rangeDesc)\n"
         }
         csvString += "#\n"
-        csvString += "Customer Name,Address,Date,Inspector,Primary Location (Area/Aisle),Secondary Location (Bay/Level),Importance,Issues,Comments,Photo File\n"
+        csvString += "Customer Name,Address,Date,Inspector Name,Primary Location (Area/Aisle),Secondary Location (Bay/Level),Importance,Issues,Comments,Photo File\n"
 
         var zipEntries: [(name: String, contents: Data)] = []
             
@@ -942,7 +942,7 @@ class ReportGenerator {
                 return issue1 < issue2
             }
         case .entryOrder, .date, .customer, .inspectionStatus:
-            return items.sorted { $0.item.sequenceNumber < $1.item.sequenceNumber }
+            return RecordedOrder.sorted(items) { $0.item.sequenceNumber }
         }
     }
 

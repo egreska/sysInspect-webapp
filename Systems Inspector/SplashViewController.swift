@@ -39,9 +39,9 @@ final class SplashViewController: UIViewController {
             iconImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -50),
             iconImageView.widthAnchor.constraint(equalToConstant: 150),
             iconImageView.heightAnchor.constraint(equalToConstant: 150),
-            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 20),
-            titleLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-            titleLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20)
+            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16)
         ])
     }
 

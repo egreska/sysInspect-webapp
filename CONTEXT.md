@@ -5,11 +5,11 @@ Field inspections of storage-rack systems: customers, inspections, and the issue
 ## Language
 
 **InspectionItem**:
-A single location on an Inspection (bay/position) where conditions are recorded. Callers ask for photo bytes, not storage slots or file URLs. At most five photos. Callers ask for recorded Issues as Paths, not Flag maps or Core Data bools.
-_Avoid_: line item, finding, row, mapper photos, photoDataList, photoURL, packed photo tuples, issueFlagMap, applyIssueFlags
+A single location on an Inspection (bay/position) where conditions are recorded. On an Inspection, items appear in the order they were recorded. Callers ask for photo bytes, not storage slots or file URLs. At most five photos. Callers ask for recorded Issues as Paths, not Flag maps or Core Data bools.
+_Avoid_: line item, finding, row, location order, bay order, mapper photos, photoDataList, photoURL, packed photo tuples, issueFlagMap, applyIssueFlags
 
 **Issue**:
-A condition from a fixed hierarchy (parent, optional child, optional grandchild), recorded on an InspectionItem as a Path. Display labels come from those Paths; a leaf is listed only when its parent is recorded.
+A condition from a fixed hierarchy (parent, optional child, optional grandchild), recorded on an InspectionItem as a Path. Display labels come from those Paths; a leaf is listed only when its parent is recorded, and a Path label may contain the word damage as the condition itself.
 _Avoid_: damage, finding, defect, DamageComponent, Flag map
 
 **Report**:
@@ -27,6 +27,10 @@ _Avoid_: mapper, codec, DamageComponent factory, draft, InspectionItemDraft
 **InspectionItemFormState**:
 The in-memory form for one InspectionItem (location, Importance, issues, photos) before InspectionItemIntake persists it. Create and edit present one InspectionItemFormViewController; that screen owns chrome and Intake. InspectionFormViewModel owns inspection lifecycle only.
 _Avoid_: ViewModel, mapper, draft, InspectionFormViewController, InspectionItemEditViewController
+
+**Customer**:
+The company site an Inspector inspects. A Customer, its Inspections, and their InspectionItems are visible only to the Inspector whose Session stamped them, and device search shows that Customer's name and site only while this Session exists.
+_Avoid_: account, client, company account
 
 **CustomerFormState**:
 The in-memory form for one Customer (name, site, contact, address, SiteRacking, SiteDocuments) before CustomerIntake persists it.
@@ -73,7 +77,7 @@ The Apple ID entitled by one Access Code. The same Apple ID on another device is
 _Avoid_: email, Session, company, device, beta tester
 
 **Inspector Name**:
-The name this device prints on Reports. It does not travel with the Session. Logout keeps it, and Delete Account forgets it.
+The name this device prints on Reports, where Reports label it Inspector Name. It does not travel with the Session. Logout keeps it, and Delete Account forgets it.
 _Avoid_: inspector information, username, Apple ID
 
 **Company Information**:

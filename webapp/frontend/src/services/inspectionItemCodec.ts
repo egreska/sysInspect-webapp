@@ -1,7 +1,7 @@
 import { importanceFromStored } from '../importance';
 import { Issue, ISSUE_FLAGS, type IssueFlagMap } from '../issue';
 import type { InspectionItem } from '../types';
-import { extractRecordName } from './cloudkit';
+import { extractRecordName } from './recordName';
 
 export type InspectionItemCloudKitRecord = {
   recordName: string;
@@ -41,6 +41,9 @@ function extractPhotoUrls(fields: InspectionItemCloudKitRecord['fields']): strin
   }
   return urls;
 }
+
+/** List queries ask for the full record. There is no field list to strip. */
+export const inspectionItemDesiredKeys = null;
 
 export function decodeInspectionItem(record: InspectionItemCloudKitRecord): InspectionItem {
   const fields = record.fields;

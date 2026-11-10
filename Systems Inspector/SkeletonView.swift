@@ -49,6 +49,7 @@ final class SkeletonView: UIView {
     }
 
     func startShimmering() {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
         let animation = CABasicAnimation(keyPath: "locations")
         animation.fromValue = [-0.5, 0, 0.5]
         animation.toValue = [0.5, 1, 1.5]
@@ -60,6 +61,23 @@ final class SkeletonView: UIView {
 
     func stopShimmering() {
         gradientLayer.removeAnimation(forKey: "shimmer")
+    }
+}
+
+/// Default-style cells have no subtitle. Register this class so `detailTextLabel` exists.
+final class SubtitleCell: UITableViewCell {
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: .subtitle, reuseIdentifier: reuseIdentifier)
+        textLabel?.numberOfLines = 0
+        detailTextLabel?.numberOfLines = 0
+        textLabel?.font = .preferredFont(forTextStyle: .body)
+        detailTextLabel?.font = .preferredFont(forTextStyle: .subheadline)
+        textLabel?.adjustsFontForContentSizeCategory = true
+        detailTextLabel?.adjustsFontForContentSizeCategory = true
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
     }
 }
 

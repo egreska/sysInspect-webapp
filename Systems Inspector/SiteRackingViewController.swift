@@ -61,16 +61,17 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             target: self,
             action: #selector(cancelTapped)
         )
-        let doneSymbol = UIImage.SymbolConfiguration(hierarchicalColor: .systemGreen)
-        let doneImage = UIImage(systemName: "checkmark", withConfiguration: doneSymbol)?
-            .withRenderingMode(.alwaysOriginal)
-        let doneItem = UIBarButtonItem(image: doneImage, style: .done, target: self, action: #selector(doneTapped))
-        doneItem.tintColor = .systemGreen
+        let doneItem = UIBarButtonItem(
+            image: UIImage(systemName: "checkmark"),
+            style: .done,
+            target: self,
+            action: #selector(doneTapped)
+        )
         doneItem.accessibilityLabel = "Done"
         navigationItem.rightBarButtonItem = doneItem
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .vertical
-        stackView.spacing = 12
+        stackView.spacing = 16
         stackView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
         scrollView.addSubview(stackView)
@@ -323,7 +324,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             let inset = UIStackView()
             inset.axis = .vertical
             inset.isLayoutMarginsRelativeArrangement = true
-            inset.layoutMargins = UIEdgeInsets(top: 12, left: 16, bottom: 16, right: 16)
+            inset.layoutMargins = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
             inset.addArrangedSubview(body())
             column.addArrangedSubview(inset)
         }
@@ -352,11 +353,13 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         let titleLabel = UILabel()
         titleLabel.text = title
         titleLabel.font = AppTheme.fontBold(.body)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textColor = AppTheme.textPrimary
         titleLabel.lineBreakMode = .byTruncatingTail
         let summaryLabel = UILabel()
         summaryLabel.text = summary
         summaryLabel.font = AppTheme.font(.footnote)
+        summaryLabel.adjustsFontForContentSizeCategory = true
         summaryLabel.textColor = AppTheme.textSecondary
         summaryLabel.isHidden = expanded
         summaryLabel.lineBreakMode = .byTruncatingTail
@@ -373,9 +376,9 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         let row = UIStackView(arrangedSubviews: [icon, textStack, chevron])
         row.axis = .horizontal
         row.alignment = .center
-        row.spacing = 12
+        row.spacing = 8
         row.isLayoutMarginsRelativeArrangement = true
-        row.layoutMargins = UIEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
+        row.layoutMargins = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         row.isUserInteractionEnabled = false
         row.translatesAutoresizingMaskIntoConstraints = false
         button.addSubview(row)
@@ -392,7 +395,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     private func manufacturerBody(toolbar: UIView, rows: [UIView]) -> UIView {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = 16
         stack.addArrangedSubview(toolbar)
         for (index, row) in rows.enumerated() {
             if index > 0 {
@@ -921,6 +924,29 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     }
 
     private func openCamera() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else { return }
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            presentSiteCamera()
+        case .notDetermined:
+            let alert = UIAlertController(
+                title: "Camera",
+                message: "Systems Inspector uses the camera to photograph site documents. iOS will ask for access next.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Not Now", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Continue", style: .default) { [weak self] _ in
+                self?.requestSiteCamera()
+            })
+            present(alert, animated: true)
+        case .denied, .restricted:
+            presentSettingsAlert()
+        @unknown default:
+            presentSettingsAlert()
+        }
+    }
+
+    private func requestSiteCamera() {
         AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -928,13 +954,16 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
                     self.presentSettingsAlert()
                     return
                 }
-                guard UIImagePickerController.isSourceTypeAvailable(.camera) else { return }
-                let picker = UIImagePickerController()
-                picker.sourceType = .camera
-                picker.delegate = self
-                self.present(picker, animated: true)
+                self.presentSiteCamera()
             }
         }
+    }
+
+    private func presentSiteCamera() {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = self
+        present(picker, animated: true)
     }
 
     private func presentSettingsAlert() {

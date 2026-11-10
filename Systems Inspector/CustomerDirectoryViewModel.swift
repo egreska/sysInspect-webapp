@@ -7,53 +7,6 @@
 import Combine
 import CoreData
 
-enum SessionCustomerQuery {
-    case page(offset: Int)
-    case search(String)
-}
-
-private let sessionCustomerPageSize = 20
-
-private func sessionUserPredicate(userId: UUID) -> NSPredicate {
-    NSPredicate(format: "userId == %@", userId as CVarArg)
-}
-
-func fetchSessionCustomers(
-    _ query: SessionCustomerQuery,
-    userId: UUID,
-    in context: NSManagedObjectContext
-) throws -> (customers: [Customer], total: Int?) {
-    let fetchRequest = NSFetchRequest<Customer>(entityName: "Customer")
-    fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-    let userPredicate = sessionUserPredicate(userId: userId)
-    switch query {
-    case .page(let offset):
-        fetchRequest.predicate = userPredicate
-        fetchRequest.fetchLimit = sessionCustomerPageSize
-        fetchRequest.fetchOffset = offset
-        fetchRequest.fetchBatchSize = sessionCustomerPageSize
-        fetchRequest.propertiesToFetch = [
-            "id", "name", "site", "contactName",
-            "phone", "address", "city", "state",
-            "zipCode", "userId", "createdDate"
-        ]
-        fetchRequest.returnsObjectsAsFaults = true
-        let countRequest = NSFetchRequest<Customer>(entityName: "Customer")
-        countRequest.predicate = userPredicate
-        let total = try context.count(for: countRequest)
-        return (customers: try context.fetch(fetchRequest), total: total)
-    case .search(let searchText):
-        let searchPredicate = NSPredicate(
-            format: "name CONTAINS[cd] %@ OR site CONTAINS[cd] %@ OR contactName CONTAINS[cd] %@ OR phone CONTAINS[cd] %@ OR address CONTAINS[cd] %@ OR city CONTAINS[cd] %@ OR state CONTAINS[cd] %@ OR zipCode CONTAINS[cd] %@",
-            searchText, searchText, searchText, searchText, searchText, searchText, searchText, searchText
-        )
-        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [searchPredicate, userPredicate])
-        fetchRequest.fetchBatchSize = 50
-        fetchRequest.fetchLimit = 500
-        return (customers: try context.fetch(fetchRequest), total: nil)
-    }
-}
-
 class CustomerDirectoryViewModel {
     // MARK: - Properties
     @Published var customers: [Customer] = []
@@ -204,6 +157,7 @@ class CustomerDirectoryViewModel {
         let success = coreDataManager.deleteObject(customer)
         if success {
             errorMessage = nil
+            CustomerSearchIndex.refreshFromStore()
             if let idx = customers.firstIndex(where: { $0.objectID == customer.objectID }) {
                 customers.remove(at: idx)
             }

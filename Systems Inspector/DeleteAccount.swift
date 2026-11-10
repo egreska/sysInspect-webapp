@@ -105,6 +105,7 @@ final class DeleteAccount {
         }
         InspectionItem.removeAppOwnedPhotoFiles(photoPaths)
         clearProfile(email: email)
+        CustomerSearchIndex.removeAll()
         UserManager.shared.wipeSession()
         await clearImageCache()
         DeleteAccountProgressStore.save(

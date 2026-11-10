@@ -102,7 +102,9 @@ class LoginViewController: UIViewController {
         setupUI()
         setupActions()
         setupKeyboardHandling()
-        checkBiometricAvailability()
+        if UserDefaults.standard.bool(forKey: Self.biometricsExplainedKey) {
+            checkBiometricAvailability()
+        }
         createAccountButton.isHidden = !canCreateAccount
     }
 
@@ -142,7 +144,7 @@ class LoginViewController: UIViewController {
             createAccountButton
         ])
         stackView.axis = .vertical
-        stackView.spacing = 20
+        stackView.spacing = 16
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(stackView)
@@ -282,6 +284,8 @@ class LoginViewController: UIViewController {
         forgotPasswordButton.accessibilityHint = "Double tap to reset your password"
     }
     
+    private static let biometricsExplainedKey = "login.biometricsExplained"
+
     private func checkBiometricAvailability() {
         let context = LAContext()
         var error: NSError?
@@ -389,7 +393,6 @@ class LoginViewController: UIViewController {
                         )
                     }
                 }
-                }
             }
         }
     }
@@ -407,13 +410,33 @@ class LoginViewController: UIViewController {
             showAlert(title: "No Account", message: "Please log in with email and password first to enable biometric authentication.")
             return
         }
-        
+
+        if !UserDefaults.standard.bool(forKey: Self.biometricsExplainedKey) {
+            let alert = UIAlertController(
+                title: "Face ID",
+                message: "Systems Inspector uses Face ID or Touch ID to log you back in on this phone. iOS will ask for permission next.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Not Now", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Continue", style: .default) { [weak self] _ in
+                UserDefaults.standard.set(true, forKey: Self.biometricsExplainedKey)
+                self?.evaluateBiometrics()
+            })
+            present(alert, animated: true)
+            return
+        }
+
+        evaluateBiometrics()
+    }
+
+    private func evaluateBiometrics() {
         isAuthenticating = true
         
         let context = LAContext()
         var error: NSError?
 
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            checkBiometricAvailability()
             let reason = "Authenticate to log in to Systems Inspector"
 
             context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { [weak self] success, authenticationError in

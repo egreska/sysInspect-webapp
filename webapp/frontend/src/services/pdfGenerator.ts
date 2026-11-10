@@ -143,7 +143,7 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
   doc.text(`Address: ${addr || 'N/A'}`, MARGIN + 220, y);
   y += 13;
   doc.text(`Date: ${dateStr}`, MARGIN, y);
-  doc.text(`Inspector: ${inspector}`, MARGIN + 220, y);
+  doc.text(`Inspector Name: ${inspector}`, MARGIN + 220, y);
   y += 20;
 
   // --- Table ---

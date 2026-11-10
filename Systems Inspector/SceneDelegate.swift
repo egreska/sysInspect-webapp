@@ -4,8 +4,9 @@
 //
 //  Created by Eric Greska on 5/22/25.
 //
-import UIKit
 import CoreData
+import CoreSpotlight
+import UIKit
 
 @available(iOS 13.0, *)
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -72,6 +73,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let urlContext = connectionOptions.urlContexts.first {
             handleIncomingURL(urlContext.url)
         }
+        for activity in connectionOptions.userActivities {
+            handleSearchActivity(activity)
+        }
+    }
+
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        handleSearchActivity(userActivity)
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
@@ -82,6 +90,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+        CustomerSearchIndex.refreshFromStore()
         guard let window else { return }
         Task { await AccessCodeCoordinator.shared.recheck(in: window) }
     }
@@ -144,6 +153,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
     
+    private func handleSearchActivity(_ activity: NSUserActivity) {
+        guard activity.activityType == CSSearchableItemActionType,
+              let identifier = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
+              let customerId = CustomerSearchIndex.customerId(from: identifier),
+              UserManager.shared.isUserLoggedIn() else { return }
+        openCustomerDetails(with: customerId.uuidString)
+    }
+
     private func openCustomerDetails(with customerId: String) {
         // If we're still on login, store for after login
         guard window?.rootViewController is UITabBarController else {
@@ -162,29 +179,30 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
         
-        let fetchRequest: NSFetchRequest<Customer> = Customer.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "id == %@", uuid as CVarArg)
+        guard let userId = UserManager.shared.sessionUserId else { return }
         
+        let customer: Customer?
         do {
-            let customers = try context.fetch(fetchRequest)
-            guard let customer = customers.first else {
-                print("Customer not found with ID: \(customerId)")
-                return
-            }
-            
-            guard let tabBarController = window?.rootViewController as? UITabBarController,
-                  let viewControllers = tabBarController.viewControllers,
-                  viewControllers.count > 0,
-                  let navigationController = viewControllers[0] as? UINavigationController else {
-                return
-            }
-            
-            tabBarController.selectedIndex = 0
-            let customerDetailsVC = CustomerDetailsViewController(customer: customer)
-            navigationController.pushViewController(customerDetailsVC, animated: true)
+            customer = try fetchSessionCustomer(id: uuid, userId: userId, in: context)
         } catch {
             print("Error finding customer: \(error)")
+            return
         }
+        guard let customer else {
+            print("Customer not found with ID: \(customerId)")
+            return
+        }
+            
+        guard let tabBarController = window?.rootViewController as? UITabBarController,
+              let viewControllers = tabBarController.viewControllers,
+              viewControllers.count > 0,
+              let navigationController = viewControllers[0] as? UINavigationController else {
+            return
+        }
+
+        tabBarController.selectedIndex = 0
+        let customerDetailsVC = CustomerDetailsViewController(customer: customer)
+        navigationController.pushViewController(customerDetailsVC, animated: true)
     }
     
     private func showRestoreDataPrompt(for url: URL) {

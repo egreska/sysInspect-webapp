@@ -83,7 +83,8 @@ final class ReportExportTests: XCTestCase {
         XCTAssertTrue(package?.fileName.hasSuffix(".csv") == true)
         let text = String(data: package?.data ?? Data(), encoding: .utf8) ?? ""
         XCTAssertTrue(text.contains("# Company: Header Co"), text)
-        XCTAssertTrue(text.contains("# Inspector: Snap Inspector"), text)
+        XCTAssertTrue(text.contains("# Inspector Name: Snap Inspector"), text)
+        XCTAssertTrue(text.contains("Inspector Name,"), text)
         XCTAssertTrue(text.contains("• Upright"), text)
         XCTAssertNil(package?.companionData)
     }

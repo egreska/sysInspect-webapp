@@ -104,7 +104,7 @@ class HelpContentViewController: UIViewController {
         // Apply styles
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4
-        paragraphStyle.paragraphSpacing = 12
+        paragraphStyle.paragraphSpacing = 16
         
         attributedString.addAttribute(
             .paragraphStyle,

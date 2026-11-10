@@ -172,9 +172,8 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate, UINa
         }
         let context = CoreDataManager.shared.context
         guard let uuid = UUID(uuidString: customerId) else { return }
-        let fetchRequest: NSFetchRequest<Customer> = Customer.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "id == %@", uuid as CVarArg)
-        guard let customer = try? context.fetch(fetchRequest).first else { return }
+        guard let userId = UserManager.shared.sessionUserId,
+              let customer = try? fetchSessionCustomer(id: uuid, userId: userId, in: context) else { return }
         navigateToCustomerDetails(customer)
     }
 

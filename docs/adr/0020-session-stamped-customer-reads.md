@@ -1,0 +1,7 @@
+# Session-stamped Customer reads leave the Reports tab out
+
+A Customer, its Inspections, and their InspectionItems are visible only to the Inspector whose Session stamped them. One read returns this Session's Customers, the Inspections on one of those Customers newest first, the InspectionItems on one of those Inspections, a Customer looked up by id, and the two counts. Callers pass the Session's user id and a context. A Customer id stamped by someone else, or with no stamp, resolves to nothing. This read does not sort InspectionItems. Recorded order is a separate rule the list, the snapshot, the Report's entry order, and the web load ask. We considered folding the Reports tab into this read so every Inspection list honored that rule. The tab filters by customer name, date, and inspector name, and those filters would widen this interface. The Reports tab stays a separate miss against the Customer rule.
+
+**Considered options:** one read that also serves the Reports tab; this read only, with the Reports tab left as a miss (chosen).
+
+**Consequences:** Do not add the Reports tab fetch here. Do not sort InspectionItems here. Recorded order is not this read. Directory rows and inspection rows ask this read for counts. Do not walk the `inspections` or `items` relationships for those counts. Catalog, Delete Account, and photo migration stay out of this read. The read does not touch UserManager.

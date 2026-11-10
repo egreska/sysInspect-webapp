@@ -1,43 +1,43 @@
-# Graph Report - Systems Inspector  (2026-10-30)
+# Graph Report - Systems Inspector  (2026-11-10)
 
 ## Corpus Check
-- 201 files · ~291,839 words
+- 212 files · ~295,569 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 35 file(s) not represented in the graph (top: (none) 16, .mdc 5, .example 3)
 
 ## Summary
-- 2997 nodes · 6312 edges · 357 communities (128 shown, 229 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 654 edges (avg confidence: 0.84)
+- 3111 nodes · 6674 edges · 369 communities (136 shown, 233 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 707 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2be56529`
+- Built from commit: `d3512eae`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- ReportGenerator
-- AccessRoute
-- UserManagerPasswordTests
-- Equatable
+- SessionSecret
+- AccessCodeGate.swift
+- SessionCustomerRead.swift
+- String
 - CustomerFormViewController
 - AccountLockoutManagerTests
 - InspectionItemDetailViewController
-- UIView
+- .specCard
 - .resolve
 - AccountCreationViewController
-- ReportInspectionSnapshot
+- .item
 - availability
 - InspectorSettingsFormViewController
 - InspectionItemFormViewController
 - MainTabBarController
 - SiteRackingTests
-- UserManager
+- .items
 - firclsdataparsing
 - SceneDelegate
 - CodingKeys
-- SiteRacking
-- inspectionCodec.ts
+- LoginViewController
+- inspectionItemCodec.ts
 - EmailReportActivity
 - .names
 - InspectionItemFormState
@@ -46,43 +46,43 @@
 - InspectionDetailsViewController
 - App Store release — Pallet Rack Safety
 - Path
-- UprightSpec
+- AccessRoute
 - ImageCacheManager
 - ReportPackage
-- XCTest
-- String
+- UserManager.swift
+- ReportInspectionSnapshot
 - AccessCodeGateTests
 - .tableView
 - IssueSelectionViewController
-- LoginViewController
+- SiteRacking
 - cct_nanopb
-- .specCard
+- CatalogTests
 - CustomerFormState
-- UIKit
-- HelpContentViewController
+- .startSession
+- .application
 - Pallet Racking
 - InspectionItemRecordedIssuesTests
 - Foundation
 - Selective Pallet Racking
-- Firebase (Analytics & Crashlytics)
+- UserManagerPasswordTests
 - Importance
 - .cacheImage
 - ptrauth
 - .rebuild
 - CoreDataManager.swift
 - SiteRackingSection
-- Data
+- .persistValidatedForm
 - SiteRackingViewController
 - metrickit
-- .application
+- .saveContext
 - ReportExportTests
 - AnalyticsManager
-- Webapp security
+- CloudKitSyncStatus
 - firclsallocate
 - Eastern Lift Truck Co. Company Logo
-- .setupCreateChrome
+- .setupUI
 - SettingsViewController
-- .tableView
+- Firebase (Analytics & Crashlytics)
 - ForgotPasswordViewController
 - CloudKitAccessCodeClient
 - PasswordRecoveryManager
@@ -104,7 +104,7 @@
 - fblpromise_all
 - external_prequest_context
 - AppTheme
-- .saveContext
+- 🔒 Security Best Practices
 - cdefs
 - client_metrics_nanopb
 - 🚀 Deployment Steps
@@ -128,7 +128,7 @@
 - fblpromise_testing
 - InspectionItem
 - fblpromise_then
-- ClaimCheck
+- DeleteAccountCloudFake
 - fblpromise_timeout
 - fblpromise_validate
 - package.json
@@ -140,15 +140,15 @@
 - firclsapplication
 - CloudKit Setup Guide - Systems Inspector
 - firclsbyteutility
-- AccessCodeViewController
+- .apply
 - Pallet Rack Safety — User Guide
 - firclscompactunwind
 - unistd
 - firclsconstants
 - firclsfabnetworkclient
-- App.tsx
+- authStore.ts
 - issue.ts
-- load.ts
+- index.ts
 - firclscontext
 - gdtcorplatform
 - firclscontextinitdata
@@ -176,7 +176,7 @@
 - firclssignal
 - SettingsUITests
 - firclsthreadstate
-- 🔧 Step-by-Step Setup
+- ReportGenerator
 - firclsunwind
 - fblpromise
 - errno
@@ -189,7 +189,7 @@
 - firclsdwarfunwind
 - firclsutility
 - firclsuuid
-- Help & Support content
+- .contextDidSave
 - cloudkitBootstrap.tsx
 - LoginFlowUITests
 - fircomponent
@@ -203,7 +203,7 @@
 - firebaseauth_swift
 - Task Master Development Workflow
 - firebasecrashlytics_swift
-- SiteDocumentFile
+- CustomerSiteDocumentTests
 - firebasecrashlyticsswift
 - firebasedatabase
 - firebasedynamiclinks
@@ -226,7 +226,7 @@
 - firinstallationsitem_registerinstallationapi
 - firinstallationslogger
 - firlibrary
-- .verifySecurityAnswer
+- PerformanceOptimizer
 - firlogger
 - commonhmac
 - crashlytics_nanopb
@@ -236,8 +236,8 @@
 - gdtcorconsolelogger
 - gdtcorendpoints
 - gdtcorevent_gdtcctsupport
-- .cityState
-- CatalogTests
+- App.tsx
+- SiteDocumentFile
 - Paths at the InspectionItem Issue seam, not Flag maps
 - gdtcorevent_gdtmetricssupport
 - gdtcorflatfilestorage
@@ -245,11 +245,11 @@
 - ReportProgressOverlay
 - gdtcormetrics_gdtcctsupport
 - FilterPreset
-- SiteRackingViewController.swift
+- LoadingCell
 - cttelephonynetworkinfo
 - gdtcormetricscontroller
 - firclscodemapping
-- .startSession
+- UserManager
 - gdtcormetricsmetadata
 - gdtcorreachability
 - gdtcorstoragemetadata
@@ -264,16 +264,16 @@
 - firconfiguration
 - gulnsdata_zlib
 - gulreachabilitychecker_internal
-- Int
+- CustomerDirectoryViewModel
 - gulscenedelegateswizzler
 - exception
 - Multiple photos per inspection item
 - gulswizzler
-- ReportPreviewPage.tsx
+- pdfGenerator.ts
 - guluserdefaults
 - in
 - mach
-- AccountLockoutManager
+- Webapp security
 - isappencrypted
 - loader
 - inject-cloudkit-config.cjs
@@ -321,37 +321,48 @@
 - vm_param
 - vm_types
 - zlib
-- AccessCodeGateTests.swift
-- CloudKitError
+- HelpAndSupportTableViewController
+- .cityState
 - .imagePickerController
 - CustomerDirectoryUITests
-- XCTestCase
-- 📊 CloudKit Data Structure
-- EventCategory
+- CoreData
+- .use
+- UIView
 - UIViewController
-- CustomerIntakeTests
-- Systems_InspectorUITests
+- .loginTapped
+- XCTestCase
 - 0018-knowing-the-code-is-the-claim.md
 - 0019-security-answer-travels-with-the-session.md
-- .reset
+- .tableView
 - Global Constraints
 - gdtcorassert
 - gdtcoruploadbatch
 - odcconversionmanager
-- CloudKitSyncStatus
-- .contextDidSave
-- Systems_InspectorUITestsLaunchTests
+- ClaimCheck
+- SplashViewController
+- .sorted
 - fblpromise_always
 - .count
 - .format
 - fblpromise_recover
 - DeleteAccount
-- .init
-- .item
+- UIKit
+- .documentsSummary
 - 0017-delete-account-keeps-the-claim.md
 - AccessCodeRecordState
+- 🐛 Troubleshooting
+- CustomerSearchIndex.swift
+- Data
+- .performAuthentication
+- MemoryUsage
+- Task 7: Hosts (form + details)
+- 📊 CloudKit Data Structure
+- .init
+- .filterCustomers
 - Snapshots at the Report export seam, not Inspection entities
-- Web InspectionItem carries Issue Paths, not Flag bools
+- .init
+- 0021-session-secrets-in-icloud-keychain.md
+- AccountLockoutManager.swift
 - run_tests.sh
 - vite-env.d.ts
 - cct
@@ -369,16 +380,16 @@
 - 0012-siteracking-standardized-load.md
 
 ## God Nodes (most connected - your core abstractions)
-1. `InspectionItemFormViewController` - 77 edges
-2. `SiteRackingViewController` - 71 edges
+1. `InspectionItemFormViewController` - 79 edges
+2. `SiteRackingViewController` - 73 edges
 3. `ReportViewController` - 54 edges
 4. `SiteRacking` - 54 edges
-5. `CustomerFormViewController` - 45 edges
-6. `InspectionItemFormState` - 45 edges
-7. `Flag` - 42 edges
-8. `SiteRackingSection` - 42 edges
-9. `SettingsViewController` - 39 edges
-10. `CoreData` - 36 edges
+5. `InspectionItemFormState` - 46 edges
+6. `CustomerFormViewController` - 45 edges
+7. `UserManager` - 44 edges
+8. `Flag` - 42 edges
+9. `SiteRackingSection` - 42 edges
+10. `SettingsViewController` - 39 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `6. Privacy & App Store` --references--> `AnalyticsManager`  [INFERRED]
@@ -401,35 +412,35 @@
 - **Pallet Rack Storage Assembly** — systems_inspector_assets_xcassets_launchicon_imageset_rackicon_upright_frames, systems_inspector_assets_xcassets_launchicon_imageset_rackicon_load_beams, systems_inspector_assets_xcassets_launchicon_imageset_rackicon_beam_decking, systems_inspector_assets_xcassets_launchicon_imageset_rackicon_wooden_pallets, systems_inspector_assets_xcassets_launchicon_imageset_rackicon_palletized_cartons [EXTRACTED 1.00]
 - **Working Warehouse Occupancy Scene** — systems_inspector_assets_xcassets_launchicon_imageset_rackicon_selective_pallet_racking, systems_inspector_assets_xcassets_launchicon_imageset_rackicon_mixed_bay_occupancy, systems_inspector_assets_xcassets_launchicon_imageset_rackicon_floor_pallet_storage [INFERRED 0.85]
 
-## Communities (357 total, 229 thin omitted)
+## Communities (369 total, 233 thin omitted)
 
-### Community 0 - "ReportGenerator"
-Cohesion: 0.16
-Nodes (13): NSAttributedString, PDFKit, Layout, ReportGenerator, ReportHeader, Any, CGFloat, CGPoint (+5 more)
-
-### Community 1 - "AccessRoute"
-Cohesion: 0.19
-Nodes (24): accessAccount(), accessCodeGateBypassed(), AccessCodeNotice, notIssued, otherAppleID, retired, AccessResolution, AccessRoute (+16 more)
-
-### Community 2 - "UserManagerPasswordTests"
+### Community 0 - "SessionSecret"
 Cohesion: 0.18
-Nodes (4): NSManagedObjectContext, NSManagedObjectContext, NSPersistentContainer, UserManagerPasswordTests
+Nodes (12): Security, KeychainSessionSecretStore, MemorySessionSecretStore, SessionSecret, .hasPassword, .hasSecurityAnswer, SessionSecretMessage, SessionSecretRules (+4 more)
 
-### Community 3 - "Equatable"
-Cohesion: 0.16
-Nodes (22): Codable, Decoder, Equatable, AnchorSpec, .blank, CrossBarSpec, .blank, DeckSpec (+14 more)
+### Community 1 - "AccessCodeGate.swift"
+Cohesion: 0.51
+Nodes (12): accessAccount(), accessCodeGateBypassed(), AccessResolution, CachedEntitlement, destination(), failedClaimResolution(), loggedOutRoute(), offlineResolution() (+4 more)
+
+### Community 2 - "SessionCustomerRead.swift"
+Cohesion: 0.25
+Nodes (19): fetchSessionCustomer(), fetchSessionCustomers(), fetchSessionCustomerSearchEntries(), fetchSessionInspectionItems(), fetchSessionInspections(), SessionCustomerQuery, page, search (+11 more)
+
+### Community 3 - "String"
+Cohesion: 0.12
+Nodes (25): Codable, Decoder, Equatable, String, RecoveryState, question, unavailable, waiting (+17 more)
 
 ### Community 4 - "CustomerFormViewController"
-Cohesion: 0.08
-Nodes (13): NSRange, CustomerFormDelegate, CustomerFormViewController, Bool, Customer, NSCoder, NSNotification, UILabel (+5 more)
+Cohesion: 0.09
+Nodes (12): AnyObject, NSRange, CustomerFormDelegate, CustomerFormViewController, Bool, NSNotification, UILabel, UIScrollView (+4 more)
 
 ### Community 5 - "AccountLockoutManagerTests"
-Cohesion: 0.17
-Nodes (4): Keys, Bool, Int, AccountLockoutManagerTests
+Cohesion: 0.13
+Nodes (6): AccountLockoutManager, Keys, Bool, Int, TimeInterval, AccountLockoutManagerTests
 
-### Community 7 - "UIView"
-Cohesion: 0.14
-Nodes (11): CardID, anchors, beams, crossBars, decks, loadInformation, rowSpacers, safetyClips (+3 more)
+### Community 7 - ".specCard"
+Cohesion: 0.19
+Nodes (7): rowSpacers, uprights, Int, QLPreviewController, QLPreviewItem, UIButton, Void
 
 ### Community 8 - ".resolve"
 Cohesion: 0.06
@@ -439,9 +450,9 @@ Nodes (38): CaseIterable, ClosedRange, Column, ColumnBuilder, PDFItemLayoutInput
 Cohesion: 0.11
 Nodes (10): AccountCreationViewController, Bool, NSNotification, UIActivityIndicatorView, UIButton, UILabel, UITextField, UIView (+2 more)
 
-### Community 10 - "ReportInspectionSnapshot"
-Cohesion: 0.16
-Nodes (13): SortedItem, ReportCustomerSnapshot, ReportInspectionSnapshot, ReportItemSnapshot, Date, Importance, Int32, Issue (+5 more)
+### Community 10 - ".item"
+Cohesion: 0.40
+Nodes (4): Int32, Issue, Set, UUID
 
 ### Community 12 - "InspectorSettingsFormViewController"
 Cohesion: 0.09
@@ -449,55 +460,55 @@ Nodes (15): Form, companyInformation, inspectorName, InspectorSettingsFormViewCo
 
 ### Community 13 - "InspectionItemFormViewController"
 Cohesion: 0.09
-Nodes (12): One InspectionItem form screen owns chrome and persist, InspectionItemFormDelegate, InspectionItemFormViewController, .hasContent, Bool, UIScrollView, UIStackView, UITextField (+4 more)
+Nodes (11): One InspectionItem form screen owns chrome and persist, Int, InspectionItemFormViewController, Int, Issue, Set, UIScrollView, UIStackView (+3 more)
 
 ### Community 14 - "MainTabBarController"
-Cohesion: 0.09
-Nodes (16): MainTabBarController, Bool, Customer, Int, Notification, UIImage, UIImageView, UIViewController (+8 more)
+Cohesion: 0.05
+Nodes (28): CAGradientLayer, FilterChipView, NSCoder, Void, MainTabBarController, Bool, Customer, Int (+20 more)
 
-### Community 16 - "UserManager"
-Cohesion: 0.16
-Nodes (8): TimeInterval, SessionKeys, Bool, UserDefaults, UUID, UserManager, .lastUserId, .storedSessionUserId
+### Community 16 - ".items"
+Cohesion: 0.22
+Nodes (7): CSSearchableIndex, CSSearchableItem, Session-stamped Customer reads leave the Reports tab out, CustomerSearchIndex, UUID, SessionCustomerSearchEntry, CustomerSearchIndexTests
 
 ### Community 18 - "SceneDelegate"
 Cohesion: 0.15
-Nodes (8): SceneDelegate, Set, UIScene, UISceneSession, UIWindow, URL, UIOpenURLContext, UIWindowSceneDelegate
+Nodes (9): NSUserActivity, SceneDelegate, Set, UIScene, UISceneSession, UIWindow, URL, UIOpenURLContext (+1 more)
 
 ### Community 19 - "CodingKeys"
 Cohesion: 0.08
 Nodes (24): CodingKey, CodingKeys, anchors, beams, capacity, construction, crossBars, decks (+16 more)
 
-### Community 20 - "SiteRacking"
-Cohesion: 0.25
-Nodes (12): SiteRacking, .anchorsSummary, .beamsSummary, .crossBarsSummary, .decksSummary, .empty, .isEmpty, .loadInformationSummary (+4 more)
+### Community 20 - "LoginViewController"
+Cohesion: 0.13
+Nodes (8): LocalAuthentication, LoginViewController, .canCreateAccount, NSNotification, UIActivityIndicatorView, UIButton, UITextField, UIView
 
-### Community 21 - "inspectionCodec.ts"
-Cohesion: 0.20
-Nodes (8): vitest, extractRecordName(), CustomerCloudKitRecord, decodeCustomer(), fieldString(), decodeDate(), decodeInspection(), InspectionCloudKitRecord
+### Community 21 - "inspectionItemCodec.ts"
+Cohesion: 0.16
+Nodes (13): importanceFromStored(), ISSUE_FLAGS, decodeDate(), decodeInspection(), InspectionCloudKitRecord, inspectionDesiredKeys, inspectionField, decodeInspectionItem() (+5 more)
 
 ### Community 22 - "EmailReportActivity"
 Cohesion: 0.12
 Nodes (14): CopySummaryActivity, .activityImage, .activityTitle, .activityType, EmailReportActivity, .activityImage, .activityTitle, .activityType (+6 more)
 
 ### Community 23 - ".names"
-Cohesion: 0.22
-Nodes (14): CatalogName, Task 3: Catalog module, Task 6: SiteRackingViewController, Catalog, CatalogAddResult, added, blank, duplicate (+6 more)
+Cohesion: 0.23
+Nodes (13): CatalogName, Task 3: Catalog module, Catalog, CatalogAddResult, added, blank, duplicate, CatalogKind (+5 more)
 
 ### Community 24 - "InspectionItemFormState"
-Cohesion: 0.06
-Nodes (25): InspectionItemFormState, .atPhotoCap, .hasContent, .issueDisplayLabels, .isValid, Bool, Importance, Int (+17 more)
+Cohesion: 0.07
+Nodes (24): InspectionItemFormState, .atPhotoCap, .hasContent, .issueDisplayLabels, .isValid, Bool, Importance, Issue (+16 more)
 
 ### Community 25 - "CoreDataManager"
-Cohesion: 0.16
-Nodes (9): NSPersistentCloudKitContainer, NSPersistentStoreDescription, CoreDataManager, .currentCloudKitSyncStatus, .isStoreLoaded, NSManagedObjectContext, NSObjectProtocol, NSPredicate (+1 more)
+Cohesion: 0.14
+Nodes (11): NSPersistentCloudKitContainer, NSPersistentStoreDescription, CoreDataManager, .currentCloudKitSyncStatus, .isStoreLoaded, Bool, NSManagedObjectContext, NSObjectProtocol (+3 more)
 
 ### Community 26 - "CustomerDirectoryViewController"
-Cohesion: 0.05
-Nodes (34): Combine, CustomerCell, CustomerDirectoryViewController, LoadingCell, Bool, CGFloat, Customer, IndexPath (+26 more)
+Cohesion: 0.15
+Nodes (9): CustomerDirectoryViewController, Bool, CGFloat, Customer, IndexPath, Int, UITableView, Timer (+1 more)
 
 ### Community 27 - "InspectionDetailsViewController"
-Cohesion: 0.27
-Nodes (3): InspectionDetailsViewController, InspectionItem, UITableViewDataSourcePrefetching
+Cohesion: 0.25
+Nodes (4): InspectionDetailsViewController, InspectionItem, UITableViewDataSourcePrefetching, UITableViewDelegate
 
 ### Community 28 - "App Store release — Pallet Rack Safety"
 Cohesion: 0.09
@@ -507,21 +518,25 @@ Nodes (18): Unlisted distribution, gated by an Access Code, An Inspector is an A
 Cohesion: 0.36
 Nodes (7): Hashable, Issue, Node, Path, .name, Bool, Set
 
-### Community 30 - "UprightSpec"
-Cohesion: 0.16
-Nodes (7): BeamSpec, .blank, RackingConstruction, rollFormed, structural, UprightSpec, .blank
+### Community 30 - "AccessRoute"
+Cohesion: 0.11
+Nodes (18): AccessCodeNotice, notIssued, otherAppleID, retired, AccessRoute, deleteFinishing, enterCode, login (+10 more)
 
 ### Community 31 - "ImageCacheManager"
-Cohesion: 0.15
-Nodes (6): Int64, ImageCacheManager, CGFloat, Int, UIImage, URL
+Cohesion: 0.14
+Nodes (7): Int64, ImageCacheManager, CGFloat, Int, UIImage, URL, Void
 
 ### Community 32 - "ReportPackage"
 Cohesion: 0.21
 Nodes (7): ReportPackage, ReportExportResult, empty, failed, joinFailed, package, Void
 
-### Community 34 - "String"
-Cohesion: 0.18
-Nodes (3): String, DeleteAccountCloudFake, Bool
+### Community 33 - "UserManager.swift"
+Cohesion: 0.33
+Nodes (5): CommonCrypto, PasswordAvailability, noUser, ready, waiting
+
+### Community 34 - "ReportInspectionSnapshot"
+Cohesion: 0.16
+Nodes (13): SortedItem, ReportCustomerSnapshot, ReportInspectionSnapshot, ReportItemSnapshot, Date, Importance, Int32, Issue (+5 more)
 
 ### Community 36 - ".tableView"
 Cohesion: 0.20
@@ -531,25 +546,25 @@ Nodes (6): IndexPath, Int, QLPreviewController, QLPreviewItem, UITableView, UITa
 Cohesion: 0.12
 Nodes (11): IssueSelectionDelegate, IssueSelectionViewController, IndexPath, Int, Issue, Set, UISearchController, UITableView (+3 more)
 
-### Community 38 - "LoginViewController"
-Cohesion: 0.11
-Nodes (9): LocalAuthentication, LoginViewController, .canCreateAccount, Bool, NSNotification, UIActivityIndicatorView, UIButton, UITextField (+1 more)
+### Community 38 - "SiteRacking"
+Cohesion: 0.15
+Nodes (18): SiteRacking, .anchorsRecorded, .anchorsSummary, .beamsRecorded, .beamsSummary, .crossBarsRecorded, .crossBarsSummary, .decksRecorded (+10 more)
 
-### Community 40 - ".specCard"
-Cohesion: 0.36
-Nodes (3): uprights, UIButton, Void
+### Community 40 - "CatalogTests"
+Cohesion: 0.13
+Nodes (4): Task 2: Core Data model, CatalogTests, NSManagedObjectContext, NSPersistentContainer
 
 ### Community 41 - "CustomerFormState"
 Cohesion: 0.15
-Nodes (11): Goals, Hosts, iOS UI, CustomerFormState, .isValid, .siteRackingSubtitle, Bool, CustomerIntake (+3 more)
+Nodes (12): Hosts, CustomerFormState, .isValid, .siteRackingSubtitle, Bool, CustomerIntake, Bool, Customer (+4 more)
 
-### Community 42 - "UIKit"
-Cohesion: 0.16
-Nodes (3): CoreData, FirebaseCore, UIKit
+### Community 42 - ".startSession"
+Cohesion: 0.20
+Nodes (3): SessionTestDefaults, UserDefaults, UserManagerSessionTests
 
-### Community 43 - "HelpContentViewController"
-Cohesion: 0.12
-Nodes (11): IndexPath, Int, UITableView, UITableViewCell, HelpContentType, about, faq, troubleshooting (+3 more)
+### Community 43 - ".application"
+Cohesion: 0.20
+Nodes (7): Any, Bool, Set, UIScene, UISceneSession, UIImage, UISceneConfiguration
 
 ### Community 44 - "Pallet Racking"
 Cohesion: 0.29
@@ -560,83 +575,83 @@ Cohesion: 0.27
 Nodes (4): InspectionItemRecordedIssuesTests, InspectionItem, NSManagedObjectContext, NSPersistentContainer
 
 ### Community 46 - "Foundation"
-Cohesion: 0.12
-Nodes (5): CommonCrypto, CryptoKit, FirebaseAnalytics, FirebaseCrashlytics, Foundation
+Cohesion: 0.18
+Nodes (3): FirebaseAnalytics, FirebaseCrashlytics, Foundation
 
 ### Community 47 - "Selective Pallet Racking"
 Cohesion: 0.33
 Nodes (9): Beam-Level Decking, Floor-Level Pallet Storage, Launch Icon Rack Scene, Horizontal Load Beams, Mixed Bay Occupancy, Palletized Cardboard Cartons, Selective Pallet Racking, Steel Upright Frames (+1 more)
 
-### Community 48 - "Firebase (Analytics & Crashlytics)"
-Cohesion: 0.25
-Nodes (8): 1. Firebase project, 2. Swift Package Manager, 3. Local `GoogleService-Info.plist` (do not commit), 5. Crashlytics build phase, 6. Privacy & App Store, 7. Verify, 8. Troubleshooting, Firebase (Analytics & Crashlytics)
+### Community 48 - "UserManagerPasswordTests"
+Cohesion: 0.24
+Nodes (3): NSManagedObjectContext, NSPersistentContainer, UserManagerPasswordTests
 
 ### Community 49 - "Importance"
 Cohesion: 0.12
 Nodes (11): Comparable, Counts, Importance, .isImmediate, monitor, needsImmediateAttention, .phrase, .toggled (+3 more)
 
 ### Community 50 - ".cacheImage"
-Cohesion: 0.16
-Nodes (5): CGSize, Void, ImageCacheManagerTests, UIColor, UIImage
+Cohesion: 0.20
+Nodes (4): CGSize, ImageCacheManagerTests, UIColor, UIImage
 
 ### Community 53 - "CoreDataManager.swift"
-Cohesion: 0.22
-Nodes (9): NSError, OpaquePointer, SQLite3, copySQLiteStore(), .cloudKitSyncStatus, .displayString, Notification.Name, storeCopyError() (+1 more)
+Cohesion: 0.12
+Nodes (15): LocalizedError, NSError, OpaquePointer, SQLite3, CloudKitError, accountRestricted, couldNotDetermine, .errorDescription (+7 more)
 
 ### Community 54 - "SiteRackingSection"
-Cohesion: 0.13
-Nodes (11): Encoder, .anchorsRecorded, .beamsRecorded, .crossBarsRecorded, .decksRecorded, .rowSpacersRecorded, .uprightsRecorded, SiteRackingSection (+3 more)
+Cohesion: 0.15
+Nodes (12): Task 1: SiteRacking value type, BeamSpec, .blank, DeckSpec, .blank, SiteRackingMode, mixed, standardized (+4 more)
 
-### Community 55 - "Data"
-Cohesion: 0.21
-Nodes (7): Customer SiteRacking Implementation Plan, Global Constraints, Spec coverage, Data, StoredZipArchive, UInt16, UInt32
+### Community 55 - ".persistValidatedForm"
+Cohesion: 0.13
+Nodes (5): AVFoundation, InspectionItemFormDelegate, .hasContent, Bool, UITextField
 
 ### Community 56 - "SiteRackingViewController"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (12): PHPickerResult, PHPickerViewController, PHPickerViewControllerDelegate, SiteRackingViewController, Any, NSCoder, NSManagedObjectContext, Set (+4 more)
 
-### Community 58 - ".application"
-Cohesion: 0.20
-Nodes (7): Any, Bool, Set, UIScene, UISceneSession, UIImage, UISceneConfiguration
+### Community 58 - ".saveContext"
+Cohesion: 0.21
+Nodes (7): 4. App bootstrap, AppDelegate, UITabBarController, UIWindow, UIApplication, UIApplicationDelegate, UIResponder
 
 ### Community 59 - "ReportExportTests"
 Cohesion: 0.20
 Nodes (6): StaticString, Bool, ReportRequest, ReportExportTests, Date, UInt
 
 ### Community 60 - "AnalyticsManager"
-Cohesion: 0.17
-Nodes (4): AnalyticsManager, Any, Bool, Int
+Cohesion: 0.05
+Nodes (28): About, FAQ, Help & Support content, Troubleshooting, User Guide, AnalyticsManager, EventCategory, authentication (+20 more)
 
-### Community 61 - "Webapp security"
-Cohesion: 0.18
-Nodes (7): HapticManager, CloudKit web API token, HTTP security headers (no CSP on `serve`), iCloud asset URLs, Incident checklist (token compromise), Production logging, Webapp security
+### Community 61 - "CloudKitSyncStatus"
+Cohesion: 0.25
+Nodes (6): CKError, CloudKitSyncStatus, failed, inProgress, notStarted, succeeded
 
 ### Community 63 - "Eastern Lift Truck Co. Company Logo"
 Cohesion: 0.83
 Nodes (4): Eastern Lift Truck Co. Company Logo, Eastern Lift Truck Co., Forklift Circular Emblem, Warehouse Products Group
 
-### Community 64 - ".setupCreateChrome"
-Cohesion: 0.16
-Nodes (5): Date, NSNotification, UIButton, UILabel, UIView
+### Community 64 - ".setupUI"
+Cohesion: 0.21
+Nodes (4): NSNotification, UIButton, UILabel, UIView
 
 ### Community 65 - "SettingsViewController"
-Cohesion: 0.05
-Nodes (25): AnyObject, Double, Editing rules, Entry point, Help & Support — developer notes, Where the text lives, MFMailComposeViewControllerDelegate, HelpAndSupportTableViewController (+17 more)
+Cohesion: 0.11
+Nodes (8): copySQLiteStore(), URL, SettingsViewController, IndexPath, Int, NSObjectProtocol, UITableView, UITableViewCell
 
-### Community 66 - ".tableView"
-Cohesion: 0.29
-Nodes (7): Bool, CGPoint, IndexPath, Int, UITableView, UITableViewCell, UIContextMenuConfiguration
+### Community 66 - "Firebase (Analytics & Crashlytics)"
+Cohesion: 0.25
+Nodes (8): 1. Firebase project, 2. Swift Package Manager, 3. Local `GoogleService-Info.plist` (do not commit), 5. Crashlytics build phase, 6. Privacy & App Store, 7. Verify, 8. Troubleshooting, Firebase (Analytics & Crashlytics)
 
 ### Community 67 - "ForgotPasswordViewController"
 Cohesion: 0.15
 Nodes (5): ForgotPasswordViewController, UIActivityIndicatorView, UIButton, UILabel, UITextField
 
 ### Community 68 - "CloudKitAccessCodeClient"
-Cohesion: 0.23
-Nodes (5): CKContainer, CKRecord, NSNumber, CloudKitAccessCodeClient, Bool
+Cohesion: 0.16
+Nodes (9): CKAccountStatus, CKContainer, CKRecord, CloudKit, NSNumber, AccessCodeCloudField, accountCheck(), CloudKitAccessCodeClient (+1 more)
 
 ### Community 69 - "PasswordRecoveryManager"
-Cohesion: 0.28
+Cohesion: 0.25
 Nodes (4): PasswordRecoveryManager, Bool, NSManagedObjectContext, Void
 
 ### Community 70 - "ReportViewController"
@@ -647,33 +662,37 @@ Nodes (8): QLPreviewControllerDataSource, Filter, ReportViewController, SortStyl
 Cohesion: 0.13
 Nodes (12): CombinedPDFJoinRule, SortCriteria, customer, date, entryOrder, importance, inspectionStatus, issue (+4 more)
 
+### Community 76 - "PasswordRecoveryManagerTests"
+Cohesion: 0.15
+Nodes (3): PasswordRecoveryManagerTests, NSManagedObjectContext, NSPersistentContainer
+
 ### Community 77 - "Taskmaster Tool & Command Reference"
-Cohesion: 0.06
-Nodes (34): 10. Update Subtask (`update_subtask`), 11. Set Task Status (`set_task_status`), 12. Remove Task (`remove_task`), 13. Expand Task (`expand_task`), 14. Expand All Tasks (`expand_all`), 15. Clear Subtasks (`clear_subtasks`), 16. Remove Subtask (`remove_subtask`), 17. Move Task (`move_task`) (+26 more)
+Cohesion: 0.05
+Nodes (38): NSManagedObjectModel, 10. Update Subtask (`update_subtask`), 11. Set Task Status (`set_task_status`), 12. Remove Task (`remove_task`), 13. Expand Task (`expand_task`), 14. Expand All Tasks (`expand_all`), 15. Clear Subtasks (`clear_subtasks`), 16. Remove Subtask (`remove_subtask`) (+30 more)
 
 ### Community 78 - "Flag"
 Cohesion: 0.06
 Nodes (36): Flag, aisleGuarding, aisleGuardingDamaged, aisleGuardingMissing, aisleGuardingRepairRequired, anchors, anchorsDamaged, anchorsMissing (+28 more)
 
 ### Community 87 - "AppTheme"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (29): AppTheme, .background, .destructive, .overlay, .placeholder, .primary, .primaryContrast, .primaryGradientEnd (+21 more)
 
-### Community 88 - ".saveContext"
-Cohesion: 0.21
-Nodes (7): 4. App bootstrap, AppDelegate, UITabBarController, UIWindow, UIApplication, UIApplicationDelegate, UIResponder
+### Community 88 - "🔒 Security Best Practices"
+Cohesion: 0.50
+Nodes (4): 1. Key Management, 2. Access Control, 3. Data Protection, 🔒 Security Best Practices
 
 ### Community 91 - "🚀 Deployment Steps"
 Cohesion: 0.20
 Nodes (10): 5.1 Create New Application, 5.2 Configure Build Settings, 5.3 Single-Port Routing, 5.4 Configure Health Checks, 🚀 Deployment Steps, Step 1: Prepare Repository, Step 2: Configure CloudKit variables (runtime **or** build-time), Step 3: Test Locally with Docker (+2 more)
 
 ### Community 92 - "Customer"
-Cohesion: 0.18
-Nodes (8): SiteRacking JSON and SiteDocument records on Customer, not Inspection or Issues, Customer, SiteDocumentAcceptance, allowed, tooLarge, wrongType, Set, UUID
+Cohesion: 0.15
+Nodes (9): Customer, SiteDocumentAcceptance, allowed, tooLarge, wrongType, Set, SessionCustomerFetchTests, NSManagedObjectContext (+1 more)
 
 ### Community 99 - "InspectionFormViewModel"
-Cohesion: 0.16
-Nodes (9): NSObject, InspectionFormViewModel, .inspection, Bool, Customer, InspectionFormViewModelTests, Customer, NSManagedObjectContext (+1 more)
+Cohesion: 0.14
+Nodes (10): NSObject, InspectionFormViewModel, .inspection, Bool, Customer, Date, InspectionFormViewModelTests, Customer (+2 more)
 
 ### Community 100 - "cloudkit.ts"
 Cohesion: 0.09
@@ -683,49 +702,49 @@ Nodes (31): CloudKitConfig, CloudKitContainer, CloudKitContainerConfig, CloudKit
 Cohesion: 0.18
 Nodes (13): Photo bytes at the InspectionItem seam, not slots or files, Data model, InspectionItem, .hasPhoto, .localPhotoFilePredicate, .photoCount, Bool, CGFloat (+5 more)
 
-### Community 112 - "ClaimCheck"
-Cohesion: 0.31
-Nodes (4): ClaimCheck, Bool, Int, UserDefaults
+### Community 112 - "DeleteAccountCloudFake"
+Cohesion: 0.16
+Nodes (6): AccountCheck, signedIn, signedOut, unknown, DeleteAccountCloudFake, Bool
 
 ### Community 115 - "package.json"
 Cohesion: 0.07
-Nodes (26): autoprefixer, eslint, eslint-plugin-react-hooks, eslint-plugin-react-refresh, postcss, react-dom, tailwindcss, tailwindcss-animate (+18 more)
+Nodes (26): autoprefixer, eslint, eslint-plugin-react-hooks, eslint-plugin-react-refresh, jspdf, postcss, react-dom, tailwindcss (+18 more)
 
 ### Community 117 - ".run"
 Cohesion: 0.21
 Nodes (8): NSManagedObjectID, ReportFromInspections, Selection, Bool, Void, ReportFromInspectionsTests, NSManagedObjectContext, NSPersistentContainer
 
 ### Community 122 - "CloudKit Setup Guide - Systems Inspector"
-Cohesion: 0.09
-Nodes (22): 1. Key Management, 2. Access Control, 3. Data Protection, 📚 Additional Resources, Apple Documentation, Authentication Flow, Backend (optional), CloudKit Setup Guide - Systems Inspector (+14 more)
+Cohesion: 0.10
+Nodes (21): 📚 Additional Resources, Apple Documentation, Authentication Flow, Backend (optional), CloudKit Setup Guide - Systems Inspector, Code Examples, 🎯 Overview, 📋 Prerequisites (+13 more)
 
-### Community 124 - "AccessCodeViewController"
-Cohesion: 0.14
-Nodes (11): AccessCodeCoordinator, Bool, UIViewController, UIWindow, normalizedAccessCode(), AccessCodeViewController, NSCoder, UIActivityIndicatorView (+3 more)
+### Community 124 - ".apply"
+Cohesion: 0.31
+Nodes (5): AccessCodeCoordinator, Bool, UIViewController, UIWindow, normalizedAccessCode()
 
 ### Community 125 - "Pallet Rack Safety — User Guide"
 Cohesion: 0.13
 Nodes (15): Account, Contents, Create an account, Customers, Forgot password, Getting started, Inspections, Lockout (+7 more)
 
-### Community 130 - "App.tsx"
-Cohesion: 0.13
-Nodes (21): react, AuthInitializer(), PrivateRoute(), Layout(), PublicDocument(), CustomerDetailPage(), CustomersPage(), DashboardPage() (+13 more)
+### Community 130 - "authStore.ts"
+Cohesion: 0.19
+Nodes (13): zustand, AuthInitializer(), PrivateRoute(), LoginPage(), CloudKitUserIdentity, setUpAuth(), triggerSignOut(), whenUserSignsIn() (+5 more)
 
 ### Community 131 - "issue.ts"
-Cohesion: 0.11
-Nodes (23): bullet(), catalog, emptyFlags(), flagsFromPaths(), flattened(), Issue, ISSUE_FLAGS, IssueFlag (+15 more)
+Cohesion: 0.14
+Nodes (18): bullet(), catalog, emptyFlags(), flagsFromPaths(), flattened(), Issue, IssueFlag, IssueFlagMap (+10 more)
 
-### Community 132 - "load.ts"
-Cohesion: 0.17
-Nodes (13): Selected Inspections reach Report through ReportFromInspections, Web load sits in front of CloudKit and in-memory adapters, Importance, IssuePath, createLoad(), dateMs(), Listed, LoadAdapter (+5 more)
+### Community 132 - "index.ts"
+Cohesion: 0.10
+Nodes (18): Selected Inspections reach Report through ReportFromInspections, Web load sits in front of CloudKit and in-memory adapters, Web InspectionItem carries Issue Paths, not Flag bools, vitest, Importance, IssuePath, CustomerCloudKitRecord, customerDesiredKeys (+10 more)
 
 ### Community 138 - "IssueTests"
 Cohesion: 0.09
 Nodes (8): IssueTests, .bracing, .bracingHorizontal, .damage, .front, .rearDamage, .upright, Issue
 
 ### Community 139 - "Customer SiteRacking and SiteDocuments"
-Cohesion: 0.13
-Nodes (17): Language, Systems Inspector, Approach, Catalog, CatalogName (new, CloudKit syncable), Customer, Customer SiteRacking and SiteDocuments, Data model (+9 more)
+Cohesion: 0.11
+Nodes (18): Language, Systems Inspector, Approach, Catalog, CatalogName (new, CloudKit syncable), Customer, Customer SiteRacking and SiteDocuments, Data model (+10 more)
 
 ### Community 152 - "compilerOptions"
 Cohesion: 0.10
@@ -736,20 +755,20 @@ Cohesion: 0.16
 Nodes (9): EmptyStateView, CGFloat, CGRect, NSCoder, UIButton, UIColor, UILabel, UIStackView (+1 more)
 
 ### Community 155 - "CustomerDetailsViewController"
-Cohesion: 0.21
+Cohesion: 0.18
 Nodes (5): CustomerDetailsViewController, Bool, Customer, NSLayoutConstraint, UILabel
 
-### Community 160 - "🔧 Step-by-Step Setup"
-Cohesion: 0.25
-Nodes (8): Step 1: Find Your CloudKit Container ID, Step 2: Enable CloudKit Web Services, Step 3a: API Token (for Web App / CloudKit JS), Step 3b: Server-to-Server Key (for Backend), Step 4: Download and Format Private Key, Step 5: Configure Environment Variables, Step 6: Test CloudKit Connection, 🔧 Step-by-Step Setup
+### Community 160 - "ReportGenerator"
+Cohesion: 0.16
+Nodes (13): NSAttributedString, PDFKit, Layout, ReportGenerator, ReportHeader, Any, CGFloat, CGPoint (+5 more)
 
 ### Community 168 - "InspectionItemPhotoBytesTests"
 Cohesion: 0.18
 Nodes (5): InspectionItemPhotoBytesTests, InspectionItem, NSManagedObjectContext, NSPersistentContainer, URL
 
-### Community 173 - "Help & Support content"
-Cohesion: 0.40
-Nodes (5): About, FAQ, Help & Support content, Troubleshooting, User Guide
+### Community 173 - ".contextDidSave"
+Cohesion: 0.33
+Nodes (3): NSManagedObject, Notification, Set
 
 ### Community 174 - "cloudkitBootstrap.tsx"
 Cohesion: 0.12
@@ -767,9 +786,9 @@ Nodes (3): Web app, Documentation index, Layout
 Cohesion: 0.12
 Nodes (15): Code Analysis & Refactoring Techniques, Configuration Management (Updated), Determining the Next Task, Implementation Drift Handling, Iterative Subtask Implementation, Managing Task Dependencies, Primary Interaction: MCP Server vs. CLI, Standard Development Workflow Process (+7 more)
 
-### Community 187 - "SiteDocumentFile"
-Cohesion: 0.21
-Nodes (6): SiteDocumentFile, UUID, CustomerSiteDocumentTests, Customer, NSManagedObjectContext, NSPersistentContainer
+### Community 187 - "CustomerSiteDocumentTests"
+Cohesion: 0.20
+Nodes (4): CustomerSiteDocumentTests, Customer, NSManagedObjectContext, NSPersistentContainer
 
 ### Community 196 - "Deployment Guide - Systems Inspector Web App"
 Cohesion: 0.13
@@ -779,9 +798,17 @@ Nodes (15): 1. Coolify Instance, 2. CloudKit Setup, 3. Local Requirements, Build
 Cohesion: 0.13
 Nodes (15): devDependencies, autoprefixer, eslint, eslint-plugin-react-hooks, eslint-plugin-react-refresh, postcss, tailwindcss, @types/react (+7 more)
 
-### Community 221 - "CatalogTests"
-Cohesion: 0.13
-Nodes (4): Task 2: Core Data model, CatalogTests, NSManagedObjectContext, NSPersistentContainer
+### Community 210 - "PerformanceOptimizer"
+Cohesion: 0.19
+Nodes (6): PerformanceMetrics, PerformanceOptimizer, Date, Int, TimeInterval, PerformanceOptimizerTests
+
+### Community 220 - "App.tsx"
+Cohesion: 0.18
+Nodes (18): date-fns, lucide-react, react, react-router-dom, @tanstack/react-query, Layout(), PublicDocument(), CustomerDetailPage() (+10 more)
+
+### Community 221 - "SiteDocumentFile"
+Cohesion: 0.32
+Nodes (9): SiteRacking JSON and SiteDocument records on Customer, not Inspection or Issues, File map, Task 4: SiteDocument files API, Task 5: CustomerFormState + CustomerIntake, Task 6: SiteRackingViewController, Intake API, UUID, SiteDocumentFile (+1 more)
 
 ### Community 222 - "Paths at the InspectionItem Issue seam, not Flag maps"
 Cohesion: 0.35
@@ -795,33 +822,33 @@ Nodes (7): ReportProgressOverlay, CGRect, NSCoder, UIActivityIndicatorView, UILa
 Cohesion: 0.42
 Nodes (3): FilterPreset, FilterPresetStorage, Int
 
-### Community 229 - "SiteRackingViewController.swift"
-Cohesion: 0.20
-Nodes (5): AVFoundation, MessageUI, PhotosUI, QuickLook, UniformTypeIdentifiers
+### Community 229 - "LoadingCell"
+Cohesion: 0.23
+Nodes (6): CustomerCell, LoadingCell, NSCoder, UIActivityIndicatorView, UILabel, UITableViewCell
 
-### Community 233 - ".startSession"
-Cohesion: 0.17
-Nodes (3): SessionTestDefaults, UserDefaults, UserManagerSessionTests
+### Community 233 - "UserManager"
+Cohesion: 0.16
+Nodes (10): SessionSecretStore, PBKDF2, SessionKeys, Bool, Int, NSManagedObjectContext, UUID, UserManager (+2 more)
 
 ### Community 237 - "Error"
-Cohesion: 0.13
-Nodes (11): MFMailComposeResult, MFMailComposeViewController, MFMailComposeResult, MFMailComposeViewController, MFMailComposeResult, MFMailComposeViewController, Error, derivationFailed (+3 more)
+Cohesion: 0.17
+Nodes (9): MFMailComposeResult, MFMailComposeViewController, MFMailComposeResult, MFMailComposeViewController, MFMailComposeResult, MFMailComposeViewController, Error, derivationFailed (+1 more)
 
-### Community 248 - "Int"
-Cohesion: 0.32
-Nodes (4): documents, Int, QLPreviewController, QLPreviewItem
+### Community 248 - "CustomerDirectoryViewModel"
+Cohesion: 0.19
+Nodes (6): Combine, CustomerDirectoryViewModel, Bool, Customer, Int, Void
 
 ### Community 251 - "Multiple photos per inspection item"
 Cohesion: 0.18
 Nodes (10): Files (expected), Goals, Intake API, iOS UI, Multiple photos per inspection item, Non-goals, Problem, Reports (+2 more)
 
-### Community 253 - "ReportPreviewPage.tsx"
-Cohesion: 0.17
-Nodes (25): date-fns, jspdf, lucide-react, react-router-dom, @tanstack/react-query, compareImportance(), importanceCounts, importanceFromStored() (+17 more)
-
-### Community 257 - "AccountLockoutManager"
+### Community 253 - "pdfGenerator.ts"
 Cohesion: 0.22
-Nodes (3): AccountLockoutManager, Notification.Name, TimeInterval
+Nodes (17): compareImportance(), importanceCounts, importancePhrase(), importanceValues, isImmediate(), MONITOR, NEEDS_IMMEDIATE_ATTENTION, toggledImportance() (+9 more)
+
+### Community 257 - "Webapp security"
+Cohesion: 0.18
+Nodes (7): HapticManager, CloudKit web API token, HTTP security headers (no CSP on `serve`), iCloud asset URLs, Incident checklist (token compromise), Production logging, Webapp security
 
 ### Community 260 - "inject-cloudkit-config.cjs"
 Cohesion: 0.22
@@ -847,53 +874,45 @@ Nodes (7): Deploy, Documentation, Env (frontend), Layout, Local dev, Stack, Syst
 Cohesion: 0.33
 Nodes (5): Mode, create, edit, InspectionItem, NSCoder
 
-### Community 305 - "AccessCodeGateTests.swift"
-Cohesion: 0.22
-Nodes (6): CKAccountStatus, CloudKit, AccessCodeCloudField, accountCheck(), ClaimGateState, Int
+### Community 305 - "HelpAndSupportTableViewController"
+Cohesion: 0.24
+Nodes (8): Editing rules, Entry point, Help & Support — developer notes, Where the text lives, MFMailComposeViewControllerDelegate, HelpAndSupportTableViewController, SettingsActionsDelegate, UITableViewController
 
-### Community 306 - "CloudKitError"
-Cohesion: 0.25
-Nodes (8): LocalizedError, CloudKitError, accountRestricted, couldNotDetermine, .errorDescription, noAccount, temporarilyUnavailable, unknown
+### Community 309 - "CoreData"
+Cohesion: 0.16
+Nodes (4): CoreData, CryptoKit, Systems_Inspector, XCTest
 
-### Community 307 - ".imagePickerController"
-Cohesion: 0.20
-Nodes (3): Any, Int, UIImagePickerController
-
-### Community 309 - "XCTestCase"
-Cohesion: 0.36
-Nodes (5): NSManagedObjectModel, 7. Add Subtask (`add_subtask`), StoreBackupTests, URL, XCTestCase
-
-### Community 310 - "📊 CloudKit Data Structure"
-Cohesion: 0.40
-Nodes (5): 📊 CloudKit Data Structure, Customer Record, Inspection Record, InspectionItem Record, User Record
-
-### Community 311 - "EventCategory"
-Cohesion: 0.25
-Nodes (8): EventCategory, authentication, customers, errors, inspections, performance, security, userActions
+### Community 311 - "UIView"
+Cohesion: 0.14
+Nodes (11): CardID, anchors, beams, crossBars, decks, documents, loadInformation, safetyClips (+3 more)
 
 ### Community 312 - "UIViewController"
-Cohesion: 0.06
-Nodes (27): CAGradientLayer, FilterChipView, NSCoder, Void, InspectionPhotoStripView, InspectionPhotoStripViewDelegate, PhotoPreviewViewController, CGRect (+19 more)
+Cohesion: 0.15
+Nodes (12): InspectionPhotoStripView, InspectionPhotoStripViewDelegate, PhotoPreviewViewController, CGRect, Int, NSCoder, UIButton, UIImage (+4 more)
 
-### Community 313 - "CustomerIntakeTests"
-Cohesion: 0.23
-Nodes (9): File map, Task 4: SiteDocument files API, Task 5: CustomerFormState + CustomerIntake, Task 7: Hosts (form + details), Files (expected), CustomerFormStateTests, CustomerIntakeTests, NSManagedObjectContext (+1 more)
+### Community 314 - "XCTestCase"
+Cohesion: 0.15
+Nodes (5): Systems_InspectorUITests, Bool, Systems_InspectorUITestsLaunchTests, .runsForEachTargetApplicationUIConfiguration, XCTestCase
+
+### Community 317 - ".tableView"
+Cohesion: 0.36
+Nodes (6): CGPoint, IndexPath, Int, UITableView, UITableViewCell, UIContextMenuConfiguration
 
 ### Community 318 - "Global Constraints"
 Cohesion: 0.29
 Nodes (6): Global Constraints, Multiple Photos per Inspection Item Implementation Plan, Task 1: Slots + helper + intake, Task 2: iOS UI, Task 3: Reports, Task 4: Web
 
-### Community 322 - "CloudKitSyncStatus"
+### Community 322 - "ClaimCheck"
+Cohesion: 0.36
+Nodes (5): AccessCodeCloudClient, ClaimCheck, Bool, Int, UserDefaults
+
+### Community 323 - "SplashViewController"
 Cohesion: 0.25
-Nodes (6): CKError, CloudKitSyncStatus, failed, inProgress, notStarted, succeeded
+Nodes (5): SplashViewController, Bool, UIImageView, UILabel, Void
 
-### Community 323 - ".contextDidSave"
-Cohesion: 0.33
-Nodes (3): NSManagedObject, Notification, Set
-
-### Community 324 - "Systems_InspectorUITestsLaunchTests"
-Cohesion: 0.33
-Nodes (3): Bool, Systems_InspectorUITestsLaunchTests, .runsForEachTargetApplicationUIConfiguration
+### Community 324 - ".sorted"
+Cohesion: 0.25
+Nodes (4): RecordedOrder, Int32, T, RecordedOrderTests
 
 ### Community 326 - ".count"
 Cohesion: 0.50
@@ -905,30 +924,54 @@ Nodes (3): DateFormatter, DateFormatters, Date
 
 ### Community 329 - "DeleteAccount"
 Cohesion: 0.07
-Nodes (33): MainActor, AccessCodeCloudClient, AccessCodeCache, UserDefaults, .context, DeleteAccount, .isUnfinished, DeleteAccountProgress (+25 more)
+Nodes (32): MainActor, AccessCodeCache, UserDefaults, .context, DeleteAccount, .isUnfinished, DeleteAccountProgress, DeleteAccountProgressStore (+24 more)
 
-### Community 331 - ".item"
-Cohesion: 0.40
-Nodes (4): Int32, Issue, Set, UUID
+### Community 330 - "UIKit"
+Cohesion: 0.13
+Nodes (5): FirebaseCore, MessageUI, PhotosUI, QuickLook, UIKit
 
 ### Community 333 - "AccessCodeRecordState"
-Cohesion: 0.10
-Nodes (16): AccessCodeRecordState, claimed, issued, missing, retired, unreadable, AccountCheck, signedIn (+8 more)
+Cohesion: 0.12
+Nodes (14): AccessCodeRecordState, claimed, issued, missing, retired, unreadable, ClaimResult, accepted (+6 more)
+
+### Community 334 - "🐛 Troubleshooting"
+Cohesion: 0.40
+Nodes (5): Error: "Authentication failed", Error: "Container not found", Error: "Record not found", Error: "Signature verification failed", 🐛 Troubleshooting
+
+### Community 336 - "Data"
+Cohesion: 0.21
+Nodes (7): Customer SiteRacking Implementation Plan, Global Constraints, Spec coverage, Data, StoredZipArchive, UInt16, UInt32
+
+### Community 337 - ".performAuthentication"
+Cohesion: 0.40
+Nodes (4): LoginResult, failure, success, waiting
+
+### Community 338 - "MemoryUsage"
+Cohesion: 0.40
+Nodes (4): Double, MemoryUsage, .formattedString, .percentage
+
+### Community 340 - "Task 7: Hosts (form + details)"
+Cohesion: 0.40
+Nodes (3): Task 7: Hosts (form + details), Files (expected), CustomerFormStateTests
+
+### Community 341 - "📊 CloudKit Data Structure"
+Cohesion: 0.40
+Nodes (5): 📊 CloudKit Data Structure, Customer Record, Inspection Record, InspectionItem Record, User Record
 
 ## Knowledge Gaps
-- **512 isolated node(s):** `AccessCodeCloudField`, `missing`, `issued`, `claimed`, `retired` (+507 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1123 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **229 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **525 isolated node(s):** `AccessCodeCloudField`, `missing`, `issued`, `claimed`, `retired` (+520 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1140 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **233 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `String` connect `String` to `ReportGenerator`, `AccessRoute`, `UserManagerPasswordTests`, `Equatable`, `CustomerFormViewController`, `AccountLockoutManagerTests`, `InspectionItemDetailViewController`, `UIView`, `.resolve`, `AccountCreationViewController`, `ReportInspectionSnapshot`, `InspectorSettingsFormViewController`, `InspectionItemFormViewController`, `MainTabBarController`, `SiteRackingTests`, `UserManager`, `SceneDelegate`, `CodingKeys`, `SiteRacking`, `EmailReportActivity`, `.names`, `InspectionItemFormState`, `CustomerDirectoryViewController`, `Path`, `UprightSpec`, `ImageCacheManager`, `ReportPackage`, `AccessCodeGateTests`, `.tableView`, `IssueSelectionViewController`, `LoginViewController`, `.specCard`, `CustomerFormState`, `HelpContentViewController`, `Importance`, `.cacheImage`, `CoreDataManager.swift`, `SiteRackingSection`, `Data`, `SiteRackingViewController`, `ReportExportTests`, `AnalyticsManager`, `.setupCreateChrome`, `SettingsViewController`, `.tableView`, `ForgotPasswordViewController`, `CloudKitAccessCodeClient`, `PasswordRecoveryManager`, `ReportViewController`, `SortCriteria`, `PasswordRecoveryManagerTests`, `Flag`, `AppTheme`, `Customer`, `InspectionFormViewModel`, `InspectionItem`, `.run`, `AccessCodeViewController`, `EmptyStateView`, `CustomerDetailsViewController`, `InspectionItemPhotoBytesTests`, `LoginFlowUITests`, `SiteDocumentFile`, `.verifySecurityAnswer`, `.cityState`, `ReportProgressOverlay`, `FilterPreset`, `.startSession`, `AccountLockoutManager`, `CloudKitError`, `.imagePickerController`, `XCTestCase`, `EventCategory`, `UIViewController`, `.format`, `DeleteAccount`, `.item`, `AccessCodeRecordState`?**
-  _High betweenness centrality (0.527) - this node is a cross-community bridge._
-- **Why does `Inspection` connect `load.ts` to `Snapshots at the Report export seam, not Inspection entities`, `inspectionCodec.ts`, `ReportPreviewPage.tsx`?**
-  _High betweenness centrality (0.098) - this node is a cross-community bridge._
-- **Why does `Snapshots at the Report export seam, not Inspection entities` connect `Snapshots at the Report export seam, not Inspection entities` to `ReportExportTests`, `load.ts`, `Path`?**
-  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+- **Why does `String` connect `String` to `SessionSecret`, `AccessCodeGate.swift`, `SessionCustomerRead.swift`, `CustomerFormViewController`, `AccountLockoutManagerTests`, `InspectionItemDetailViewController`, `.specCard`, `.resolve`, `AccountCreationViewController`, `.item`, `InspectorSettingsFormViewController`, `InspectionItemFormViewController`, `MainTabBarController`, `.items`, `SceneDelegate`, `CodingKeys`, `LoginViewController`, `EmailReportActivity`, `.names`, `InspectionItemFormState`, `Path`, `AccessRoute`, `ImageCacheManager`, `ReportPackage`, `ReportInspectionSnapshot`, `AccessCodeGateTests`, `.tableView`, `IssueSelectionViewController`, `SiteRacking`, `CustomerFormState`, `.startSession`, `UserManagerPasswordTests`, `Importance`, `.cacheImage`, `CoreDataManager.swift`, `SiteRackingSection`, `SiteRackingViewController`, `ReportExportTests`, `AnalyticsManager`, `.setupUI`, `SettingsViewController`, `ForgotPasswordViewController`, `CloudKitAccessCodeClient`, `PasswordRecoveryManager`, `ReportViewController`, `SortCriteria`, `PasswordRecoveryManagerTests`, `Taskmaster Tool & Command Reference`, `Flag`, `Customer`, `InspectionFormViewModel`, `InspectionItem`, `DeleteAccountCloudFake`, `.run`, `.apply`, `EmptyStateView`, `CustomerDetailsViewController`, `ReportGenerator`, `InspectionItemPhotoBytesTests`, `LoginFlowUITests`, `PerformanceOptimizer`, `SiteDocumentFile`, `ReportProgressOverlay`, `FilterPreset`, `LoadingCell`, `UserManager`, `CustomerDirectoryViewModel`, `.cityState`, `.imagePickerController`, `UIView`, `.loginTapped`, `.tableView`, `.format`, `DeleteAccount`, `.documentsSummary`, `AccessCodeRecordState`, `Data`, `.performAuthentication`, `MemoryUsage`, `.filterCustomers`?**
+  _High betweenness centrality (0.546) - this node is a cross-community bridge._
+- **Why does `Inspection` connect `index.ts` to `Snapshots at the Report export seam, not Inspection entities`, `pdfGenerator.ts`, `App.tsx`, `inspectionItemCodec.ts`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `HelpContentViewController` connect `AnalyticsManager` to `UIViewController`, `HelpAndSupportTableViewController`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
 - **Are the 7 inferred relationships involving `InspectionItemFormViewController` (e.g. with `One InspectionItem form screen owns chrome and persist` and `.addInspectionTapped()`) actually correct?**
   _`InspectionItemFormViewController` has 7 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 4 inferred relationships involving `SiteRackingViewController` (e.g. with `Task 7: Hosts (form + details)` and `iOS UI`) actually correct?**

@@ -33,7 +33,7 @@ final class ReportPDFLayoutOptionsViewController: UIViewController {
         
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
-        stack.spacing = 20
+        stack.spacing = 16
         stack.translatesAutoresizingMaskIntoConstraints = false
         
         secondaryLabel.text = "Always include Secondary Location (Bay/Level)"
@@ -70,7 +70,7 @@ final class ReportPDFLayoutOptionsViewController: UIViewController {
         NSLayoutConstraint.activate([
             secondarySwitch.leadingAnchor.constraint(equalTo: secondaryRow.leadingAnchor),
             secondarySwitch.centerYAnchor.constraint(equalTo: secondaryRow.centerYAnchor),
-            secondaryLabel.leadingAnchor.constraint(equalTo: secondarySwitch.trailingAnchor, constant: 12),
+            secondaryLabel.leadingAnchor.constraint(equalTo: secondarySwitch.trailingAnchor, constant: 8),
             secondaryLabel.centerYAnchor.constraint(equalTo: secondaryRow.centerYAnchor),
             secondaryLabel.trailingAnchor.constraint(lessThanOrEqualTo: secondaryRow.trailingAnchor),
             secondaryRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)

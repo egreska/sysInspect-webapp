@@ -1,4 +1,5 @@
 import type { Customer, Inspection, InspectionItem } from '../types';
+import { recordedOrder } from './recordedOrder';
 
 export const LIST_STOPPED_EARLY = 'This list stopped early. CloudKit may have more records.';
 
@@ -58,9 +59,7 @@ export function createLoad(adapter: LoadAdapter) {
       const inspection = await adapter.inspection(id);
       if (!inspection) throw new Error('Inspection not found');
       const listed = await adapter.items(id);
-      const items = listed.rows
-        .filter((row) => row.inspectionId === id)
-        .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+      const items = recordedOrder(listed.rows.filter((row) => row.inspectionId === id));
       const customer = inspection.customerId
         ? (await adapter.customer(inspection.customerId)) ?? undefined
         : undefined;

@@ -111,4 +111,22 @@ final class ReportSnapshotMapperTests: XCTestCase {
         XCTAssertEqual(snapshot.items.first?.photos.count, 0)
         XCTAssertTrue(CombinedPDFJoinRule.canJoin([snapshot]))
     }
+
+    func testItemsFollowRecordedOrderRatherThanLocation() {
+        let inspection = Inspection(context: context)
+        _ = InspectionItemIntake.create(
+            into: inspection,
+            form: InspectionItemFormState(location: "Aisle"),
+            sequenceNumber: 2
+        )
+        _ = InspectionItemIntake.create(
+            into: inspection,
+            form: InspectionItemFormState(location: "Bay"),
+            sequenceNumber: 1
+        )
+
+        let snapshot = ReportSnapshotMapper.snapshot(from: inspection, includePhotos: false)
+        XCTAssertEqual(snapshot.items.map(\.sequenceNumber), [1, 2])
+        XCTAssertEqual(snapshot.items.map(\.location), ["Bay", "Aisle"])
+    }
 }

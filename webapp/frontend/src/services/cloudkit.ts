@@ -1,4 +1,9 @@
 import { logger } from '../utils/logger';
+import { customerDesiredKeys } from './customerCodec';
+import { inspectionDesiredKeys } from './inspectionCodec';
+import { inspectionItemDesiredKeys } from './inspectionItemCodec';
+
+export { extractRecordName } from './recordName';
 
 /**
  * CloudKit JS Browser SDK Service
@@ -231,27 +236,17 @@ export function inspectionItemQueryFilters(inspectionId: string) {
   ];
 }
 
-/**
- * Limit fields returned by CloudKit (smaller payloads, less data in browser memory).
- * Omit for record types that need full field sets (e.g. CD_InspectionItem).
- */
-export const QUERY_DESIRED_KEYS: Record<string, readonly string[]> = {
-  CD_Customer: [
-    'CD_name',
-    'CD_contactName',
-    'CD_phone',
-    'CD_address',
-    'CD_city',
-    'CD_state',
-    'CD_zipCode',
-    'CD_site',
-    'CD_createdDate',
-  ],
-  CD_Inspection: ['CD_date', 'CD_inspectorName', 'CD_customer'],
+const codecDesiredKeys: Record<string, readonly string[] | null> = {
+  CD_Customer: customerDesiredKeys,
+  CD_Inspection: inspectionDesiredKeys,
+  CD_InspectionItem: inspectionItemDesiredKeys,
 };
 
-export interface QueryRecordsExtras {
-  desiredKeys?: string[];
+function desiredKeysForList(recordType: string): readonly string[] | undefined {
+  if (!Object.prototype.hasOwnProperty.call(codecDesiredKeys, recordType)) return undefined;
+  const keys = codecDesiredKeys[recordType];
+  if (keys == null || keys.length === 0) return undefined;
+  return keys;
 }
 
 /**
@@ -428,8 +423,7 @@ export async function queryRecords(
   recordType: string,
   filters: Array<{ fieldName: string; comparator: string; fieldValue: { value: unknown } }> = [],
   sortBy?: { fieldName: string; ascending: boolean },
-  resultsLimit = 100,
-  extras?: QueryRecordsExtras
+  resultsLimit = 100
 ): Promise<{ records: CloudKitRecord[]; stoppedEarly: boolean }> {
   const db = getContainer().privateCloudDatabase;
 
@@ -449,9 +443,8 @@ export async function queryRecords(
       resultsLimit,
     };
     if (marker) options.continuationMarker = marker;
-    const presetKeys = QUERY_DESIRED_KEYS[recordType];
-    const desiredKeys = extras?.desiredKeys ?? (presetKeys ? [...presetKeys] : undefined);
-    if (desiredKeys?.length) options.desiredKeys = desiredKeys;
+    const desiredKeys = desiredKeysForList(recordType);
+    if (desiredKeys?.length) options.desiredKeys = [...desiredKeys];
 
     let response: CloudKitQueryResponse;
     try {
@@ -553,21 +546,3 @@ async function fetchRecordByName(
   }
 }
 
-/**
- * CloudKit JS may return reference values as a string (recordName),
- * an object { recordName }, or { value: { recordName } }. Normalize to string.
- */
-export function extractRecordName(ref: unknown): string | undefined {
-  if (!ref) return undefined;
-  if (typeof ref === 'string') return ref;
-  if (typeof ref === 'object') {
-    const obj = ref as Record<string, unknown>;
-    if (typeof obj.recordName === 'string') return obj.recordName;
-    if (typeof obj.value === 'string') return obj.value;
-    if (typeof obj.value === 'object' && obj.value) {
-      const inner = obj.value as Record<string, unknown>;
-      if (typeof inner.recordName === 'string') return inner.recordName;
-    }
-  }
-  return undefined;
-}

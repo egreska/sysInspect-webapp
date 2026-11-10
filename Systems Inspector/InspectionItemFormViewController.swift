@@ -3,6 +3,7 @@
 //  Systems Inspector
 //
 
+import AVFoundation
 import UIKit
 
 protocol InspectionItemFormDelegate: AnyObject {
@@ -368,6 +369,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
     }
 
     private func flashAddButtonSuccess() {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
         let originalBg = addItemButton.backgroundColor
         let originalTransform = addItemButton.transform
         UIView.animate(withDuration: 0.15, animations: {
@@ -694,6 +696,41 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             showAlert(message: "Camera is not available")
             return
         }
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            presentInspectionCamera()
+        case .notDetermined:
+            let alert = UIAlertController(
+                title: "Camera",
+                message: "Systems Inspector uses the camera to photograph this inspection item. iOS will ask for access next.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Not Now", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Continue", style: .default) { [weak self] _ in
+                self?.requestInspectionCamera()
+            })
+            present(alert, animated: true)
+        case .denied, .restricted:
+            showAlert(message: "Enable camera access in Settings to photograph inspection items.")
+        @unknown default:
+            showAlert(message: "Camera is not available")
+        }
+    }
+
+    private func requestInspectionCamera() {
+        AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard granted else {
+                    self.showAlert(message: "Enable camera access in Settings to photograph inspection items.")
+                    return
+                }
+                self.presentInspectionCamera()
+            }
+        }
+    }
+
+    private func presentInspectionCamera() {
         let imagePicker = UIImagePickerController()
         imagePicker.sourceType = .camera
         imagePicker.cameraCaptureMode = .photo

@@ -71,7 +71,9 @@ class ReportViewController: UIViewController {
         title = "Generate Reports"
         view.backgroundColor = AppTheme.background
         
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "InspectionCell")
+        tableView.register(SubtitleCell.self, forCellReuseIdentifier: "InspectionCell")
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 60
         tableView.register(SkeletonCell.self, forCellReuseIdentifier: SkeletonCell.reuseId)
         tableView.dataSource = self
         tableView.delegate = self
@@ -104,7 +106,7 @@ class ReportViewController: UIViewController {
         generateCSVButton.setTitle("Generate CSV Report", for: .normal)
         generateCSVButton.accessibilityLabel = "Generate CSV report"
         generateCSVButton.addTarget(self, action: #selector(generateCSVReport), for: .touchUpInside)
-        generateCSVButton.backgroundColor = AppTheme.success
+        generateCSVButton.backgroundColor = AppTheme.primary
         generateCSVButton.setTitleColor(AppTheme.primaryContrast, for: .normal)
         generateCSVButton.layer.cornerRadius = 8
         generateCSVButton.translatesAutoresizingMaskIntoConstraints = false
@@ -112,13 +114,13 @@ class ReportViewController: UIViewController {
         // Create button stack
         let buttonStack = UIStackView(arrangedSubviews: [generatePDFButton, generateCSVButton])
         buttonStack.axis = .horizontal
-        buttonStack.spacing = 10
+        buttonStack.spacing = 8
         buttonStack.distribution = .fillEqually
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         
         let filterSortStack = UIStackView(arrangedSubviews: [filterButton, sortButton])
         filterSortStack.axis = .horizontal
-        filterSortStack.spacing = 10
+        filterSortStack.spacing = 8
         filterSortStack.distribution = .fillEqually
         filterSortStack.translatesAutoresizingMaskIntoConstraints = false
         
@@ -143,7 +145,7 @@ class ReportViewController: UIViewController {
             filterSortStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             filterSortStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             
-            filterChipsScrollView.topAnchor.constraint(equalTo: filterSortStack.bottomAnchor, constant: 4),
+            filterChipsScrollView.topAnchor.constraint(equalTo: filterSortStack.bottomAnchor, constant: 8),
             filterChipsScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             filterChipsScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             filterChipsScrollViewHeightConstraint!,
@@ -152,9 +154,9 @@ class ReportViewController: UIViewController {
             filterChipsStack.trailingAnchor.constraint(equalTo: filterChipsScrollView.contentLayoutGuide.trailingAnchor, constant: -16),
             filterChipsStack.topAnchor.constraint(equalTo: filterChipsScrollView.contentLayoutGuide.topAnchor),
             filterChipsStack.bottomAnchor.constraint(equalTo: filterChipsScrollView.contentLayoutGuide.bottomAnchor),
-            filterChipsStack.heightAnchor.constraint(equalToConstant: 36),
+            filterChipsStack.heightAnchor.constraint(equalToConstant: 44),
             
-            tableView.topAnchor.constraint(equalTo: filterChipsScrollView.bottomAnchor, constant: 4),
+            tableView.topAnchor.constraint(equalTo: filterChipsScrollView.bottomAnchor, constant: 8),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: buttonStack.topAnchor, constant: -16),
@@ -210,10 +212,12 @@ class ReportViewController: UIViewController {
     
     private func rebuildFilterChips() {
         filterChipsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let chipHeight: CGFloat = 32
+        let chipHeight: CGFloat = 44
         for (index, filter) in activeFilters.enumerated() {
             let label = displayLabel(for: filter)
-            let keyLabel = filter.key.prefix(1).uppercased() + filter.key.dropFirst()
+            let keyLabel = filter.key == "inspector"
+                ? "Inspector Name"
+                : filter.key.prefix(1).uppercased() + filter.key.dropFirst()
             let chip = FilterChipView(title: "\(keyLabel): \(label)")
             chip.onRemove = { [weak self] in
                 self?.removeFilter(at: index)
@@ -364,7 +368,7 @@ class ReportViewController: UIViewController {
             self?.showDateFilterInput()
         })
         
-        alertController.addAction(UIAlertAction(title: "By Inspector", style: .default) { [weak self] _ in
+        alertController.addAction(UIAlertAction(title: "By Inspector Name", style: .default) { [weak self] _ in
             self?.showInspectorFilterInput()
         })
         
@@ -789,10 +793,10 @@ class ReportViewController: UIViewController {
     }
     
     private func showInspectorFilterInput() {
-        let alertController = UIAlertController(title: "Filter by Inspector", message: "Enter inspector name", preferredStyle: .alert)
+        let alertController = UIAlertController(title: "Filter by Inspector Name", message: "Enter an Inspector Name", preferredStyle: .alert)
         
         alertController.addTextField { textField in
-            textField.placeholder = "Inspector name"
+            textField.placeholder = "Inspector Name"
             
             // Pre-fill with existing filter value if any
             if let existingFilter = self.activeFilters.first(where: { $0.key == "inspector" }) {

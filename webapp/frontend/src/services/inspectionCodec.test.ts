@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeInspection } from './inspectionCodec';
+import { decodeInspection, inspectionDesiredKeys } from './inspectionCodec';
 
 function record(
   fields: Record<string, unknown>,
@@ -48,5 +48,25 @@ describe('decodeInspection', () => {
   it('decodes a millisecond CloudKit date to ISO', () => {
     const inspection = decodeInspection(record({ CD_date: 1690848000000 }));
     expect(inspection.date).toBe(new Date(1690848000000).toISOString());
+  });
+
+  it('decodes a record that contains only the exported fields', () => {
+    const values: Record<string, string> = {
+      CD_date: '2026-08-01T12:00:00Z',
+      CD_inspectorName: 'Jordan',
+      CD_customer: 'cust-1',
+    };
+    const fields: Record<string, string> = {};
+    for (const key of inspectionDesiredKeys) {
+      if (!(key in values)) throw new Error(`missing fixture for ${key}`);
+      fields[key] = values[key];
+    }
+    expect(decodeInspection(record(fields))).toEqual({
+      id: 'insp-1',
+      date: '2026-08-01T12:00:00Z',
+      inspectorName: 'Jordan',
+      customerId: 'cust-1',
+      createdDate: '2026-08-01T12:00:00Z',
+    });
   });
 });

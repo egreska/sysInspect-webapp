@@ -78,7 +78,7 @@ final class EmptyStateView: UIView {
             symbolStack.topAnchor.constraint(equalTo: topAnchor),
             symbolStack.leadingAnchor.constraint(equalTo: leadingAnchor),
             symbolStack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            titleLabel.topAnchor.constraint(equalTo: symbolStack.bottomAnchor, constant: 20),
+            titleLabel.topAnchor.constraint(equalTo: symbolStack.bottomAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
             titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
             messageLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),

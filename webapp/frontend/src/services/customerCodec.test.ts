@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeCustomer } from './customerCodec';
+import { customerDesiredKeys, decodeCustomer } from './customerCodec';
 
 function record(
   fields: Record<string, unknown>,
@@ -48,5 +48,36 @@ describe('decodeCustomer', () => {
     expect(customer.contactName).toBe('');
     expect(customer.site).toBe('');
     expect(customer.createdDate).toBe('');
+  });
+
+  it('decodes a record that contains only the exported fields', () => {
+    const values: Record<string, string> = {
+      CD_name: 'Acme Storage',
+      CD_contactName: 'Pat Lee',
+      CD_phone: '555-0100',
+      CD_address: '1 Dock St',
+      CD_city: 'Austin',
+      CD_state: 'TX',
+      CD_zipCode: '78701',
+      CD_site: 'Warehouse A',
+      CD_createdDate: '2026-01-15',
+    };
+    const fields: Record<string, string> = {};
+    for (const key of customerDesiredKeys) {
+      if (!(key in values)) throw new Error(`missing fixture for ${key}`);
+      fields[key] = values[key];
+    }
+    expect(decodeCustomer(record(fields))).toEqual({
+      id: 'cust-1',
+      name: 'Acme Storage',
+      contactName: 'Pat Lee',
+      phone: '555-0100',
+      address: '1 Dock St',
+      city: 'Austin',
+      state: 'TX',
+      zipCode: '78701',
+      site: 'Warehouse A',
+      createdDate: '2026-01-15',
+    });
   });
 });

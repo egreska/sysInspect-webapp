@@ -175,10 +175,10 @@ final class CustomerFormViewController: UIViewController {
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
-            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
     }
 
@@ -186,6 +186,8 @@ final class CustomerFormViewController: UIViewController {
         let label = UILabel()
         label.text = text
         label.font = AppTheme.fontBold(.subheadline)
+        label.adjustsFontForContentSizeCategory = true
+        label.numberOfLines = 0
         label.textColor = AppTheme.textSecondary
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -312,6 +314,7 @@ final class CustomerFormViewController: UIViewController {
                 return
             }
             HapticManager.success()
+            CustomerSearchIndex.refreshFromStore()
             delegate?.didSaveCustomer(customer, isNew: false)
         } else {
             guard UserManager.shared.sessionUserId != nil else {
@@ -324,6 +327,7 @@ final class CustomerFormViewController: UIViewController {
                 return
             }
             HapticManager.success()
+            CustomerSearchIndex.refreshFromStore()
             delegate?.didSaveCustomer(customer, isNew: true)
         }
         dismiss(animated: true)

@@ -1,5 +1,5 @@
 import type { Inspection } from '../types';
-import { extractRecordName } from './cloudkit';
+import { extractRecordName } from './recordName';
 
 export type InspectionCloudKitRecord = {
   recordName: string;
@@ -16,14 +16,22 @@ function decodeDate(raw: unknown): string | undefined {
   return undefined;
 }
 
+const inspectionField = {
+  date: 'CD_date',
+  inspectorName: 'CD_inspectorName',
+  customer: 'CD_customer',
+} as const;
+
+export const inspectionDesiredKeys = Object.values(inspectionField);
+
 export function decodeInspection(record: InspectionCloudKitRecord): Inspection {
   const fields = record.fields;
-  const date = decodeDate(fields.CD_date?.value);
+  const date = decodeDate(fields[inspectionField.date]?.value);
   return {
     id: record.recordName,
     date,
-    inspectorName: (fields.CD_inspectorName?.value as string) || '',
-    customerId: extractRecordName(fields.CD_customer?.value),
+    inspectorName: (fields[inspectionField.inspectorName]?.value as string) || '',
+    customerId: extractRecordName(fields[inspectionField.customer]?.value),
     createdDate: date,
   };
 }

@@ -148,7 +148,7 @@ class AccountCreationViewController: UIViewController {
             createAccountButton
         ])
         stackView.axis = .vertical
-        stackView.spacing = 20
+        stackView.spacing = 16
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(stackView)

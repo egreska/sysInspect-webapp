@@ -175,21 +175,21 @@ class SettingsViewController: UIViewController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
 
-            logoImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            logoImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             logoImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             logoImageView.widthAnchor.constraint(equalToConstant: 100),
             logoImageView.heightAnchor.constraint(equalToConstant: 100),
 
-            titleLabel.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 20),
+            titleLabel.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 16),
             titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
 
             versionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
             versionLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
 
-            descriptionLabel.topAnchor.constraint(equalTo: versionLabel.bottomAnchor, constant: 30),
-            descriptionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            descriptionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            descriptionLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+            descriptionLabel.topAnchor.constraint(equalTo: versionLabel.bottomAnchor, constant: 24),
+            descriptionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            descriptionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            descriptionLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
 
         navigationController?.pushViewController(aboutVC, animated: true)

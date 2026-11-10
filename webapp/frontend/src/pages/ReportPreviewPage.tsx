@@ -129,7 +129,7 @@ export default function ReportPreviewPage() {
           )}
           {edited.inspectorName && (
             <p>
-              <span className="font-medium text-gray-900">Inspector:</span>{' '}
+              <span className="font-medium text-gray-900">Inspector Name:</span>{' '}
               {edited.inspectorName}
             </p>
           )}

@@ -63,7 +63,7 @@ final class AccessCodeViewController: UIViewController {
 
         let stack = UIStackView(arrangedSubviews: [messageLabel, codeField, actionButton])
         stack.axis = .vertical
-        stack.spacing = 20
+        stack.spacing = 16
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
         view.addSubview(activityIndicator)

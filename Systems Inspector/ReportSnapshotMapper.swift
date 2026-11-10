@@ -22,9 +22,9 @@ enum ReportSnapshotMapper {
         } else {
             customer = nil
         }
-        let items = ((inspection.items?.allObjects as? [InspectionItem]) ?? [])
-            .sorted { $0.sequenceNumber < $1.sequenceNumber }
-            .map { itemSnapshot(from: $0, includePhotos: includePhotos) }
+        let items = RecordedOrder.sorted((inspection.items?.allObjects as? [InspectionItem]) ?? []) {
+            $0.sequenceNumber
+        }.map { itemSnapshot(from: $0, includePhotos: includePhotos) }
         return ReportInspectionSnapshot(
             date: inspection.date,
             inspectorName: inspection.inspectorName,

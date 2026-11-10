@@ -14,20 +14,23 @@ final class FilterChipView: UIView {
         label.translatesAutoresizingMaskIntoConstraints = false
         
         removeButton.setTitle("✕", for: .normal)
+        removeButton.accessibilityLabel = "Remove \(title)"
         removeButton.addTarget(self, action: #selector(removeTapped), for: .touchUpInside)
         removeButton.translatesAutoresizingMaskIntoConstraints = false
         
         backgroundColor = UIColor.secondarySystemFill
-        layer.cornerRadius = 16
+        layer.cornerRadius = 22
         addSubview(label)
         addSubview(removeButton)
         
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             label.centerYAnchor.constraint(equalTo: centerYAnchor),
             removeButton.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 4),
             removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             removeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            removeButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            removeButton.heightAnchor.constraint(equalToConstant: 44),
         ])
     }
     

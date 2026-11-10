@@ -252,6 +252,9 @@ class UserManager {
     
     func logoutUser() async {
         AnalyticsManager.shared.logLogout()
+        if let userId = sessionUserId {
+            CustomerSearchIndex.removeSession(userId: userId)
+        }
         clearSession()
         print("User logged out successfully")
     }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createLoad } from './load';
 import { cloudKitAdapter } from './cloudKitAdapter';
 import {
@@ -115,5 +115,61 @@ describe('queryHitPageGuard', () => {
     expect(queryHitPageGuard(50, more)).toBe(true);
     expect(queryHitPageGuard(49, more)).toBe(false);
     expect(queryHitPageGuard(50, { moreComing: false, continuationMarker: 'next' })).toBe(false);
+  });
+});
+
+describe('list field lists', () => {
+  it('sends codec fields for Customer and Inspection and none for InspectionItem', async () => {
+    vi.resetModules();
+    const seen: { recordType: string; desiredKeys?: string[] }[] = [];
+    const previous = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = {
+      CloudKit: {
+        configure() {},
+        getDefaultContainer() {
+          return {
+            setUpAuth: async () => null,
+            whenUserSignsIn: Promise.resolve(null),
+            whenUserSignsOut: Promise.resolve(),
+            privateCloudDatabase: {
+              performQuery: async (
+                query: { recordType: string },
+                options: { desiredKeys?: string[] }
+              ) => {
+                seen.push({ recordType: query.recordType, desiredKeys: options.desiredKeys });
+                return { records: [] };
+              },
+            },
+          };
+        },
+        getContainer() {
+          throw new Error('unused');
+        },
+      },
+      __CLOUDKIT_RUNTIME_CONFIG__: {
+        containerId: 'iCloud.test',
+        apiToken: 'token',
+      },
+    };
+    try {
+      const { initCloudKit, queryRecords } = await import('./cloudkit');
+      const { customerDesiredKeys } = await import('./customerCodec');
+      const { inspectionDesiredKeys } = await import('./inspectionCodec');
+      await initCloudKit();
+      await queryRecords('CD_Customer');
+      await queryRecords('CD_Inspection');
+      await queryRecords('CD_InspectionItem');
+      expect(seen.map((row) => row.recordType)).toEqual([
+        'CD_Customer',
+        'CD_Inspection',
+        'CD_InspectionItem',
+      ]);
+      expect(seen[0].desiredKeys).toEqual([...customerDesiredKeys]);
+      expect(seen[1].desiredKeys).toEqual([...inspectionDesiredKeys]);
+      expect(seen[2].desiredKeys).toBeUndefined();
+    } finally {
+      (globalThis as { window?: unknown }).window = previous;
+      vi.resetModules();
+    }
   });
 });

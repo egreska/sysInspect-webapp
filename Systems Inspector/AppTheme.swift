@@ -79,30 +79,40 @@ enum AppTheme {
     // MARK: - Typography (Dynamic Type)
 
     static func font(_ style: FontStyle) -> UIFont {
-        switch style {
-        case .largeTitle: return .preferredFont(forTextStyle: .largeTitle)
-        case .title1: return .preferredFont(forTextStyle: .title1)
-        case .title2: return .preferredFont(forTextStyle: .title2)
-        case .title3: return .preferredFont(forTextStyle: .title3)
-        case .headline: return .preferredFont(forTextStyle: .headline)
-        case .body: return .preferredFont(forTextStyle: .body)
-        case .callout: return .preferredFont(forTextStyle: .callout)
-        case .subheadline: return .preferredFont(forTextStyle: .subheadline)
-        case .footnote: return .preferredFont(forTextStyle: .footnote)
-        case .caption: return .preferredFont(forTextStyle: .caption1)
-        }
+        .preferredFont(forTextStyle: textStyle(for: style))
     }
 
-    /// Bold variant of a text style (e.g. for emphasis)
+    /// Bold variant that keeps scaling with Dynamic Type.
     static func fontBold(_ style: FontStyle) -> UIFont {
-        let base = font(style)
-        return UIFont.systemFont(ofSize: base.pointSize, weight: .bold)
+        scaledFont(for: style, weight: .bold)
     }
 
-    /// Medium weight variant
+    /// Medium weight variant that keeps scaling with Dynamic Type.
     static func fontMedium(_ style: FontStyle) -> UIFont {
-        let base = font(style)
-        return UIFont.systemFont(ofSize: base.pointSize, weight: .medium)
+        scaledFont(for: style, weight: .medium)
+    }
+
+    private static func scaledFont(for style: FontStyle, weight: UIFont.Weight) -> UIFont {
+        let textStyle = textStyle(for: style)
+        let metrics = UIFontMetrics(forTextStyle: textStyle)
+        let baseSize = UIFont.preferredFont(forTextStyle: textStyle).pointSize
+        let font = UIFont.systemFont(ofSize: baseSize, weight: weight)
+        return metrics.scaledFont(for: font)
+    }
+
+    private static func textStyle(for style: FontStyle) -> UIFont.TextStyle {
+        switch style {
+        case .largeTitle: return .largeTitle
+        case .title1: return .title1
+        case .title2: return .title2
+        case .title3: return .title3
+        case .headline: return .headline
+        case .body: return .body
+        case .callout: return .callout
+        case .subheadline: return .subheadline
+        case .footnote: return .footnote
+        case .caption: return .caption1
+        }
     }
 
     enum FontStyle {

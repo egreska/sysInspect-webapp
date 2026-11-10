@@ -80,7 +80,9 @@ class CustomerDetailsViewController: UIViewController {
             var updated = CustomerIntake.formState(from: self.customer)
             updated.siteRacking = racking
             updated.siteDocuments = docs
-            _ = CustomerIntake.update(self.customer, form: updated)
+            if CustomerIntake.update(self.customer, form: updated) {
+                CustomerSearchIndex.refreshFromStore()
+            }
             self.setupCustomerInfoHeader()
         }
         let nav = UINavigationController(rootViewController: sheet)
@@ -135,7 +137,7 @@ class CustomerDetailsViewController: UIViewController {
         headerView.backgroundColor = AppTheme.surface
         
         newInspectionButton.setTitle("New Inspection", for: .normal)
-        newInspectionButton.backgroundColor = AppTheme.success
+        newInspectionButton.backgroundColor = AppTheme.primary
         newInspectionButton.setTitleColor(AppTheme.primaryContrast, for: .normal)
         newInspectionButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         newInspectionButton.titleLabel?.adjustsFontForContentSizeCategory = true
@@ -148,7 +150,9 @@ class CustomerDetailsViewController: UIViewController {
         newInspectionButton.addTarget(self, action: #selector(addInspectionTapped), for: .touchUpInside)
         newInspectionButton.accessibilityLabel = "New inspection"
         
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "InspectionCell")
+        tableView.register(SubtitleCell.self, forCellReuseIdentifier: "InspectionCell")
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 60
         tableView.register(SkeletonCell.self, forCellReuseIdentifier: SkeletonCell.reuseId)
         tableView.dataSource = self
         tableView.delegate = self
@@ -173,8 +177,8 @@ class CustomerDetailsViewController: UIViewController {
             
             // New Inspection button constraints
             newInspectionButton.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 16),
-            newInspectionButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            newInspectionButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            newInspectionButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            newInspectionButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             newInspectionButton.heightAnchor.constraint(equalToConstant: 50),
             
             // Table view constraints
@@ -388,7 +392,7 @@ class CustomerDetailsViewController: UIViewController {
         CoreDataManager.shared.performBackgroundTask { [weak self] context in
             guard let self = self else { return }
             do {
-                guard let bgCustomer = try? context.existingObject(with: customerID) else {
+                guard let bgCustomer = try? context.existingObject(with: customerID) as? Customer else {
                     DispatchQueue.main.async {
                         self.isLoadingInspections = false
                         self.tableView.reloadData()
@@ -397,13 +401,7 @@ class CustomerDetailsViewController: UIViewController {
                     }
                     return
                 }
-                let req: NSFetchRequest<Inspection> = Inspection.fetchRequest()
-                req.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                    NSPredicate(format: "customer == %@", bgCustomer),
-                    NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-                ])
-                req.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-                let result = try context.fetch(req)
+                let result = try fetchSessionInspections(for: bgCustomer, userId: currentUserID, in: context)
                 let objectIDs = result.map(\.objectID)
                 DispatchQueue.main.async {
                     let mainContext = CoreDataManager.shared.context
@@ -449,7 +447,13 @@ extension CustomerDetailsViewController: UITableViewDataSource {
 
         cell.textLabel?.text = "Inspection on \(dateString)"
 
-        let itemCount = inspection.items?.count ?? 0
+        let itemCount: Int
+        if let userId = UserManager.shared.sessionUserId,
+           let context = inspection.managedObjectContext {
+            itemCount = (try? sessionInspectionItemCount(for: inspection, userId: userId, in: context)) ?? 0
+        } else {
+            itemCount = 0
+        }
         cell.detailTextLabel?.text = "\(itemCount) item\(itemCount == 1 ? "" : "s")"
 
         cell.accessoryType = .disclosureIndicator
@@ -583,20 +587,24 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
 
     private func setupUI() {
         title = "Inspection Details"
-        view.backgroundColor = .white
+        view.backgroundColor = AppTheme.background
         
         // Replace multiple buttons with single actions button
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
+        let actionsItem = UIBarButtonItem(
             image: UIImage(systemName: "ellipsis.circle"),
             style: .plain,
             target: self,
             action: #selector(showActionSheet)
         )
+        actionsItem.accessibilityLabel = "Inspection actions"
+        navigationItem.rightBarButtonItem = actionsItem
         
         tableView.dataSource = self
         tableView.delegate = self
         tableView.prefetchDataSource = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "ItemCell")
+        tableView.register(SubtitleCell.self, forCellReuseIdentifier: "ItemCell")
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 60
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.tableFooterView = UIView()
         
@@ -652,24 +660,12 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
         CoreDataManager.shared.performBackgroundTask { [weak self] context in
             guard let self = self else { return }
             do {
-                guard let bgInspection = try? context.existingObject(with: inspectionID) else {
+                guard let bgInspection = try? context.existingObject(with: inspectionID) as? Inspection else {
                     DispatchQueue.main.async { self.tableView.reloadData() }
                     return
                 }
-                let req: NSFetchRequest<InspectionItem> = InspectionItem.fetchRequest()
-                req.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-                    NSPredicate(format: "inspection == %@", bgInspection),
-                    NSPredicate(format: "userId == %@", currentUserID as CVarArg)
-                ])
-                let result = try context.fetch(req)
-                let sorted = result.sorted { item1, item2 in
-                    let location1 = item1.location ?? ""
-                    let location2 = item2.location ?? ""
-                    if location1 == location2 {
-                        return (item1.bayNumber ?? "") < (item2.bayNumber ?? "")
-                    }
-                    return location1 < location2
-                }
+                let result = try fetchSessionInspectionItems(for: bgInspection, userId: currentUserID, in: context)
+                let sorted = RecordedOrder.sorted(result) { $0.sequenceNumber }
                 let objectIDs = sorted.map(\.objectID)
                 DispatchQueue.main.async {
                     let mainContext = CoreDataManager.shared.context
@@ -847,7 +843,7 @@ class InspectionItemDetailViewController: UIViewController {
         let primaryLocation = inspectionItem.location ?? "N/A"
         let secondaryLocation = inspectionItem.bayNumber ?? "N/A"
         title = "\(primaryLocation) - \(secondaryLocation)"
-        view.backgroundColor = .white
+        view.backgroundColor = AppTheme.background
         
         // Add Edit button to navigation bar
         navigationItem.rightBarButtonItem = UIBarButtonItem(
@@ -956,31 +952,21 @@ class InspectionItemDetailViewController: UIViewController {
     }
     
     private func addDetailLabel(to stackView: UIStackView, title: String, value: String) {
-        let container = UIView()
-        
         let titleLabel = UILabel()
         titleLabel.text = title
-        titleLabel.font = UIFont.boldSystemFont(ofSize: 16)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        
+        titleLabel.font = .preferredFont(forTextStyle: .subheadline)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.textColor = .secondaryLabel
+        titleLabel.numberOfLines = 0
+
         let valueLabel = UILabel()
         valueLabel.text = value
-        valueLabel.font = UIFont.systemFont(ofSize: 16)
-        valueLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        container.addSubview(titleLabel)
-        container.addSubview(valueLabel)
-        
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: container.topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            
-            valueLabel.topAnchor.constraint(equalTo: container.topAnchor),
-            valueLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            valueLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
-        
-        stackView.addArrangedSubview(container)
+        valueLabel.font = .preferredFont(forTextStyle: .body)
+        valueLabel.adjustsFontForContentSizeCategory = true
+        valueLabel.numberOfLines = 0
+
+        stackView.addArrangedSubview(titleLabel)
+        stackView.addArrangedSubview(valueLabel)
     }
     
     private func addSectionHeader(to stackView: UIStackView, title: String) {
