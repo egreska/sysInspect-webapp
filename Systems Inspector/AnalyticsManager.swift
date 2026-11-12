@@ -17,11 +17,7 @@ final class AnalyticsManager {
 
     enum EventCategory: String {
         case authentication = "authentication"
-        case customers = "customers"
-        case inspections = "inspections"
-        case performance = "performance"
         case security = "security"
-        case errors = "errors"
         case userActions = "user_actions"
     }
 
@@ -78,79 +74,6 @@ final class AnalyticsManager {
         logEvent("account_locked", parameters: [
             "failed_attempts": attempts
         ], category: .security)
-    }
-
-    func logCustomerCreated() {
-        logEvent("customer_created", category: .customers)
-    }
-
-    func logCustomerViewed() {
-        logEvent("customer_viewed", category: .customers)
-    }
-
-    func logCustomerEdited() {
-        logEvent("customer_edited", category: .customers)
-    }
-
-    func logCustomerDeleted() {
-        logEvent("customer_deleted", category: .customers)
-    }
-
-    func logCustomerSearch(resultCount: Int) {
-        logEvent("customer_search", parameters: [
-            "result_count": resultCount
-        ], category: .customers)
-    }
-
-    func logInspectionCreated(itemCount: Int) {
-        logEvent("inspection_created", parameters: [
-            "item_count": itemCount
-        ], category: .inspections)
-    }
-
-    func logInspectionViewed() {
-        logEvent("inspection_viewed", category: .inspections)
-    }
-
-    func logInspectionPhotoAdded() {
-        logEvent("inspection_photo_added", category: .inspections)
-    }
-
-    func logReportGenerated(type: String) {
-        logEvent("report_generated", parameters: [
-            "report_type": type
-        ], category: .inspections)
-    }
-
-    func logCacheHit(cacheType: String) {
-        logEvent("cache_hit", parameters: [
-            "cache_type": cacheType
-        ], category: .performance)
-    }
-
-    func logCacheMiss(cacheType: String) {
-        logEvent("cache_miss", parameters: [
-            "cache_type": cacheType
-        ], category: .performance)
-    }
-
-    func logError(_ error: Error, context: String) {
-        let parameters: [String: Any] = [
-            "error_description": error.localizedDescription,
-            "context": context,
-            "error_domain": (error as NSError).domain,
-            "error_code": (error as NSError).code
-        ]
-
-        logEvent("error_occurred", parameters: parameters, category: .errors)
-
-        #if DEBUG
-        if debugMode {
-            print("❌ Error logged: \(error.localizedDescription) in \(context)")
-        }
-        #endif
-
-        Crashlytics.crashlytics().record(error: error)
     }
 
     func setUserID(_ userID: String) {

@@ -53,8 +53,16 @@ extension InspectionItem {
         clearPhotoCache()
     }
 
+    func photoIndexes() -> [Int] {
+        (0..<Self.maxPhotoCount).filter { hasPhoto(at: $0) }
+    }
+
     func getPhotoThumbnail(maxDimension: CGFloat = 300, completion: @escaping (UIImage?) -> Void) {
         getPhotoThumbnail(at: 0, maxDimension: maxDimension, completion: completion)
+    }
+
+    func getPhotoThumbnail(at index: Int, maxDimension: CGFloat = 300, completion: @escaping (UIImage?) -> Void) {
+        loadPhotoThumbnail(at: index, maxDimension: maxDimension, completion: completion)
     }
 
     /// Paths of in-app files whose bytes are now on the item. The caller deletes them after a successful save.
@@ -147,7 +155,7 @@ extension InspectionItem {
         return nil
     }
 
-    private func getPhotoThumbnail(at index: Int, maxDimension: CGFloat = 300, completion: @escaping (UIImage?) -> Void) {
+    private func loadPhotoThumbnail(at index: Int, maxDimension: CGFloat = 300, completion: @escaping (UIImage?) -> Void) {
         let key = cacheKey(at: index)
         if let data = photoData(at: index) {
             if let key {

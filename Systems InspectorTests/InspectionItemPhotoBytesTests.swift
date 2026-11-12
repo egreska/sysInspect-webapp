@@ -91,6 +91,7 @@ final class InspectionItemPhotoBytesTests: XCTestCase {
         let item = makeItem()
         item.setValue(blob, forKey: "photoData3")
         XCTAssertEqual(item.photoBytes(), [blob])
+        XCTAssertEqual(item.photoIndexes(), [2])
     }
 
     func testPhotoBytesOmitsMissingFileWithNoBlob() {

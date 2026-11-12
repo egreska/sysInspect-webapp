@@ -12,8 +12,6 @@ import FirebaseCore
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    var window: UIWindow?
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         
@@ -22,18 +20,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Configure the appearance of the navigation bar
         configureAppearance()
-        
-        // Initialize the main window if not using storyboards (iOS 12 and below)
-        if #available(iOS 13.0, *) {
-            // In iOS 13+ the SceneDelegate handles window setup
-        } else {
-            window = UIWindow(frame: UIScreen.main.bounds)
-            // Go directly to LoginViewController - LaunchScreen.storyboard handles the splash
-            let loginVC = LoginViewController()
-            let navigationController = UINavigationController(rootViewController: loginVC)
-            window?.rootViewController = navigationController
-            window?.makeKeyAndVisible()
-        }
         
         // Setup CoreData stack
         setupCoreData()
@@ -88,55 +74,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         UINavigationBar.appearance().compactAppearance = navAppearance
         UINavigationBar.appearance().tintColor = AppTheme.primaryContrast
         
-        if #available(iOS 15.0, *) {
-            let tabAppearance = UITabBarAppearance()
-            tabAppearance.configureWithDefaultBackground()
-            tabAppearance.backgroundColor = .secondarySystemGroupedBackground
-            tabAppearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
-            UITabBar.appearance().standardAppearance = tabAppearance
-            UITabBar.appearance().scrollEdgeAppearance = tabAppearance
-        }
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithDefaultBackground()
+        tabAppearance.backgroundColor = .secondarySystemGroupedBackground
+        tabAppearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
+        UITabBar.appearance().standardAppearance = tabAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabAppearance
         UITabBar.appearance().tintColor = AppTheme.primary
         UITableView.appearance().separatorColor = AppTheme.separator
         UIButton.appearance(whenContainedInInstancesOf: [UINavigationBar.self]).tintColor = AppTheme.primaryContrast
-    }
-    
-    // MARK: - Main Tab Bar Setup
-    /// Used only for iOS 12 and below (no scene delegate). On iOS 13+, SceneDelegate presents LoginViewController and MainTabBarController sets up its own tabs in setupViewControllers(). Keep this method in sync if changing tab structure.
-    func createMainTabBarController() -> UITabBarController {
-        let tabBarController = UITabBarController()
-        
-        // Create customer directory tab
-        let customerDirectoryVC = CustomerDirectoryViewController()
-        let customerDirectoryNav = UINavigationController(rootViewController: customerDirectoryVC)
-        customerDirectoryNav.tabBarItem = UITabBarItem(
-            title: "Customers",
-            image: UIImage(systemName: "person.3"),
-            tag: 0
-        )
-        
-        // Create reports tab
-        let reportsVC = ReportViewController()
-        let reportsNav = UINavigationController(rootViewController: reportsVC)
-        reportsNav.tabBarItem = UITabBarItem(
-            title: "Reports",
-            image: UIImage(systemName: "doc.text.chart"),
-            tag: 1
-        )
-        
-        // Create settings tab
-        let settingsVC = SettingsViewController()
-        let settingsNav = UINavigationController(rootViewController: settingsVC)
-        settingsNav.tabBarItem = UITabBarItem(
-            title: "Settings",
-            image: UIImage(systemName: "gearshape"),
-            tag: 2
-        )
-        
-        // Set tabs
-        tabBarController.viewControllers = [customerDirectoryNav, reportsNav, settingsNav]
-        
-        return tabBarController
     }
     
     // MARK: - App Lifecycle

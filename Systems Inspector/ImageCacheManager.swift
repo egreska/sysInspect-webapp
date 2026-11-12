@@ -37,12 +37,10 @@ class ImageCacheManager {
     ) {
         let cacheKey = key as NSString
         if let cachedImage = memoryCache.object(forKey: cacheKey) {
-            AnalyticsManager.shared.logCacheHit(cacheType: "memory")
             completion(cachedImage)
             return
         }
         guard let data else {
-            AnalyticsManager.shared.logCacheMiss(cacheType: "image")
             completion(nil)
             return
         }
@@ -120,11 +118,8 @@ class ImageCacheManager {
         completion: @escaping (UIImage?) -> Void
     ) {
         DispatchQueue.global(qos: .userInitiated).async {
-            guard let image = UIImage(data: data) else {
-                DispatchQueue.main.async { completion(nil) }
-                return
-            }
-            let thumb = Self.downscale(image: image, maxDimension: maxDimension)
+            let thumb = StoredPhoto.thumbnail(from: data, maxPixelSize: maxDimension)
+                ?? Self.fallbackThumbnail(from: data, maxDimension: maxDimension)
             DispatchQueue.main.async { completion(thumb) }
         }
     }
@@ -133,6 +128,11 @@ class ImageCacheManager {
         let scale = image.scale
         let size = image.size
         return Int(size.width * scale * size.height * scale * 4)
+    }
+
+    private static func fallbackThumbnail(from data: Data, maxDimension: CGFloat) -> UIImage? {
+        guard let image = UIImage(data: data) else { return nil }
+        return downscale(image: image, maxDimension: maxDimension)
     }
 
     private static func downscale(image: UIImage, maxDimension: CGFloat) -> UIImage {

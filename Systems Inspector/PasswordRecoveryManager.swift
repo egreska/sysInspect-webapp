@@ -194,12 +194,109 @@ class PasswordRecoveryManager {
             }
         }
         guard ready else { return (false, "Failed to reset password.") }
-        return resetPassword(
+        return await resetPasswordOffMain(
             for: email,
             newPassword: newPassword,
             securityAnswer: securityAnswer,
             in: loadedSharedContext()
         )
+    }
+
+    func resetPasswordOffMain(
+        for email: String,
+        newPassword: String,
+        securityAnswer: String,
+        in context: NSManagedObjectContext?
+    ) async -> (success: Bool, message: String) {
+        if let locked = lockMessage(for: email) {
+            return (false, locked)
+        }
+        let waiting = context?.performAndWait {
+            if case .waiting = self.recoveryState(for: email, in: context) {
+                return true
+            }
+            return false
+        } ?? false
+        if waiting {
+            return (false, SessionSecretMessage.waiting)
+        }
+        let strength = validatePasswordStrength(newPassword)
+        guard strength.isValid else {
+            return (false, strength.message)
+        }
+        guard let context,
+              await verifySecurityAnswerOffMain(for: email, answer: securityAnswer, in: context) else {
+            AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
+            if let locked = lockMessage(for: email) {
+                return (false, locked)
+            }
+            return (false, "Security answer is incorrect.")
+        }
+        guard await UserManager.shared.replacePasswordOffMain(
+            email: email,
+            newPassword: newPassword,
+            in: context
+        ) else {
+            return (false, "Failed to reset password.")
+        }
+        AccountLockoutManager.shared.manuallyUnlock(email: email)
+        AnalyticsManager.shared.logPasswordReset(method: "security_question", success: true)
+        return (true, "Password has been reset successfully!")
+    }
+
+    private func verifySecurityAnswerOffMain(
+        for email: String,
+        answer: String,
+        in context: NSManagedObjectContext
+    ) async -> Bool {
+        let normalized = email.lowercased()
+        if AccountLockoutManager.shared.isAccountLocked(email: normalized) {
+            return false
+        }
+        let loaded: (userID: UUID, secret: SessionSecret)? = context.performAndWait {
+            guard let user = self.fetchUser(email: normalized, in: context), let userId = user.id else { return nil }
+            let manager = UserManager.shared
+            manager.absorbSyncedSecrets(for: user, defaults: .standard, in: context)
+            guard let secret = manager.secrets.load(userId: userId) else { return nil }
+            return (userId, secret)
+        }
+        guard let loaded else { return false }
+        guard loaded.secret.securityAnswerHash != nil else {
+            AccountLockoutManager.shared.recordFailedAttempt(email: normalized)
+            return false
+        }
+        let valid = await answerMatches(answer, secret: loaded.secret)
+        if valid {
+            if loaded.secret.securityAnswerIterations == nil {
+                let candidate = normalizedAnswer(answer)
+                if let record = await UserManager.shared.hashPasswordSecureOffMain(candidate) {
+                    context.performAndWait {
+                        var upgraded = loaded.secret
+                        upgraded.securityAnswerHash = record.hash
+                        upgraded.securityAnswerSalt = record.salt
+                        upgraded.securityAnswerIterations = SessionSecretRules.iterations
+                        _ = UserManager.shared.secrets.save(upgraded, userId: loaded.userID)
+                    }
+                }
+            }
+            return true
+        }
+        AccountLockoutManager.shared.recordFailedAttempt(email: normalized)
+        return false
+    }
+
+    private func answerMatches(_ answer: String, secret: SessionSecret) async -> Bool {
+        guard let storedHash = secret.securityAnswerHash else { return false }
+        let candidate = normalizedAnswer(answer)
+        if let salt = secret.securityAnswerSalt, let iterations = secret.securityAnswerIterations {
+            return await UserManager.shared.verifyPasswordSecureOffMain(
+                candidate,
+                hash: storedHash,
+                salt: salt,
+                iterations: iterations
+            )
+        }
+        return UserManager.shared.hashesMatch(legacyAnswerHash(answer), storedHash)
     }
 
     func resetPassword(

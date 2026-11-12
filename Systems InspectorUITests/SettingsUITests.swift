@@ -98,7 +98,7 @@ final class SettingsUITests: XCTestCase {
             // Then: Should show performance alert
             let alert = app.alerts["Performance Statistics"]
             XCTAssertTrue(alert.waitForExistence(timeout: 5))
-            XCTAssertTrue(alert.buttons["Close"].exists || alert.buttons["Reset Stats"].exists)
+            XCTAssertTrue(alert.buttons["Close"].exists)
             
             alert.buttons["Close"].tap()
         }

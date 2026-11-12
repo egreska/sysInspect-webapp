@@ -671,23 +671,25 @@ class ReportGenerator {
     }
 
     private func drawPhotoGrid(photos: [Data], in bounds: CGRect, attributes: [NSAttributedString.Key: Any]) {
-        let images = photos.compactMap { UIImage(data: $0) }
-        guard !images.isEmpty else {
+        guard !photos.isEmpty else {
             "No Photo".draw(in: bounds, withAttributes: attributes)
             return
         }
-        let rects = PDFResolvedTableLayout.photoRects(count: images.count, in: bounds)
-        for (image, slot) in zip(images, rects) {
-            let compressed: UIImage
-            if let jpegData = image.jpegData(compressionQuality: 0.2), let downsampled = UIImage(data: jpegData) {
-                compressed = downsampled
-            } else {
-                compressed = image
+        let rects = PDFResolvedTableLayout.photoRects(count: photos.count, in: bounds)
+        var drew = false
+        for (data, slot) in zip(photos, rects) {
+            let pixels = max(slot.width, slot.height)
+            guard let image = StoredPhoto.thumbnail(from: data, maxPixelSize: pixels) ?? UIImage(data: data) else {
+                continue
             }
-            let photoRect = calculateAspectFitRect(for: compressed, in: slot)
+            drew = true
+            let photoRect = calculateAspectFitRect(for: image, in: slot)
             UIColor.lightGray.setStroke()
             UIBezierPath(rect: photoRect.insetBy(dx: -1, dy: -1)).stroke()
-            compressed.draw(in: photoRect)
+            image.draw(in: photoRect)
+        }
+        if !drew {
+            "No Photo".draw(in: bounds, withAttributes: attributes)
         }
     }
         
@@ -725,13 +727,7 @@ class ReportGenerator {
         let x = availableBounds.origin.x + (availableSize.width - targetWidth) / 2
         let y = availableBounds.origin.y + (availableSize.height - targetHeight) / 2
         
-        let finalRect = CGRect(x: x, y: y, width: targetWidth, height: targetHeight)
-        
-        // Log aspect ratio information for debugging
-        let orientation = imageAspectRatio > 1.0 ? "landscape" : (imageAspectRatio < 1.0 ? "portrait" : "square")
-        print("📸 Image: \(Int(imageSize.width))x\(Int(imageSize.height)) (\(orientation)) -> PDF: \(Int(targetWidth))x\(Int(targetHeight))")
-        
-        return finalRect
+        return CGRect(x: x, y: y, width: targetWidth, height: targetHeight)
     }
     
     // Improved text wrapping specifically for comments column
@@ -776,13 +772,6 @@ class ReportGenerator {
         attributedString.draw(in: rect)
     }
 
-    
-    // New helper method for text wrapping
-    private func drawWrappedText(_ text: String, in rect: CGRect, attributes: [NSAttributedString.Key: Any], context: UIGraphicsPDFRendererContext) {
-        let attributedString = NSAttributedString(string: text, attributes: attributes)
-        attributedString.draw(in: rect)
-    }
-    
     // Updated CSV generation with metadata
     // MARK: - Updated CSV Report Generation with Photos
     private func generateCSVReportWithPhotos(inspections: [ReportInspectionSnapshot], sortCriteria: SortCriteria? = nil, dateRangeDescription: String? = nil, header: ReportHeader) -> ReportPackage? {

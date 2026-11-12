@@ -77,7 +77,7 @@ struct SessionOpening {
         if UserManager.shared.userExists(email: email, in: context) {
             return .refused(SessionNotice(title: "Error", message: Self.emailTakenMessage))
         }
-        let created = UserManager.shared.performUserCreation(
+        let created = await UserManager.shared.performUserCreationOffMain(
             email: email,
             password: password,
             securityQuestion: securityQuestion,
@@ -132,7 +132,7 @@ struct SessionOpening {
         if !strength.isValid {
             return SessionReset(success: false, title: "Weak Password", message: strength.message)
         }
-        let result = recovery.resetPassword(
+        let result = await recovery.resetPasswordOffMain(
             for: email,
             newPassword: newPassword,
             securityAnswer: securityAnswer,

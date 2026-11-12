@@ -25,16 +25,22 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else {
+            #if DEBUG
             print("SceneDelegate: ERROR - Could not cast scene to UIWindowScene")
+            #endif
             return
         }
         
+        #if DEBUG
         print("SceneDelegate: Creating window with windowScene")
+        #endif
         
         // Create the window programmatically
         window = UIWindow(windowScene: windowScene)
         
+        #if DEBUG
         print("SceneDelegate: Window created: \(String(describing: window))")
+        #endif
         
         let splash = SplashViewController()
         splash.onComplete = { [weak self] in
@@ -46,7 +52,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             }
         }
         window?.rootViewController = splash
+        #if DEBUG
         print("SceneDelegate: Set root view controller to SplashViewController (0.3s brand moment)")
+        #endif
         
         window?.makeKeyAndVisible()
         NotificationCenter.default.addObserver(
@@ -65,9 +73,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             guard let window = self?.window else { return }
             Task { await AccessCodeCoordinator.shared.recheck(in: window) }
         }
+        #if DEBUG
         print("SceneDelegate: Made window key and visible")
-        
         print("SceneDelegate: Final window state - isHidden: \(window?.isHidden ?? true), isKeyWindow: \(window?.isKeyWindow ?? false)")
+        #endif
         
         // Handle any URLs that were passed to the app on launch
         if let urlContext = connectionOptions.urlContexts.first {
@@ -175,7 +184,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let context = CoreDataManager.shared.context
         
         guard let uuid = UUID(uuidString: customerId) else {
+            #if DEBUG
             print("Invalid customer ID format: \(customerId)")
+            #endif
             return
         }
         
@@ -185,11 +196,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         do {
             customer = try fetchSessionCustomer(id: uuid, userId: userId, in: context)
         } catch {
+            #if DEBUG
             print("Error finding customer: \(error)")
+            #endif
             return
         }
         guard let customer else {
+            #if DEBUG
             print("Customer not found with ID: \(customerId)")
+            #endif
             return
         }
             

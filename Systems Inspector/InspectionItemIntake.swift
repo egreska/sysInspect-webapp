@@ -66,7 +66,7 @@ enum InspectionItemIntake {
     private static func applyPhotos(_ item: InspectionItem, _ form: InspectionItemFormState) {
         guard form.photosChanged else { return }
         let bytes = Array(form.photos.prefix(InspectionItem.maxPhotoCount)).compactMap { image in
-            image.jpegData(compressionQuality: 0.8)
+            StoredPhoto.jpegData(from: image)
         }
         item.replacePhotos(bytes)
     }

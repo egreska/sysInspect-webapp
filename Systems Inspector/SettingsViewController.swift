@@ -375,17 +375,6 @@ class SettingsViewController: UIViewController {
             preferredStyle: .alert
         )
         
-        alert.addAction(UIAlertAction(title: "Reset Stats", style: .destructive) { _ in
-            PerformanceOptimizer.shared.resetMetrics()
-            let resetAlert = UIAlertController(
-                title: "Stats Reset",
-                message: "Performance statistics have been reset.",
-                preferredStyle: .alert
-            )
-            resetAlert.addAction(UIAlertAction(title: "OK", style: .default))
-            self.present(resetAlert, animated: true)
-        })
-        
         alert.addAction(UIAlertAction(title: "Close", style: .cancel))
         
         present(alert, animated: true)
@@ -476,10 +465,14 @@ class SettingsViewController: UIViewController {
                 
                 await MainActor.run {
                     if isValid {
+                        #if DEBUG
                         print("✅ Password verified for data deletion")
+                        #endif
                         self?.confirmDeleteAccount()
                     } else {
+                        #if DEBUG
                         print("❌ Invalid password for data deletion")
+                        #endif
                         self?.showAlert(
                             title: "Authentication Failed",
                             message: "Invalid password. Account deletion cancelled."

@@ -116,15 +116,11 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.systemGray4.cgColor
         button.contentHorizontalAlignment = .left
-        if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.plain()
-            config.title = "Select Issue"
-            config.baseForegroundColor = AppTheme.primary
-            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
-            button.configuration = config
-        } else {
-            button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
-        }
+        var config = UIButton.Configuration.plain()
+        config.title = "Select Issue"
+        config.baseForegroundColor = AppTheme.primary
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
+        button.configuration = config
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -602,34 +598,20 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         importanceToggleButton.accessibilityValue = form.importance.phrase
         importanceToggleButton.contentHorizontalAlignment = .left
 
-        if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.plain()
-            config.title = form.importance.phrase
-            config.image = image
-            config.imagePadding = 8
-            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)
-            config.baseForegroundColor = titleColor
-            config.background.backgroundColor = stateColor.withAlphaComponent(0.15)
-            config.background.cornerRadius = 8
-            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-                var outgoing = incoming
-                outgoing.font = AppTheme.font(.body)
-                return outgoing
-            }
-            importanceToggleButton.configuration = config
-        } else {
-            importanceToggleButton.setImage(image, for: .normal)
-            importanceToggleButton.setTitle("  \(form.importance.phrase)", for: .normal)
-            importanceToggleButton.tintColor = stateColor
-            importanceToggleButton.setTitleColor(titleColor, for: .normal)
-            importanceToggleButton.backgroundColor = stateColor.withAlphaComponent(0.15)
-            importanceToggleButton.layer.cornerRadius = 8
-            importanceToggleButton.clipsToBounds = true
-            importanceToggleButton.titleLabel?.font = AppTheme.font(.body)
-            importanceToggleButton.titleLabel?.adjustsFontForContentSizeCategory = true
-            importanceToggleButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
-            importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 0)
+        var config = UIButton.Configuration.plain()
+        config.title = form.importance.phrase
+        config.image = image
+        config.imagePadding = 8
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)
+        config.baseForegroundColor = titleColor
+        config.background.backgroundColor = stateColor.withAlphaComponent(0.15)
+        config.background.cornerRadius = 8
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = AppTheme.font(.body)
+            return outgoing
         }
+        importanceToggleButton.configuration = config
     }
 
     private func updateSelectedIssueDisplay() {
@@ -810,17 +792,17 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
     }
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-        if let image = info[.originalImage] as? UIImage {
-            if image.jpegData(compressionQuality: 0.8) == nil {
-                picker.dismiss(animated: true)
+        picker.dismiss(animated: true)
+        guard let image = info[.originalImage] as? UIImage else { return }
+        Task { @MainActor in
+            guard let prepared = await StoredPhoto.prepared(from: image) else {
                 showAlert(message: "Couldn't save that photo. Try taking it again.")
                 return
             }
-            if form.addPhoto(image) {
+            if form.addPhoto(prepared.image) {
                 refreshPhotoStrip()
             }
         }
-        picker.dismiss(animated: true)
     }
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

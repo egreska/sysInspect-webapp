@@ -55,51 +55,88 @@ class UserManager {
         securityQuestion: String,
         securityAnswer: String
     ) async -> Bool {
-        return await withCheckedContinuation { continuation in
-            coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self else {
-                    continuation.resume(returning: false)
-                    return
-                }
-                if !success {
-                    print("❌ Error: Core Data stores failed to load")
-                    continuation.resume(returning: false)
-                    return
-                }
-                let result = self.performUserCreation(
-                    email: email,
-                    password: password,
-                    securityQuestion: securityQuestion,
-                    securityAnswer: securityAnswer,
-                    in: self.coreDataManager.context
-                )
-                continuation.resume(returning: result)
-            }
+        guard await waitUntilStoreLoaded() else {
+            #if DEBUG
+            print("❌ Error: Core Data stores failed to load")
+            #endif
+            return false
         }
+        return await performUserCreationOffMain(
+            email: email,
+            password: password,
+            securityQuestion: securityQuestion,
+            securityAnswer: securityAnswer,
+            in: coreDataManager.context
+        )
     }
-    
-    func performUserCreation(
+
+    func performUserCreationOffMain(
         email: String,
         password: String,
         securityQuestion: String,
         securityAnswer: String,
         in context: NSManagedObjectContext
-    ) -> Bool {
-        if userExists(email: email, in: context) {
-            print("❌ Error creating user: User already exists with this email.")
+    ) async -> Bool {
+        let prelude = context.performAndWait {
+            self.creationPrelude(
+                email: email,
+                password: password,
+                securityQuestion: securityQuestion,
+                securityAnswer: securityAnswer,
+                in: context
+            )
+        }
+        guard case .ready(let answer) = prelude else { return false }
+        async let passwordRecord = hashPasswordSecureOffMain(password)
+        async let answerRecord = hashPasswordSecureOffMain(answer)
+        guard let passwordRecord = await passwordRecord,
+              let answerRecord = await answerRecord else {
             return false
+        }
+        return context.performAndWait {
+            self.insertCreatedUser(
+                email: email,
+                securityQuestion: securityQuestion,
+                password: passwordRecord,
+                answer: answerRecord,
+                in: context
+            )
+        }
+    }
+
+    private enum CreationPrelude {
+        case refused
+        case ready(answer: String)
+    }
+
+    private func creationPrelude(
+        email: String,
+        password: String,
+        securityQuestion: String,
+        securityAnswer: String,
+        in context: NSManagedObjectContext
+    ) -> CreationPrelude {
+        if userExists(email: email, in: context) {
+            #if DEBUG
+            print("❌ Error creating user: User already exists with this email.")
+            #endif
+            return .refused
         }
         guard PasswordRecoveryManager.shared.validatePasswordStrength(password).isValid else {
-            return false
+            return .refused
         }
         let answer = SessionSecretRules.normalizedAnswer(securityAnswer)
-        guard !securityQuestion.isEmpty,
-              answer.count >= 8,
-              let passwordRecord = hashPasswordSecure(password),
-              let answerRecord = hashPasswordSecure(answer) else {
-            return false
-        }
+        guard !securityQuestion.isEmpty, answer.count >= 8 else { return .refused }
+        return .ready(answer: answer)
+    }
 
+    private func insertCreatedUser(
+        email: String,
+        securityQuestion: String,
+        password passwordRecord: (hash: String, salt: Data),
+        answer answerRecord: (hash: String, salt: Data),
+        in context: NSManagedObjectContext
+    ) -> Bool {
         let user = User(context: context)
         let userId = UUID()
         user.id = userId
@@ -130,73 +167,128 @@ class UserManager {
         } catch {
             secrets.delete(userId: userId)
             context.delete(user)
+            #if DEBUG
             print("❌ Error creating user: \(error)")
+            #endif
             return false
+        }
+    }
+
+    private func waitUntilStoreLoaded() async -> Bool {
+        await withCheckedContinuation { continuation in
+            coreDataManager.waitForStoreToLoad { ready in
+                continuation.resume(returning: ready)
+            }
         }
     }
 
     
     // MARK: - User Authentication
     func authenticateUser(email: String, password: String) async -> LoginResult {
-        // Ensure Core Data stores are loaded first
-        return await withCheckedContinuation { continuation in
-            coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self else {
-                    continuation.resume(returning: .failure)
-                    return
-                }
-                if !success {
-                    print("❌ Error: Core Data stores failed to load")
-                    continuation.resume(returning: .failure)
-                    return
-                }
-                continuation.resume(returning: self.performAuthentication(email: email, password: password))
-            }
+        guard await waitUntilStoreLoaded() else {
+            #if DEBUG
+            print("❌ Error: Core Data stores failed to load")
+            #endif
+            return .failure
         }
+        return await performAuthentication(email: email, password: password)
     }
-    
-    private func performAuthentication(email: String, password: String) -> LoginResult {
+
+    private func performAuthentication(email: String, password: String) async -> LoginResult {
         if AccountLockoutManager.shared.isAccountLocked(email: email) {
             return .failure
         }
 
-        let context = CoreDataManager.shared.context
-        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
-
-        do {
-            guard let user = try context.fetch(fetchRequest).first else {
-                AccountLockoutManager.shared.recordFailedAttempt(email: email)
-                return .failure
-            }
-            absorbSyncedSecrets(for: user, defaults: defaults, in: context)
-            guard let userId = user.id,
-                  secrets.load(userId: userId)?.hasPassword == true else {
-                return .waiting
-            }
-            guard passwordMatches(password, user: user, in: context) else {
+        let context = coreDataManager.context
+        let gate = context.performAndWait {
+            self.loginGate(email: email, in: context)
+        }
+        switch gate {
+        case .noUser:
+            AccountLockoutManager.shared.recordFailedAttempt(email: email)
+            return .failure
+        case .waiting:
+            return .waiting
+        case .ready(let userID, let hash, let salt, let iterations):
+            let matches = await passwordIsValid(password, hash: hash, salt: salt, iterations: iterations)
+            guard matches else {
                 AccountLockoutManager.shared.recordFailedAttempt(email: email)
                 AnalyticsManager.shared.logLogin(method: "password", success: false)
                 return .failure
             }
+            if iterations == nil {
+                await upgradeLegacyPassword(password, userID: userID, in: context)
+            }
+            return context.performAndWait {
+                guard let user = self.fetchActiveUser(id: userID, in: context) else { return LoginResult.failure }
+                AccountLockoutManager.shared.recordSuccessfulLogin(email: email)
+                user.lastLoginDate = Date()
+                do {
+                    try context.save()
+                } catch {
+                    #if DEBUG
+                    print("❌ Error during authentication: \(error.localizedDescription)")
+                    #endif
+                    return .failure
+                }
+                self.startSession(userId: userID)
+                AnalyticsManager.shared.logLogin(method: "password", success: true)
+                AnalyticsManager.shared.setUserID(userID.uuidString)
+                return .success
+            }
+        }
+    }
 
-            AccountLockoutManager.shared.recordSuccessfulLogin(email: email)
-            user.lastLoginDate = Date()
-            try context.save()
-            startSession(userId: userId)
-            AnalyticsManager.shared.logLogin(method: "password", success: true)
-            AnalyticsManager.shared.setUserID(userId.uuidString)
-            return .success
-        } catch {
-            print("❌ Error during authentication: \(error.localizedDescription)")
-            return .failure
+    private enum LoginGate {
+        case noUser
+        case waiting
+        case ready(userID: UUID, hash: String, salt: Data?, iterations: Int?)
+    }
+
+    private func loginGate(email: String, in context: NSManagedObjectContext) -> LoginGate {
+        let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
+        guard let user = try? context.fetch(fetchRequest).first else { return .noUser }
+        absorbSyncedSecrets(for: user, defaults: defaults, in: context)
+        guard let userId = user.id,
+              let secret = secrets.load(userId: userId),
+              secret.hasPassword,
+              let hash = secret.passwordHash else {
+            return .waiting
+        }
+        return .ready(userID: userId, hash: hash, salt: secret.passwordSalt, iterations: secret.passwordIterations)
+    }
+
+    private func passwordIsValid(
+        _ password: String,
+        hash: String,
+        salt: Data?,
+        iterations: Int?
+    ) async -> Bool {
+        if let salt, let iterations {
+            return await verifyPasswordSecureOffMain(password, hash: hash, salt: salt, iterations: iterations)
+        }
+        return hashesMatch(hash, hashPasswordLegacy(password))
+    }
+
+    private func upgradeLegacyPassword(
+        _ password: String,
+        userID: UUID,
+        in context: NSManagedObjectContext
+    ) async {
+        guard let record = await hashPasswordSecureOffMain(password) else { return }
+        context.performAndWait {
+            let existing = self.secrets.load(userId: userID) ?? SessionSecret()
+            _ = self.storeDerivedPassword(record, userId: userID, preserving: existing)
         }
     }
     
     // MARK: - User Queries
     func userExists(email: String) -> Bool {
         guard coreDataManager.isStoreLoaded else {
+            #if DEBUG
             print("CoreDataManager: Cannot check user existence - stores not loaded yet (UserManager.userExists)")
+            #endif
             return false
         }
         return userExists(email: email, in: CoreDataManager.shared.context)
@@ -209,14 +301,18 @@ class UserManager {
             let count = try context.count(for: fetchRequest)
             return count > 0
         } catch {
+            #if DEBUG
             print("Error checking if user exists: \(error.localizedDescription)")
+            #endif
             return false
         }
     }
     
     func getCurrentUser() -> User? {
         guard coreDataManager.isStoreLoaded else {
+            #if DEBUG
             print("CoreDataManager: Cannot get current user - stores not loaded yet (UserManager.getCurrentUser)")
+            #endif
             return nil
         }
         guard let id = sessionUserId ?? storedSessionUserId else {
@@ -258,7 +354,9 @@ class UserManager {
             CustomerSearchIndex.removeSession(userId: userId)
         }
         clearSession()
+        #if DEBUG
         print("User logged out successfully")
+        #endif
     }
 
     func completeBiometricLogin() -> Bool {
@@ -274,21 +372,26 @@ class UserManager {
     }
 
     func verifyCurrentUserPassword(_ password: String) async -> Bool {
-        await withCheckedContinuation { continuation in
-            coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self, success,
-                      let user = self.getCurrentUser(),
-                      let email = user.email else {
-                    continuation.resume(returning: false)
-                    return
-                }
-                continuation.resume(returning: self.verifyPassword(
-                    password,
-                    forEmail: email,
-                    in: CoreDataManager.shared.context
-                ))
+        guard await waitUntilStoreLoaded() else { return false }
+        let context = coreDataManager.context
+        let material: (userID: UUID, hash: String, salt: Data?, iterations: Int?)? = context.performAndWait {
+            guard let user = self.getCurrentUser(), let email = user.email else { return nil }
+            guard case .ready(let userID, let hash, let salt, let iterations) = self.loginGate(email: email, in: context) else {
+                return nil
             }
+            return (userID, hash, salt, iterations)
         }
+        guard let material else { return false }
+        let matches = await passwordIsValid(
+            password,
+            hash: material.hash,
+            salt: material.salt,
+            iterations: material.iterations
+        )
+        if matches, material.iterations == nil {
+            await upgradeLegacyPassword(password, userID: material.userID, in: context)
+        }
+        return matches
     }
 
     private var storedSessionUserId: UUID? {
@@ -411,6 +514,36 @@ class UserManager {
         }
         return (derivedKey.base64EncodedString(), saltData)
     }
+
+    func hashPasswordSecureOffMain(_ password: String, salt: Data? = nil) async -> (hash: String, salt: Data)? {
+        guard let saltData = salt ?? generateSalt() else { return nil }
+        guard let derivedKey = await PBKDF2.deriveKeyOffMain(
+            password: Data(password.utf8),
+            salt: saltData,
+            iterations: SessionSecretRules.iterations,
+            keyLength: 32
+        ) else {
+            return nil
+        }
+        return (derivedKey.base64EncodedString(), saltData)
+    }
+
+    func verifyPasswordSecureOffMain(
+        _ password: String,
+        hash: String,
+        salt: Data,
+        iterations: Int = SessionSecretRules.iterations
+    ) async -> Bool {
+        guard let derivedKey = await PBKDF2.deriveKeyOffMain(
+            password: Data(password.utf8),
+            salt: salt,
+            iterations: iterations,
+            keyLength: 32
+        ) else {
+            return false
+        }
+        return hashesMatch(derivedKey.base64EncodedString(), hash)
+    }
     
     @discardableResult
     func applyPassword(_ password: String, to user: User) -> Bool {
@@ -460,6 +593,14 @@ class UserManager {
 
     private func storePassword(_ password: String, userId: UUID, preserving secret: SessionSecret) -> Bool {
         guard let record = hashPasswordSecure(password) else { return false }
+        return storeDerivedPassword(record, userId: userId, preserving: secret)
+    }
+
+    private func storeDerivedPassword(
+        _ record: (hash: String, salt: Data),
+        userId: UUID,
+        preserving secret: SessionSecret
+    ) -> Bool {
         var updated = secret
         updated.passwordHash = record.hash
         updated.passwordSalt = record.salt
@@ -479,23 +620,49 @@ class UserManager {
     }
     
     func replacePassword(email: String, newPassword: String) async -> Bool {
-        await withCheckedContinuation { continuation in
-            coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self else {
-                    continuation.resume(returning: false)
-                    return
+        guard await waitUntilStoreLoaded() else { return false }
+        return await replacePasswordOffMain(
+            email: email,
+            newPassword: newPassword,
+            in: coreDataManager.context
+        )
+    }
+
+    func replacePasswordOffMain(
+        email: String,
+        newPassword: String,
+        in context: NSManagedObjectContext
+    ) async -> Bool {
+        guard let record = await hashPasswordSecureOffMain(newPassword) else { return false }
+        return context.performAndWait {
+            let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
+            fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
+            do {
+                guard let user = try context.fetch(fetchRequest).first else {
+                    #if DEBUG
+                    print("❌ User not found: \(email)")
+                    #endif
+                    return false
                 }
-                if !success {
-                    continuation.resume(returning: false)
-                    return
-                }
-                continuation.resume(returning: self.replacePassword(
-                    email: email,
-                    newPassword: newPassword,
-                    in: CoreDataManager.shared.context
-                ))
+                guard self.writeDerivedPassword(record, to: user) else { return false }
+                try context.save()
+                return true
+            } catch {
+                #if DEBUG
+                print("❌ Error replacing password: \(error.localizedDescription)")
+                #endif
+                return false
             }
         }
+    }
+
+    private func writeDerivedPassword(_ record: (hash: String, salt: Data), to user: User) -> Bool {
+        guard let userId = user.id else { return false }
+        let existing = secrets.load(userId: userId) ?? SessionSecret()
+        guard storeDerivedPassword(record, userId: userId, preserving: existing) else { return false }
+        user.passwordHash = nil
+        user.passwordSalt = nil
+        return true
     }
 
     func replacePassword(email: String, newPassword: String, in context: NSManagedObjectContext) -> Bool {
@@ -503,37 +670,35 @@ class UserManager {
         fetchRequest.predicate = NSPredicate(format: "email == %@ AND isActive == YES", email.lowercased())
         do {
             guard let user = try context.fetch(fetchRequest).first else {
+                #if DEBUG
                 print("❌ User not found: \(email)")
+                #endif
                 return false
             }
             guard applyPassword(newPassword, to: user) else { return false }
             try context.save()
             return true
         } catch {
+            #if DEBUG
             print("❌ Error replacing password: \(error.localizedDescription)")
+            #endif
             return false
         }
     }
 
     func changePassword(email: String, oldPassword: String, newPassword: String) async -> Bool {
-        return await withCheckedContinuation { continuation in
-            coreDataManager.waitForStoreToLoad { [weak self] success in
-                guard let self else {
-                    continuation.resume(returning: false)
-                    return
-                }
-                if !success {
-                    continuation.resume(returning: false)
-                    return
-                }
-                continuation.resume(returning: self.changePassword(
-                    email: email,
-                    oldPassword: oldPassword,
-                    newPassword: newPassword,
-                    in: CoreDataManager.shared.context
-                ))
-            }
+        guard await waitUntilStoreLoaded() else { return false }
+        let context = coreDataManager.context
+        let gate = context.performAndWait {
+            self.loginGate(email: email, in: context)
         }
+        guard case .ready(let userID, let hash, let salt, let iterations) = gate else { return false }
+        let matches = await passwordIsValid(oldPassword, hash: hash, salt: salt, iterations: iterations)
+        guard matches else { return false }
+        if iterations == nil {
+            await upgradeLegacyPassword(oldPassword, userID: userID, in: context)
+        }
+        return await replacePasswordOffMain(email: email, newPassword: newPassword, in: context)
     }
 
     func changePassword(email: String, oldPassword: String, newPassword: String, in context: NSManagedObjectContext) -> Bool {
@@ -542,7 +707,9 @@ class UserManager {
         do {
             let users = try context.fetch(fetchRequest)
             guard let user = users.first else {
+                #if DEBUG
                 print("❌ User not found: \(email)")
+                #endif
                 return false
             }
             guard passwordMatches(oldPassword, user: user, in: context) else {
@@ -552,7 +719,9 @@ class UserManager {
             try context.save()
             return true
         } catch {
+            #if DEBUG
             print("❌ Error changing password: \(error.localizedDescription)")
+            #endif
             return false
         }
     }
@@ -611,5 +780,23 @@ struct PBKDF2 {
         }
         
         return derivedKeyData
+    }
+
+    static func deriveKeyOffMain(
+        password: Data,
+        salt: Data,
+        iterations: Int,
+        keyLength: Int
+    ) async -> Data? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: try? deriveKey(
+                    password: password,
+                    salt: salt,
+                    iterations: iterations,
+                    keyLength: keyLength
+                ))
+            }
+        }
     }
 }

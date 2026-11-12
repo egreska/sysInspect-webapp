@@ -5,15 +5,11 @@
 
 import Foundation
 
-/// Lightweight timing for Settings diagnostics, plus memory snapshots.
+/// Memory snapshot for Settings.
 final class PerformanceOptimizer {
     static let shared = PerformanceOptimizer()
 
-    private var metrics = PerformanceMetrics()
-
     private init() {}
-
-    // MARK: - Memory
 
     func releaseUnusedResources() {
         ImageCacheManager.shared.clearMemoryCache()
@@ -48,41 +44,9 @@ final class PerformanceOptimizer {
         )
     }
 
-    // MARK: - Timing (Settings “Performance Stats”)
-
-    func startTiming(_ operation: String) {
-        metrics.startTime[operation] = Date()
-    }
-
-    func endTiming(_ operation: String) {
-        guard let startTime = metrics.startTime[operation] else { return }
-        let elapsed = Date().timeIntervalSince(startTime)
-        metrics.operations[operation] = (metrics.operations[operation] ?? 0) + 1
-        metrics.totalTime[operation] = (metrics.totalTime[operation] ?? 0) + elapsed
-        #if DEBUG
-        print("⏱️ \(operation): \(String(format: "%.2f", elapsed * 1000))ms")
-        #endif
-        metrics.startTime.removeValue(forKey: operation)
-    }
-
     func getPerformanceSummary() -> String {
-        var summary = "📊 Performance Summary:\n"
-        for (operation, count) in metrics.operations.sorted(by: { $0.key < $1.key }) {
-            if let totalTime = metrics.totalTime[operation] {
-                let avgTime = totalTime / Double(count)
-                summary += "  \(operation): \(count) calls, avg \(String(format: "%.2f", avgTime * 1000))ms\n"
-            }
-        }
         let memory = getMemoryUsage()
-        summary += "  Memory: \(String(format: "%.1f", memory.used))MB / \(String(format: "%.0f", memory.total))MB"
-        return summary
-    }
-
-    func resetMetrics() {
-        metrics = PerformanceMetrics()
-        #if DEBUG
-        print("📊 Performance metrics reset")
-        #endif
+        return "Memory: \(String(format: "%.1f", memory.used))MB / \(String(format: "%.0f", memory.total))MB"
     }
 }
 
@@ -98,10 +62,4 @@ struct MemoryUsage {
     var formattedString: String {
         "\(String(format: "%.1f", used))MB / \(String(format: "%.0f", total))MB (\(String(format: "%.1f", percentage))%)"
     }
-}
-
-private struct PerformanceMetrics {
-    var startTime: [String: Date] = [:]
-    var operations: [String: Int] = [:]
-    var totalTime: [String: TimeInterval] = [:]
 }

@@ -54,7 +54,6 @@ class CustomerDirectoryViewModel {
         if isFirstPage { isLoading = true }
         let page = currentPage
         let viewContext = coreDataManager.context
-        PerformanceOptimizer.shared.startTiming("fetchCustomers")
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
@@ -72,12 +71,10 @@ class CustomerDirectoryViewModel {
                 self.hasMoreCustomers = self.customers.count < fetched.total
                 self.isLoadingMore = false
                 self.isLoading = false
-                PerformanceOptimizer.shared.endTiming("fetchCustomers")
             } catch {
                 self.isLoadingMore = false
                 self.isLoading = false
                 self.hasMoreCustomers = false
-                PerformanceOptimizer.shared.endTiming("fetchCustomers")
                 self.errorMessage = "Could not load customers. Pull down to try again."
             }
         }

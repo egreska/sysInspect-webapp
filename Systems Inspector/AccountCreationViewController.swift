@@ -63,19 +63,12 @@ class AccountCreationViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Select a Security Question", for: .normal)
         
-        if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.plain()
-            config.title = "Select a Security Question"
-            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)
-            config.background.backgroundColor = UIColor.systemGray6
-            config.baseForegroundColor = AppTheme.primary
-            button.configuration = config
-        } else {
-            button.backgroundColor = UIColor.systemGray6
-            button.setTitleColor(AppTheme.primary, for: .normal)
-            button.contentHorizontalAlignment = .left
-            button.contentEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
-        }
+        var config = UIButton.Configuration.plain()
+        config.title = "Select a Security Question"
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)
+        config.background.backgroundColor = UIColor.systemGray6
+        config.baseForegroundColor = AppTheme.primary
+        button.configuration = config
         
         button.layer.cornerRadius = 8
         button.layer.borderWidth = 1
@@ -348,7 +341,9 @@ class AccountCreationViewController: UIViewController {
         }
 
         showActivityIndicator(true)
+        #if DEBUG
         print("🔄 Starting account creation for: \(email)")
+        #endif
 
         Task {
             let outcome = await SessionOpening.live.start(

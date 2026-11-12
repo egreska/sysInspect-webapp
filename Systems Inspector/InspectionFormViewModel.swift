@@ -91,7 +91,9 @@ class InspectionFormViewModel: NSObject {
         if let currentUserID = UserManager.shared.sessionUserId {
             newInspection.userId = currentUserID
         } else {
+            #if DEBUG
             print("WARNING: Creating new inspection without a currentUserID. Ensure user is logged in before creating inspections.")
+            #endif
         }
 
         if let customer = customer {

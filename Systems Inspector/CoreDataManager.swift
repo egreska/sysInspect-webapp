@@ -10,6 +10,12 @@ import CloudKit
 import SQLite3
 import UIKit
 
+private func coreDataLog(_ message: @autoclosure () -> String) {
+    #if DEBUG
+    Swift.print(message())
+    #endif
+}
+
 func copySQLiteStore(from storeURL: URL, to backupURL: URL) throws {
     var source: OpaquePointer?
     var destination: OpaquePointer?
@@ -49,12 +55,6 @@ private func storeCopyError(_ db: OpaquePointer?, fallback: String) -> NSError {
 // Define notification names for Core Data changes
 extension Notification.Name {
     static let inspectionCompleted = Notification.Name("InspectionCompleted")
-    static let coreDataDidSaveCustomer = Notification.Name("CoreDataDidSaveCustomer")
-    static let coreDataDidDeleteCustomer = Notification.Name("CoreDataDidDeleteCustomer")
-    static let coreDataDidSaveInspection = Notification.Name("CoreDataDidSaveInspection")
-    static let coreDataDidDeleteInspection = Notification.Name("CoreDataDidDeleteInspection")
-    static let coreDataDidSaveInspectionItem = Notification.Name("CoreDataDidSaveInspectionItem")
-    static let coreDataDidDeleteInspectionItem = Notification.Name("CoreDataDidDeleteInspectionItem")
     static let cloudKitSyncStatusChanged = Notification.Name("CloudKitSyncStatusChanged")
     static let coreDataStoreDidLoad = Notification.Name("CoreDataStoreDidLoad")
     /// Posted when saveContext() fails. userInfo["error"] contains the NSError.
@@ -66,7 +66,7 @@ extension CoreDataManager {
     /// Migrate existing local photos to CloudKit data
     func migrateLocalPhotosToCloudKit() {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot migrate photos - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot migrate photos - stores not loaded yet")
             return
         }
         
@@ -74,7 +74,7 @@ extension CoreDataManager {
         performBackgroundTask { backgroundContext in
             do {
                 let itemsWithLocalPhotos = try InspectionItem.itemsWithLocalPhotoFiles(in: backgroundContext)
-                print("🔄 Found \(itemsWithLocalPhotos.count) items with local photos to migrate")
+                coreDataLog("🔄 Found \(itemsWithLocalPhotos.count) items with local photos to migrate")
                 
                 let paths = itemsWithLocalPhotos.flatMap { $0.migrateLocalPhotoToCloudKit() }
                 if backgroundContext.hasChanges {
@@ -84,7 +84,7 @@ extension CoreDataManager {
                 
             } catch {
                 backgroundContext.rollback()
-                print("❌ Error migrating local photos: \(error)")
+                coreDataLog("❌ Error migrating local photos: \(error)")
             }
         }
     }
@@ -125,11 +125,6 @@ class CoreDataManager {
     
     // Private initializer to enforce singleton pattern
     private init() {
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(contextDidSave(_:)),
-                                               name: .NSManagedObjectContextDidSave,
-                                               object: nil)
-        
         // Listen for CloudKit remote change notifications
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(processCloudKitRemoteChanges(_:)),
@@ -166,7 +161,7 @@ class CoreDataManager {
         container.loadPersistentStores { [weak self] (storeDescription, error) in
             DispatchQueue.main.async {
                 if let error = error as NSError? {
-                    print("CoreDataManager: Error loading persistent store: \(error), \(error.userInfo)")
+                    coreDataLog("CoreDataManager: Error loading persistent store: \(error), \(error.userInfo)")
                     self?.storeLoadingError = error
                     self?.storesLoaded = false
                     
@@ -177,11 +172,11 @@ class CoreDataManager {
                     
                     #if DEBUG
                     // For development, try to recover by deleting and recreating
-                    print("CoreDataManager: Attempting to recover by deleting store...")
+                    coreDataLog("CoreDataManager: Attempting to recover by deleting store...")
                     self?.deleteAndRecreateStore(container: container, storeDescription: storeDescription)
                     #endif
                 } else {
-                    print("CoreDataManager: Persistent store loaded successfully with CloudKit")
+                    coreDataLog("CoreDataManager: Persistent store loaded successfully with CloudKit")
                     self?.storesLoaded = true
                     self?.storeLoadingError = nil
                     
@@ -281,22 +276,22 @@ class CoreDataManager {
             DispatchQueue.main.async {
                 switch status {
                 case .available:
-                    print("CloudKit: Account available")
+                    coreDataLog("CloudKit: Account available")
                     self?.setCloudKitSyncStatus(.succeeded)
                 case .noAccount:
-                    print("CloudKit: No iCloud account")
+                    coreDataLog("CloudKit: No iCloud account")
                     self?.setCloudKitSyncStatus(.failed(CloudKitError.noAccount))
                 case .restricted:
-                    print("CloudKit: Account restricted")
+                    coreDataLog("CloudKit: Account restricted")
                     self?.setCloudKitSyncStatus(.failed(CloudKitError.accountRestricted))
                 case .couldNotDetermine:
-                    print("CloudKit: Could not determine account status")
+                    coreDataLog("CloudKit: Could not determine account status")
                     self?.setCloudKitSyncStatus(.failed(CloudKitError.couldNotDetermine))
                 case .temporarilyUnavailable:
-                    print("CloudKit: Account temporarily unavailable")
+                    coreDataLog("CloudKit: Account temporarily unavailable")
                     self?.setCloudKitSyncStatus(.failed(CloudKitError.temporarilyUnavailable))
                 @unknown default:
-                    print("CloudKit: Unknown account status")
+                    coreDataLog("CloudKit: Unknown account status")
                     self?.setCloudKitSyncStatus(.failed(CloudKitError.unknown))
                 }
             }
@@ -306,25 +301,25 @@ class CoreDataManager {
     private func handleCloudKitError(_ error: CKError) {
         switch error.code {
         case .networkUnavailable, .networkFailure:
-            print("CloudKit: Network error - \(error.localizedDescription)")
+            coreDataLog("CloudKit: Network error - \(error.localizedDescription)")
             setCloudKitSyncStatus(.failed(error))
         case .quotaExceeded:
-            print("CloudKit: Quota exceeded - \(error.localizedDescription)")
+            coreDataLog("CloudKit: Quota exceeded - \(error.localizedDescription)")
             setCloudKitSyncStatus(.failed(error))
         case .limitExceeded:
-            print("CloudKit: Limit exceeded - \(error.localizedDescription)")
+            coreDataLog("CloudKit: Limit exceeded - \(error.localizedDescription)")
             setCloudKitSyncStatus(.failed(error))
         case .requestRateLimited:
-            print("CloudKit: Request rate limited - \(error.localizedDescription)")
+            coreDataLog("CloudKit: Request rate limited - \(error.localizedDescription)")
             setCloudKitSyncStatus(.failed(error))
         default:
-            print("CloudKit: Other error - \(error.localizedDescription)")
+            coreDataLog("CloudKit: Other error - \(error.localizedDescription)")
             setCloudKitSyncStatus(.failed(error))
         }
     }
     
     @objc private func processCloudKitRemoteChanges(_ notification: Notification) {
-        print("CloudKit: Processing remote changes")
+        coreDataLog("CloudKit: Processing remote changes")
         // Run entirely on the view context queue (main). Do not mix `DispatchQueue.main.async`
         // (inProgress) with `context.perform` (succeeded): two main-queue blocks can reorder and
         // fire duplicate UI updates during UIImageView/tint traversal (Crashlytics: objc_loadWeak).
@@ -338,9 +333,9 @@ class CoreDataManager {
     @discardableResult
     func saveContext() -> Bool {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot save - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot save - stores not loaded yet")
             if let error = storeLoadingError {
-                print("CoreDataManager: Store loading error: \(error)")
+                coreDataLog("CoreDataManager: Store loading error: \(error)")
             }
             return false
         }
@@ -352,12 +347,12 @@ class CoreDataManager {
         do {
             setCloudKitSyncStatus(.inProgress)
             try context.save()
-            print("CoreDataManager: Context saved successfully")
+            coreDataLog("CoreDataManager: Context saved successfully")
             setCloudKitSyncStatus(.succeeded)
             return true
         } catch {
             let nserror = error as NSError
-            print("CoreDataManager: Save error \(nserror), \(nserror.userInfo)")
+            coreDataLog("CoreDataManager: Save error \(nserror), \(nserror.userInfo)")
             setCloudKitSyncStatus(.failed(nserror))
             
             // Handle specific CloudKit errors
@@ -369,13 +364,13 @@ class CoreDataManager {
             if nserror.code == NSValidationMultipleErrorsError,
                let detailedErrors = nserror.userInfo[NSDetailedErrorsKey] as? [NSError] {
                 for detailedError in detailedErrors {
-                    print("Validation error: \(detailedError.localizedDescription)")
+                    coreDataLog("Validation error: \(detailedError.localizedDescription)")
                 }
             }
             
             // Rollback changes on error to prevent corruption
             context.rollback()
-            print("CoreDataManager: Rolled back changes due to save error")
+            coreDataLog("CoreDataManager: Rolled back changes due to save error")
             NotificationCenter.default.post(name: .coreDataSaveDidFail, object: nil, userInfo: ["error": nserror])
             
             #if DEBUG
@@ -390,69 +385,12 @@ class CoreDataManager {
     @discardableResult
     func deleteObject(_ object: NSManagedObject) -> Bool {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot delete - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot delete - stores not loaded yet")
             return false
         }
         
         context.delete(object)
         return saveContext()
-    }
-    
-    // MARK: - Observers
-    @objc private func contextDidSave(_ notification: Notification) {
-        guard let savedContext = notification.object as? NSManagedObjectContext else { return }
-        
-        let insertedObjects = notification.userInfo?[NSInsertedObjectsKey] as? Set<NSManagedObject> ?? Set()
-        let updatedObjects = notification.userInfo?[NSUpdatedObjectsKey] as? Set<NSManagedObject> ?? Set()
-        let deletedObjects = notification.userInfo?[NSDeletedObjectsKey] as? Set<NSManagedObject> ?? Set()
-        
-        print("CoreDataManager: Received NSManagedObjectContextDidSaveNotification from context: \(savedContext.description)")
-        
-        DispatchQueue.main.async {
-            self.context.perform {
-                self.postChangeNotifications(insertedObjects: insertedObjects, updatedObjects: updatedObjects, deletedObjects: deletedObjects)
-            }
-        }
-    }
-    
-    private func postChangeNotifications(insertedObjects: Set<NSManagedObject>, updatedObjects: Set<NSManagedObject>, deletedObjects: Set<NSManagedObject>) {
-        print("📢 Processing Core Data changes for notifications (inserted: \(insertedObjects.count), updated: \(updatedObjects.count), deleted: \(deletedObjects.count))...")
-        
-        // Handle inserted and updated objects
-        for object in insertedObjects.union(updatedObjects) {
-            if let customer = object as? Customer {
-                print("📢 Posting notification for saved customer: \(customer.name ?? "N/A"), userId: \(customer.userId?.uuidString ?? "nil")")
-                NotificationCenter.default.post(name: .coreDataDidSaveCustomer, object: nil, userInfo: ["object": customer])
-            } else if let inspection = object as? Inspection {
-                print("📢 Posting notification for saved inspection: \(inspection.id?.uuidString ?? "N/A"), userId: \(inspection.userId?.uuidString ?? "nil")")
-                NotificationCenter.default.post(name: .coreDataDidSaveInspection, object: nil, userInfo: ["object": inspection])
-            } else if let item = object as? InspectionItem {
-                print("📢 Posting notification for saved inspection item: \(item.id?.uuidString ?? "N/A"), userId: \(item.userId?.uuidString ?? "nil")")
-                NotificationCenter.default.post(name: .coreDataDidSaveInspectionItem, object: nil, userInfo: ["object": item])
-            }
-        }
-        
-        // Handle deleted objects
-        for object in deletedObjects {
-            let objectID = object.objectID
-            let entityName = object.entity.name
-            
-            if let entityName = entityName {
-                switch entityName {
-                case "Customer":
-                    print("📢 Posting notification for deleted customer ID: \(objectID.uriRepresentation().lastPathComponent)")
-                    NotificationCenter.default.post(name: .coreDataDidDeleteCustomer, object: nil, userInfo: ["id": objectID])
-                case "Inspection":
-                    print("📢 Posting notification for deleted inspection ID: \(objectID.uriRepresentation().lastPathComponent)")
-                    NotificationCenter.default.post(name: .coreDataDidDeleteInspection, object: nil, userInfo: ["id": objectID])
-                case "InspectionItem":
-                    print("📢 Posting notification for deleted inspection item ID: \(objectID.uriRepresentation().lastPathComponent)")
-                    NotificationCenter.default.post(name: .coreDataDidDeleteInspectionItem, object: nil, userInfo: ["id": objectID])
-                default:
-                    break
-                }
-            }
-        }
     }
     
     // MARK: - Background Context
@@ -464,7 +402,7 @@ class CoreDataManager {
     
     func performBackgroundTask(_ block: @escaping (NSManagedObjectContext) -> Void) {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot perform background task - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot perform background task - stores not loaded yet")
             return
         }
         
@@ -475,9 +413,9 @@ class CoreDataManager {
             if context.hasChanges {
                 do {
                     try context.save()
-                    print("CoreDataManager: Background context saved")
+                    coreDataLog("CoreDataManager: Background context saved")
                 } catch {
-                    print("CoreDataManager: Background save error \(error)")
+                    coreDataLog("CoreDataManager: Background save error \(error)")
                 }
             }
         }
@@ -486,28 +424,28 @@ class CoreDataManager {
     // MARK: - Utility Methods
     func fetch<T: NSManagedObject>(_ request: NSFetchRequest<T>) -> [T] {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot fetch - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot fetch - stores not loaded yet")
             return []
         }
         
         do {
             return try context.fetch(request)
         } catch {
-            print("Failed to fetch \(T.entity().name ?? "Unknown Entity"): \(error)")
+            coreDataLog("Failed to fetch \(T.entity().name ?? "Unknown Entity"): \(error)")
             return []
         }
     }
     
     func count<T: NSManagedObject>(_ request: NSFetchRequest<T>) -> Int {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot count - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot count - stores not loaded yet")
             return 0
         }
         
         do {
             return try context.count(for: request)
         } catch {
-            print("Failed to count \(T.entity().name ?? "Unknown Entity"): \(error)")
+            coreDataLog("Failed to count \(T.entity().name ?? "Unknown Entity"): \(error)")
             return 0
         }
     }
@@ -519,7 +457,7 @@ class CoreDataManager {
     // MARK: - Database Backup
     func backupDatabase() -> URL? {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot backup - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot backup - stores not loaded yet")
             return nil
         }
         
@@ -536,7 +474,7 @@ class CoreDataManager {
             return backupURL
         } catch {
             try? fileManager.removeItem(at: backupURL)
-            print("Failed to backup database: \(error)")
+            coreDataLog("Failed to backup database: \(error)")
             return nil
         }
     }
@@ -545,7 +483,7 @@ class CoreDataManager {
     #if DEBUG
     func resetAllData() {
         guard isStoreLoaded else {
-            print("CoreDataManager: Cannot reset data - stores not loaded yet")
+            coreDataLog("CoreDataManager: Cannot reset data - stores not loaded yet")
             return
         }
         
@@ -557,9 +495,9 @@ class CoreDataManager {
             
             do {
                 try context.execute(deleteRequest)
-                print("Deleted all \(entityName) entities")
+                coreDataLog("Deleted all \(entityName) entities")
             } catch {
-                print("Failed to delete \(entityName) entities: \(error)")
+                coreDataLog("Failed to delete \(entityName) entities: \(error)")
             }
         }
         
@@ -572,16 +510,16 @@ class CoreDataManager {
         do {
             try container.persistentStoreCoordinator.destroyPersistentStore(at: storeURL, ofType: NSSQLiteStoreType, options: nil)
             try FileManager.default.removeItem(at: storeURL)
-            print("Deleted and recreating store")
+            coreDataLog("Deleted and recreating store")
             
             container.loadPersistentStores { [weak self] (_, error) in
                 DispatchQueue.main.async {
                     if let error = error {
-                        print("Error recreating store: \(error)")
+                        coreDataLog("Error recreating store: \(error)")
                         self?.storesLoaded = false
                         self?.storeLoadingError = error
                     } else {
-                        print("Store recreated successfully")
+                        coreDataLog("Store recreated successfully")
                         self?.storesLoaded = true
                         self?.storeLoadingError = nil
                         NotificationCenter.default.post(name: .coreDataStoreDidLoad, object: nil)
@@ -589,7 +527,7 @@ class CoreDataManager {
                 }
             }
         } catch {
-            print("Error deleting store: \(error)")
+            coreDataLog("Error deleting store: \(error)")
         }
     }
     #endif

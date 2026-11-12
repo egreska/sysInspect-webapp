@@ -187,15 +187,13 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate, UINa
         tabBar.tintColor = AppTheme.primary
         tabBar.unselectedItemTintColor = AppTheme.textSecondary
         
-        if #available(iOS 15.0, *) {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithDefaultBackground()
-            appearance.backgroundColor = .secondarySystemGroupedBackground
-            appearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
-            
-            tabBar.standardAppearance = appearance
-            tabBar.scrollEdgeAppearance = appearance
-        }
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.backgroundColor = .secondarySystemGroupedBackground
+        appearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
+
+        tabBar.standardAppearance = appearance
+        tabBar.scrollEdgeAppearance = appearance
     }
     
     private func setupViewControllers() {
@@ -258,23 +256,16 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate, UINa
     private func configureNavigationBar(_ navigationBar: UINavigationBar) {
         navigationBar.prefersLargeTitles = false
         
-        if #available(iOS 15.0, *) {
-            let appearance = UINavigationBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = AppTheme.primary
-            appearance.titleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
-            appearance.largeTitleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
-            
-            navigationBar.tintColor = AppTheme.primaryContrast
-            navigationBar.standardAppearance = appearance
-            navigationBar.scrollEdgeAppearance = appearance
-            navigationBar.compactAppearance = appearance
-        } else {
-            navigationBar.barTintColor = AppTheme.primary
-            navigationBar.tintColor = AppTheme.primaryContrast
-            navigationBar.titleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
-            navigationBar.largeTitleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
-        }
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = AppTheme.primary
+        appearance.titleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
+        appearance.largeTitleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
+
+        navigationBar.tintColor = AppTheme.primaryContrast
+        navigationBar.standardAppearance = appearance
+        navigationBar.scrollEdgeAppearance = appearance
+        navigationBar.compactAppearance = appearance
     }
     
     // MARK: - Public Methods

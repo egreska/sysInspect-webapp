@@ -514,7 +514,7 @@ extension CustomerDetailsViewController: CustomerFormDelegate {
 }
 
 // MARK: - InspectionDetailsViewController
-class InspectionDetailsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UITableViewDataSourcePrefetching {
+class InspectionDetailsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     private let inspection: Inspection
     private let tableView = UITableView()
     private var inspectionItems: [InspectionItem] = []
@@ -558,7 +558,6 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
         
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.prefetchDataSource = self
         tableView.register(SubtitleCell.self, forCellReuseIdentifier: "ItemCell")
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 60
@@ -705,16 +704,6 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
     // MARK: - Editing Support
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         return isEditingMode
-    }
-    
-    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
-        for indexPath in indexPaths {
-            guard indexPath.row < inspectionItems.count else { continue }
-            let item = inspectionItems[indexPath.row]
-            if item.hasPhoto {
-                item.getPhotoThumbnail(maxDimension: 300) { _ in }
-            }
-        }
     }
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
@@ -880,12 +869,13 @@ class InspectionItemDetailViewController: UIViewController {
             detailStack.addArrangedSubview(commentsLabel)
         }
 
-        let photos = inspectionItem.photoBytes().compactMap { UIImage(data: $0) }
-        if !photos.isEmpty {
-            addSectionHeader(to: detailStack, title: photos.count == 1 ? "Photo" : "Photos")
+        let photoIndexes = inspectionItem.photoIndexes()
+        if !photoIndexes.isEmpty {
+            addSectionHeader(to: detailStack, title: photoIndexes.count == 1 ? "Photo" : "Photos")
             let location = inspectionItem.location ?? "inspection item"
-            for (index, photo) in photos.enumerated() {
-                let imageView = UIImageView(image: photo)
+            let pixels = detailPhotoPixelSize()
+            for (position, index) in photoIndexes.enumerated() {
+                let imageView = UIImageView()
                 imageView.contentMode = .scaleAspectFit
                 imageView.layer.cornerRadius = 12
                 imageView.clipsToBounds = true
@@ -893,10 +883,20 @@ class InspectionItemDetailViewController: UIViewController {
                 imageView.translatesAutoresizingMaskIntoConstraints = false
                 imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
                 imageView.isAccessibilityElement = true
-                imageView.accessibilityLabel = "Photo \(index + 1) of \(photos.count), \(location)"
+                imageView.accessibilityLabel = "Photo \(position + 1) of \(photoIndexes.count), \(location)"
                 detailStack.addArrangedSubview(imageView)
+                inspectionItem.getPhotoThumbnail(at: index, maxDimension: pixels) { [weak imageView] image in
+                    imageView?.image = image
+                }
             }
         }
+    }
+
+    /// Longer side of the 200-point photo view, in pixels.
+    private func detailPhotoPixelSize() -> CGFloat {
+        let scale = max(traitCollection.displayScale, 1)
+        let width = view.bounds.width > 32 ? view.bounds.width - 32 : 343
+        return max(width, 200) * scale
     }
     
     @objc private func editButtonTapped() {
@@ -970,38 +970,6 @@ class InspectionItemDetailViewController: UIViewController {
 
         stackView.addArrangedSubview(titleLabel)
         stackView.addArrangedSubview(row)
-    }
-
-    private func addComponentGroup(to stackView: UIStackView, title: String, isChecked: Bool) {
-        let container = UIView()
-        
-        let titleLabel = UILabel()
-        titleLabel.text = title
-        titleLabel.font = UIFont.systemFont(ofSize: 16)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        let statusImage = UIImageView()
-        statusImage.image = isChecked ?
-            UIImage(systemName: "checkmark.circle.fill") :
-            UIImage(systemName: "xmark.circle")
-        statusImage.tintColor = isChecked ? .systemGreen : .systemRed
-        statusImage.translatesAutoresizingMaskIntoConstraints = false
-        
-        container.addSubview(titleLabel)
-        container.addSubview(statusImage)
-        
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: container.topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            titleLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            
-            statusImage.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            statusImage.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            statusImage.widthAnchor.constraint(equalToConstant: 24),
-            statusImage.heightAnchor.constraint(equalToConstant: 24)
-        ])
-        
-        stackView.addArrangedSubview(container)
     }
 }
 

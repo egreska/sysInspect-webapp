@@ -103,7 +103,9 @@ class LoginViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        #if DEBUG
         print("🔵 LoginViewController: viewDidLoad called")
+        #endif
         setupUI()
         applyBiometricButtonBorder()
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (controller: Self, _: UITraitCollection) in
@@ -342,13 +344,8 @@ class LoginViewController: UIViewController {
                 facialRecognitionButton.setTitle("Log In with Touch ID", for: .normal)
                 facialRecognitionButton.accessibilityLabel = "Log in with Touch ID"
             case .opticID:
-                if #available(iOS 17.0, *) {
-                    facialRecognitionButton.setTitle("Log In with Optic ID", for: .normal)
-                    facialRecognitionButton.accessibilityLabel = "Log in with Optic ID"
-                } else {
-                    facialRecognitionButton.setTitle("Biometric Login", for: .normal)
-                    facialRecognitionButton.accessibilityLabel = "Biometric login"
-                }
+                facialRecognitionButton.setTitle("Log In with Optic ID", for: .normal)
+                facialRecognitionButton.accessibilityLabel = "Log in with Optic ID"
             case .none:
                 facialRecognitionButton.setTitle("Biometric Login", for: .normal)
                 facialRecognitionButton.accessibilityLabel = "Biometric login"
@@ -367,11 +364,15 @@ class LoginViewController: UIViewController {
 
     // MARK: - Actions
     @objc private func loginTapped() {
+        #if DEBUG
         print("🔵 LoginViewController: Login button tapped")
+        #endif
         
         // Prevent multiple simultaneous login attempts
         guard !isAuthenticating else {
+            #if DEBUG
             print("🔵 LoginViewController: Authentication already in progress")
+            #endif
             return
         }
         
@@ -441,11 +442,15 @@ class LoginViewController: UIViewController {
     }
 
     @objc private func facialRecognitionLoginTapped() {
+        #if DEBUG
         print("🔵 LoginViewController: Face ID button tapped")
+        #endif
         
         // Prevent multiple simultaneous login attempts
         guard !isAuthenticating else {
+            #if DEBUG
             print("🔵 LoginViewController: Authentication already in progress")
+            #endif
             return
         }
         
@@ -490,7 +495,9 @@ class LoginViewController: UIViewController {
                     
                     if success {
                         HapticManager.success()
+                        #if DEBUG
                         print("🔵 LoginViewController: Biometric authentication successful")
+                        #endif
                         if UserManager.shared.completeBiometricLogin() {
                             Task {
                                 await self.performSuccessfulLogin()
@@ -502,7 +509,9 @@ class LoginViewController: UIViewController {
                     } else {
                         HapticManager.error()
                         let errorMessage = authenticationError?.localizedDescription ?? "Failed to authenticate with biometrics."
+                        #if DEBUG
                         print("🔴 LoginViewController: Biometric authentication failed: \(errorMessage)")
+                        #endif
                         self.showAlert(title: "Authentication Failed", message: errorMessage)
                     }
                 }
@@ -515,14 +524,18 @@ class LoginViewController: UIViewController {
     }
 
     @objc private func createAccountTapped() {
+        #if DEBUG
         print("🔵 LoginViewController: Create account button tapped")
+        #endif
         
         let accountCreationVC = AccountCreationViewController()
         navigationController?.pushViewController(accountCreationVC, animated: true)
     }
     
     @objc private func forgotPasswordTapped() {
+        #if DEBUG
         print("🔵 LoginViewController: Forgot password button tapped")
+        #endif
         
         let forgotPasswordVC = ForgotPasswordViewController()
         let navController = UINavigationController(rootViewController: forgotPasswordVC)
@@ -530,7 +543,9 @@ class LoginViewController: UIViewController {
     }
 
     private func performSuccessfulLogin() async {
+        #if DEBUG
         print("🔵 LoginViewController: Performing successful login")
+        #endif
         
         await MainActor.run {
             self.showActivityIndicator(false)

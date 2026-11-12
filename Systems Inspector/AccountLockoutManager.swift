@@ -87,7 +87,9 @@ class AccountLockoutManager {
                 // Reset counter if it's been too long since last attempt
                 UserDefaults.standard.set(1, forKey: failedAttemptsKey)
                 UserDefaults.standard.set(now, forKey: lastAttemptTimeKey)
+                #if DEBUG
                 print("🔒 Account lockout: Reset failed attempts counter for \(email) (time elapsed)")
+                #endif
                 return
             }
         }
@@ -99,12 +101,16 @@ class AccountLockoutManager {
         UserDefaults.standard.set(newAttempts, forKey: failedAttemptsKey)
         UserDefaults.standard.set(now, forKey: lastAttemptTimeKey)
         
+        #if DEBUG
         print("🔒 Account lockout: Failed attempt \(newAttempts)/\(maxAttempts) for \(email)")
+        #endif
         
         // Check if we should lock the account
         if newAttempts >= maxAttempts {
             UserDefaults.standard.set(now, forKey: lockoutTimeKey)
+            #if DEBUG
             print("⛔ Account locked for \(email) - too many failed attempts")
+            #endif
             
             // Log lockout event
             AnalyticsManager.shared.logAccountLocked(attempts: newAttempts)
@@ -117,7 +123,9 @@ class AccountLockoutManager {
     /// Record a successful login (clears all lockout data)
     func recordSuccessfulLogin(email: String) {
         clearLockout(for: email)
+        #if DEBUG
         print("✅ Account lockout: Cleared lockout data for \(email) after successful login")
+        #endif
     }
     
     /// Get current failed attempt count
@@ -149,7 +157,9 @@ class AccountLockoutManager {
     /// Manually unlock an account (admin/support function)
     func manuallyUnlock(email: String) {
         clearLockout(for: email)
+        #if DEBUG
         print("🔓 Account manually unlocked for \(email)")
+        #endif
     }
     
     /// Format remaining time as human-readable string

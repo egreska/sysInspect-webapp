@@ -59,7 +59,7 @@ struct InspectionItemFormState {
     @discardableResult
     mutating func addPhoto(_ image: UIImage) -> Bool {
         guard photos.count < InspectionItem.maxPhotoCount else { return false }
-        photos.append(image)
+        photos.append(StoredPhoto.fitting(image))
         photosChanged = true
         return true
     }
