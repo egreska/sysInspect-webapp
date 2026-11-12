@@ -21,6 +21,8 @@ class AccountCreationViewController: UIViewController {
         textField.borderStyle = .roundedRect
         textField.keyboardType = .emailAddress
         textField.autocapitalizationType = .none
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -30,6 +32,8 @@ class AccountCreationViewController: UIViewController {
         textField.placeholder = "Password"
         textField.borderStyle = .roundedRect
         textField.isSecureTextEntry = true
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -39,6 +43,8 @@ class AccountCreationViewController: UIViewController {
         textField.placeholder = "Confirm Password"
         textField.borderStyle = .roundedRect
         textField.isSecureTextEntry = true
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -83,6 +89,8 @@ class AccountCreationViewController: UIViewController {
         textField.placeholder = "Your Answer (for password recovery)"
         textField.borderStyle = .roundedRect
         textField.autocapitalizationType = .none
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -178,11 +186,11 @@ class AccountCreationViewController: UIViewController {
             stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -40),
 
             // Button height constraints
-            emailTextField.heightAnchor.constraint(equalToConstant: 44),
-            passwordTextField.heightAnchor.constraint(equalToConstant: 44),
-            confirmPasswordTextField.heightAnchor.constraint(equalToConstant: 44),
+            emailTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            passwordTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            confirmPasswordTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             securityQuestionButton.heightAnchor.constraint(equalToConstant: 44),
-            securityAnswerTextField.heightAnchor.constraint(equalToConstant: 44),
+            securityAnswerTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             createAccountButton.heightAnchor.constraint(equalToConstant: 50),
             
             // Overlay constraints

@@ -17,6 +17,8 @@ class LoginViewController: UIViewController {
     private let emailTextField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "Email"
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.borderStyle = .roundedRect
         textField.keyboardType = .emailAddress
         textField.autocapitalizationType = .none
@@ -27,6 +29,8 @@ class LoginViewController: UIViewController {
     private let passwordTextField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "Password"
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.borderStyle = .roundedRect
         textField.isSecureTextEntry = true
         textField.translatesAutoresizingMaskIntoConstraints = false
@@ -174,8 +178,8 @@ class LoginViewController: UIViewController {
             stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -40),
 
             // Button height constraints
-            emailTextField.heightAnchor.constraint(equalToConstant: 44),
-            passwordTextField.heightAnchor.constraint(equalToConstant: 44),
+            emailTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            passwordTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             loginButton.heightAnchor.constraint(equalToConstant: 50),
             facialRecognitionButton.heightAnchor.constraint(equalToConstant: 50),
             
@@ -277,11 +281,8 @@ class LoginViewController: UIViewController {
         createAccountButton.addTarget(self, action: #selector(createAccountTapped), for: .touchUpInside)
         
         loginButton.accessibilityLabel = "Log in"
-        loginButton.accessibilityHint = "Double tap to sign in with email and password"
         createAccountButton.accessibilityLabel = "Create new account"
-        createAccountButton.accessibilityHint = "Double tap to create a new account"
         forgotPasswordButton.accessibilityLabel = "Forgot password"
-        forgotPasswordButton.accessibilityHint = "Double tap to reset your password"
     }
     
     private static let biometricsExplainedKey = "login.biometricsExplained"

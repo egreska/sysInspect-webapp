@@ -139,9 +139,11 @@ final class CustomerFormViewController: UIViewController {
         textField.borderStyle = .roundedRect
         textField.autocapitalizationType = autocapitalization
         textField.returnKeyType = .next
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.delegate = self
         textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        textField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
     }
 
     private func setupUI() {
@@ -189,6 +191,7 @@ final class CustomerFormViewController: UIViewController {
         label.adjustsFontForContentSizeCategory = true
         label.numberOfLines = 0
         label.textColor = AppTheme.textSecondary
+        label.accessibilityTraits = .header
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }

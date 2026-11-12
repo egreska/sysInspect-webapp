@@ -978,6 +978,7 @@ class InspectionItemDetailViewController: UIViewController {
         let headerLabel = UILabel()
         headerLabel.text = title
         headerLabel.font = UIFont.boldSystemFont(ofSize: 18)
+        headerLabel.accessibilityTraits = .header
         
         stackView.addArrangedSubview(UIView()) // Add some space
         stackView.addArrangedSubview(separator)

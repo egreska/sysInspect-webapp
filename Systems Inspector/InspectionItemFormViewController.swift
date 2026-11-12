@@ -38,6 +38,8 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let label = UILabel()
         label.text = "+ Item"
         label.font = AppTheme.font(.subheadline)
+        label.adjustsFontForContentSizeCategory = true
+        label.numberOfLines = 0
         label.textAlignment = .center
         label.isAccessibilityElement = false
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -78,6 +80,8 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let textField = UITextField()
         textField.placeholder = "Area/Aisle"
         textField.borderStyle = .roundedRect
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -96,6 +100,8 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let textField = UITextField()
         textField.placeholder = "Bay/Level (Optional)"
         textField.borderStyle = .roundedRect
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -141,11 +147,14 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         return button
     }()
 
+    private var commentsMinHeight: NSLayoutConstraint?
     private let commentsTextView: UITextView = {
         let textView = UITextView()
         textView.layer.borderWidth = 1
         textView.layer.borderColor = AppTheme.separator.cgColor
         textView.layer.cornerRadius = 5
+        textView.font = AppTheme.font(.body)
+        textView.adjustsFontForContentSizeCategory = true
         textView.translatesAutoresizingMaskIntoConstraints = false
         textView.text = "Enter comments here..."
         textView.textColor = AppTheme.placeholder
@@ -168,6 +177,8 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let label = UILabel()
         label.text = "Take Photo"
         label.font = AppTheme.font(.subheadline)
+        label.adjustsFontForContentSizeCategory = true
+        label.numberOfLines = 0
         label.textAlignment = .center
         label.isAccessibilityElement = false
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -231,6 +242,9 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         commentsTextView.delegate = self
         applyFormToFields()
         setupChrome()
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (controller: Self, _: UITraitCollection) in
+            controller.updateCommentsMinHeight()
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -288,8 +302,21 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
-            commentsTextView.heightAnchor.constraint(equalToConstant: 100)
+            commentsMinHeightConstraint()
         ])
+        updateCommentsMinHeight()
+    }
+
+    private func commentsMinHeightConstraint() -> NSLayoutConstraint {
+        let constraint = commentsTextView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100)
+        commentsMinHeight = constraint
+        return constraint
+    }
+
+    private func updateCommentsMinHeight() {
+        let lineHeight = AppTheme.font(.body).lineHeight
+        let insets = commentsTextView.textContainerInset.top + commentsTextView.textContainerInset.bottom
+        commentsMinHeight?.constant = max(100, (lineHeight * 4) + insets)
     }
 
     private func setupActions() {
@@ -500,7 +527,6 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         container.addSubview(issueDropdownButton)
         container.addSubview(selectedIssueLabel)
         issueDropdownButton.accessibilityLabel = "Issue type"
-        issueDropdownButton.accessibilityHint = "Double tap to open issue picker"
         NSLayoutConstraint.activate([
             label.topAnchor.constraint(equalTo: container.topAnchor),
             label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
@@ -548,9 +574,10 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             button.widthAnchor.constraint(equalToConstant: 60),
             button.heightAnchor.constraint(equalToConstant: 60),
             label.topAnchor.constraint(equalTo: button.bottomAnchor, constant: 8),
-            label.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             label.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            container.heightAnchor.constraint(equalToConstant: 90)
+            container.heightAnchor.constraint(greaterThanOrEqualToConstant: 90)
         ])
         return container
     }
@@ -580,7 +607,6 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         }
         importanceToggleButton.accessibilityLabel = "Importance"
         importanceToggleButton.accessibilityValue = form.importance.phrase
-        importanceToggleButton.accessibilityHint = "Double tap to change"
     }
 
     private func updateSelectedIssueDisplay() {

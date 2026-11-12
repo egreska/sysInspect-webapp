@@ -89,7 +89,8 @@ class ReportViewController: UIViewController {
         
         // Setup Sort Button
         sortButton.setTitle("Sort By: Entry Order", for: .normal)
-        sortButton.accessibilityLabel = "Sort by"
+        sortButton.accessibilityLabel = "Sort"
+        sortButton.accessibilityValue = "Sort By: Entry Order"
         sortButton.addTarget(self, action: #selector(showSortOptions), for: .touchUpInside)
         sortButton.translatesAutoresizingMaskIntoConstraints = false
         
@@ -502,6 +503,8 @@ class ReportViewController: UIViewController {
         private func updateSortCriteria(_ criteria: SortCriteria, title: String) {
             selectedSortCriteria = criteria
             sortButton.setTitle(title, for: .normal)
+            sortButton.accessibilityLabel = "Sort"
+            sortButton.accessibilityValue = title
             fetchInspections()
         }
         

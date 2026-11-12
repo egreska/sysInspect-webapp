@@ -680,8 +680,8 @@ class CustomerCell: UITableViewCell {
         let name = customer.name ?? "Unknown Company"
         var a11y = "Customer, \(name), \(inspectionCount) inspection\(inspectionCount == 1 ? "" : "s")"
         if showPendingSync { a11y += ", pending sync" }
+        a11y += ", Added: \(dateString)"
         accessibilityLabel = a11y
-        accessibilityHint = "Double tap to view details"
     }
 }
 

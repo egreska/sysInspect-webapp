@@ -34,6 +34,9 @@ class HelpContentViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         loadContent()
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (controller: Self, _: UITraitCollection) in
+            controller.loadContent()
+        }
         
         // Log screen view
         AnalyticsManager.shared.logScreenView(
@@ -56,7 +59,8 @@ class HelpContentViewController: UIViewController {
         // Configure text view
         textView.isEditable = false
         textView.isScrollEnabled = false
-        textView.font = .systemFont(ofSize: 16)
+        textView.font = AppTheme.font(.body)
+        textView.adjustsFontForContentSizeCategory = true
         textView.textColor = .label
         textView.backgroundColor = .clear
         textView.textContainerInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
@@ -106,11 +110,9 @@ class HelpContentViewController: UIViewController {
         paragraphStyle.lineSpacing = 4
         paragraphStyle.paragraphSpacing = 16
         
-        attributedString.addAttribute(
-            .paragraphStyle,
-            value: paragraphStyle,
-            range: NSRange(location: 0, length: attributedString.length)
-        )
+        let fullRange = NSRange(location: 0, length: attributedString.length)
+        attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
+        attributedString.addAttribute(.font, value: AppTheme.font(.body), range: fullRange)
         
         // Style headers (lines starting with #)
         let lines = content.components(separatedBy: .newlines)
@@ -120,21 +122,17 @@ class HelpContentViewController: UIViewController {
             let lineLength = line.count + 1 // +1 for newline
             
             if line.hasPrefix("# ") {
-                // Main header
                 let range = NSRange(location: currentPosition, length: min(lineLength - 1, attributedString.length - currentPosition))
-                attributedString.addAttribute(.font, value: UIFont.boldSystemFont(ofSize: 24), range: range)
+                attributedString.addAttribute(.font, value: AppTheme.fontBold(.title2), range: range)
             } else if line.hasPrefix("## ") {
-                // Subheader
                 let range = NSRange(location: currentPosition, length: min(lineLength - 1, attributedString.length - currentPosition))
-                attributedString.addAttribute(.font, value: UIFont.boldSystemFont(ofSize: 20), range: range)
+                attributedString.addAttribute(.font, value: AppTheme.fontBold(.title3), range: range)
             } else if line.hasPrefix("### ") {
-                // Sub-subheader
                 let range = NSRange(location: currentPosition, length: min(lineLength - 1, attributedString.length - currentPosition))
-                attributedString.addAttribute(.font, value: UIFont.boldSystemFont(ofSize: 18), range: range)
+                attributedString.addAttribute(.font, value: AppTheme.fontBold(.headline), range: range)
             } else if line.hasPrefix("**") && line.hasSuffix("**") {
-                // Bold text
                 let range = NSRange(location: currentPosition, length: min(lineLength - 1, attributedString.length - currentPosition))
-                attributedString.addAttribute(.font, value: UIFont.boldSystemFont(ofSize: 16), range: range)
+                attributedString.addAttribute(.font, value: AppTheme.fontBold(.body), range: range)
             }
             
             currentPosition += lineLength

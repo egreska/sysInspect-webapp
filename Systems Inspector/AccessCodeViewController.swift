@@ -24,6 +24,8 @@ final class AccessCodeViewController: UIViewController {
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.accessibilityLabel = "Access Code"
+        field.font = AppTheme.font(.body)
+        field.adjustsFontForContentSizeCategory = true
         field.translatesAutoresizingMaskIntoConstraints = false
         return field
     }()
@@ -73,7 +75,7 @@ final class AccessCodeViewController: UIViewController {
             stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 40),
             stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -40),
             stack.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
-            codeField.heightAnchor.constraint(equalToConstant: 44),
+            codeField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             actionButton.heightAnchor.constraint(equalToConstant: 50),
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             activityIndicator.topAnchor.constraint(equalTo: stack.bottomAnchor, constant: 24)

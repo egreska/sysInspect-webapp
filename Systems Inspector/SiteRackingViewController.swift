@@ -475,19 +475,19 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         column.spacing = 4
         column.alignment = .center
         let button = UIButton(type: .system)
-        if file.contentType == "public.pdf" {
-            button.setTitle("PDF", for: .normal)
-        } else {
-            button.setTitle("Photo", for: .normal)
-        }
+        let kind = file.contentType == "public.pdf" ? "PDF" : "Photo"
+        button.setTitle(kind, for: .normal)
+        button.accessibilityLabel = "\(kind), \(file.filename)"
         button.addAction(UIAction { [weak self] _ in self?.previewDocument(at: index) }, for: .touchUpInside)
         let name = UILabel()
         name.text = file.filename
         name.font = AppTheme.font(.caption)
         name.textColor = AppTheme.textSecondary
         name.lineBreakMode = .byTruncatingMiddle
+        name.isAccessibilityElement = false
         let remove = UIButton(type: .system)
         remove.setTitle("Remove", for: .normal)
+        remove.accessibilityLabel = "Remove \(file.filename)"
         remove.tintColor = AppTheme.destructive
         remove.addAction(UIAction { [weak self] _ in
             self?.documents.remove(at: index)
@@ -556,6 +556,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         presentLabel.text = "Present"
         presentLabel.font = AppTheme.font(.body)
         presentLabel.textColor = AppTheme.textPrimary
+        presentLabel.isAccessibilityElement = false
         let control = UISegmentedControl(items: ["No", "Yes"])
         control.selectedSegmentIndex = racking.safetyClips.present ? 1 : 0
         control.accessibilityLabel = "Present"
@@ -585,7 +586,9 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         textField.placeholder = placeholder
         textField.text = text
         textField.borderStyle = .roundedRect
-        textField.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
+        textField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
         textField.addAction(UIAction { _ in
             onChange(textField.text ?? "")
         }, for: .editingChanged)
@@ -742,6 +745,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         label.text = title
         label.font = AppTheme.font(.body)
         label.textColor = AppTheme.textPrimary
+        label.isAccessibilityElement = false
         let control = UISegmentedControl(items: ["No", "Yes"])
         control.selectedSegmentIndex = isOn ? 1 : 0
         control.accessibilityLabel = accessibilityLabel
@@ -789,7 +793,9 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             textField.placeholder = field.0
             textField.text = field.1
             textField.borderStyle = .roundedRect
-            textField.heightAnchor.constraint(equalToConstant: 44).isActive = true
+            textField.font = AppTheme.font(.body)
+            textField.adjustsFontForContentSizeCategory = true
+            textField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
             textField.addAction(UIAction { _ in
                 onField(fieldIndex, textField.text ?? "")
             }, for: .editingChanged)

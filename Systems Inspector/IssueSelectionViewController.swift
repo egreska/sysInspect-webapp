@@ -94,7 +94,6 @@ extension IssueSelectionViewController: UITableViewDataSource, UITableViewDelega
         cell.accessoryType = isSelected ? .checkmark : .none
         cell.accessibilityLabel = node.path.name
         cell.accessibilityValue = isSelected ? "Selected" : "Not selected"
-        cell.accessibilityHint = "Double tap to select or deselect"
         return cell
     }
 

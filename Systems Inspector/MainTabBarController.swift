@@ -45,7 +45,11 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate, UINa
         let indicator = syncIndicatorView
         let titleLabel = UILabel()
         titleLabel.text = titleText
-        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.font = AppTheme.fontBold(.headline)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.numberOfLines = 1
+        titleLabel.lineBreakMode = .byTruncatingTail
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         titleLabel.textColor = AppTheme.primaryContrast
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(indicator)

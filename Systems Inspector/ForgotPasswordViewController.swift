@@ -42,6 +42,8 @@ class ForgotPasswordViewController: UIViewController {
         textField.borderStyle = .roundedRect
         textField.keyboardType = .emailAddress
         textField.autocapitalizationType = .none
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -73,6 +75,8 @@ class ForgotPasswordViewController: UIViewController {
         textField.placeholder = "Your Answer"
         textField.borderStyle = .roundedRect
         textField.autocapitalizationType = .none
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -82,6 +86,8 @@ class ForgotPasswordViewController: UIViewController {
         textField.placeholder = "New Password"
         textField.borderStyle = .roundedRect
         textField.isSecureTextEntry = true
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -91,6 +97,8 @@ class ForgotPasswordViewController: UIViewController {
         textField.placeholder = "Confirm New Password"
         textField.borderStyle = .roundedRect
         textField.isSecureTextEntry = true
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -195,7 +203,7 @@ class ForgotPasswordViewController: UIViewController {
             emailTextField.topAnchor.constraint(equalTo: instructionLabel.bottomAnchor, constant: 32),
             emailTextField.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
             emailTextField.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
-            emailTextField.heightAnchor.constraint(equalToConstant: 44),
+            emailTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             
             checkEmailButton.topAnchor.constraint(equalTo: emailTextField.bottomAnchor, constant: 16),
             checkEmailButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
@@ -214,17 +222,17 @@ class ForgotPasswordViewController: UIViewController {
             securityAnswerTextField.topAnchor.constraint(equalTo: securityQuestionLabel.bottomAnchor, constant: 16),
             securityAnswerTextField.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
             securityAnswerTextField.trailingAnchor.constraint(equalTo: securityQuestionContainerView.trailingAnchor),
-            securityAnswerTextField.heightAnchor.constraint(equalToConstant: 44),
+            securityAnswerTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             
             newPasswordTextField.topAnchor.constraint(equalTo: securityAnswerTextField.bottomAnchor, constant: 16),
             newPasswordTextField.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
             newPasswordTextField.trailingAnchor.constraint(equalTo: securityQuestionContainerView.trailingAnchor),
-            newPasswordTextField.heightAnchor.constraint(equalToConstant: 44),
+            newPasswordTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             
             confirmPasswordTextField.topAnchor.constraint(equalTo: newPasswordTextField.bottomAnchor, constant: 16),
             confirmPasswordTextField.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
             confirmPasswordTextField.trailingAnchor.constraint(equalTo: securityQuestionContainerView.trailingAnchor),
-            confirmPasswordTextField.heightAnchor.constraint(equalToConstant: 44),
+            confirmPasswordTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             
             passwordRequirementsLabel.topAnchor.constraint(equalTo: confirmPasswordTextField.bottomAnchor, constant: 8),
             passwordRequirementsLabel.leadingAnchor.constraint(equalTo: securityQuestionContainerView.leadingAnchor),
