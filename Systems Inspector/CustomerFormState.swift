@@ -24,4 +24,14 @@ struct CustomerFormState {
     var siteRackingSubtitle: String {
         siteRacking.customerLine(documentCount: siteDocuments.count)
     }
+
+    /// Records the pair, or leaves this form unchanged and returns SiteRacking's sentence.
+    mutating func commitSite(racking: SiteRacking, documents: [SiteDocumentFile]) -> String? {
+        if let message = racking.validationMessage() {
+            return message
+        }
+        siteRacking = racking
+        siteDocuments = documents
+        return nil
+    }
 }

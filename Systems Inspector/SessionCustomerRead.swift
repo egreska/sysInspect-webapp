@@ -140,3 +140,98 @@ func sessionInspectionItemCount(
     request.predicate = sessionInspectionItemsPredicate(inspection: inspection, userId: userId)
     return try context.count(for: request)
 }
+
+enum SessionReadHopError: Error, Equatable {
+    case storeUnavailable
+    case unresolved
+}
+
+/// Customers for one page, on the view context the caller passed.
+@MainActor
+func sessionCustomerPage(
+    _ page: Int,
+    userId: UUID,
+    in viewContext: NSManagedObjectContext
+) async throws -> (customers: [Customer], total: Int) {
+    let fetched = try await readInBackground(of: viewContext) { context in
+        let fetchedPage = try fetchSessionCustomers(
+            .page(offset: page * sessionCustomerPageSize),
+            userId: userId,
+            in: context
+        )
+        return HoppedPage(
+            ids: fetchedPage.customers.map(\.objectID),
+            total: fetchedPage.total ?? 0
+        )
+    }
+    let customers: [Customer] = try materialize(fetched.ids, in: viewContext)
+    return (customers, fetched.total)
+}
+
+/// Inspections for one Customer, newest first, on the view context the caller passed.
+@MainActor
+func sessionInspections(
+    for customer: Customer,
+    userId: UUID,
+    in viewContext: NSManagedObjectContext
+) async throws -> [Inspection] {
+    let customerID = customer.objectID
+    let ids = try await readInBackground(of: viewContext) { context in
+        guard let backgroundCustomer = try? context.existingObject(with: customerID) as? Customer else {
+            throw SessionReadHopError.unresolved
+        }
+        return try fetchSessionInspections(for: backgroundCustomer, userId: userId, in: context).map(\.objectID)
+    }
+    return try materialize(ids, in: viewContext)
+}
+
+/// InspectionItems for one Inspection, unsorted, on the view context the caller passed.
+@MainActor
+func sessionInspectionItems(
+    for inspection: Inspection,
+    userId: UUID,
+    in viewContext: NSManagedObjectContext
+) async throws -> [InspectionItem] {
+    let inspectionID = inspection.objectID
+    let ids = try await readInBackground(of: viewContext) { context in
+        guard let backgroundInspection = try? context.existingObject(with: inspectionID) as? Inspection else {
+            throw SessionReadHopError.unresolved
+        }
+        return try fetchSessionInspectionItems(for: backgroundInspection, userId: userId, in: context).map(\.objectID)
+    }
+    return try materialize(ids, in: viewContext)
+}
+
+private struct HoppedPage: Sendable {
+    var ids: [NSManagedObjectID]
+    var total: Int
+}
+
+private func readInBackground<T: Sendable>(
+    of viewContext: NSManagedObjectContext,
+    _ body: @escaping (NSManagedObjectContext) throws -> T
+) async throws -> T {
+    guard let coordinator = viewContext.persistentStoreCoordinator,
+          !coordinator.persistentStores.isEmpty else {
+        throw SessionReadHopError.storeUnavailable
+    }
+    let background = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+    background.persistentStoreCoordinator = coordinator
+    background.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
+    return try await background.perform {
+        try body(background)
+    }
+}
+
+@MainActor
+private func materialize<T: NSManagedObject>(
+    _ ids: [NSManagedObjectID],
+    in viewContext: NSManagedObjectContext
+) throws -> [T] {
+    try ids.map { id in
+        guard let object = try viewContext.existingObject(with: id) as? T else {
+            throw SessionReadHopError.unresolved
+        }
+        return object
+    }
+}

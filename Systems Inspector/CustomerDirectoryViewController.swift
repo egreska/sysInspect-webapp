@@ -45,10 +45,11 @@ class CustomerDirectoryViewController: UIViewController {
     // MARK: - UI Setup
     private func setupUI() {
         title = "Customers"
-        view.backgroundColor = AppTheme.background
+        view.backgroundColor = .systemGroupedBackground
         
         // Setup TableView
-        tableView = UITableView(frame: view.bounds, style: .plain)
+        tableView = UITableView(frame: view.bounds, style: .insetGrouped)
+        tableView.backgroundColor = .systemGroupedBackground
         tableView.register(CustomerCell.self, forCellReuseIdentifier: "CustomerCell")
         tableView.register(LoadingCell.self, forCellReuseIdentifier: "LoadingCell")
         tableView.register(SkeletonCell.self, forCellReuseIdentifier: SkeletonCell.reuseId)
@@ -56,7 +57,6 @@ class CustomerDirectoryViewController: UIViewController {
         tableView.delegate = self
         tableView.prefetchDataSource = self
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.tableFooterView = UIView() // Remove empty cell separators
         
         // Add refresh control
         refreshControl.addTarget(self, action: #selector(refreshData), for: .valueChanged)
@@ -68,7 +68,7 @@ class CustomerDirectoryViewController: UIViewController {
         searchController.searchResultsUpdater = self
         searchController.obscuresBackgroundDuringPresentation = false
         searchController.searchBar.placeholder = "Search Customers"
-        searchController.searchBar.tintColor = .systemBlue
+        searchController.searchBar.tintColor = AppTheme.primary
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
         definesPresentationContext = true
@@ -205,7 +205,7 @@ extension CustomerDirectoryViewController: UITableViewDataSource {
         if count == 0 {
             let isSearching = searchController.isActive && !(searchController.searchBar.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let container = UIView(frame: CGRect(x: 0, y: 0, width: tableView.bounds.width, height: max(tableView.bounds.height, 320)))
-            container.backgroundColor = AppTheme.background
+            container.backgroundColor = .systemGroupedBackground
             container.addSubview(emptyStateView)
             NSLayoutConstraint.activate([
                 emptyStateView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
@@ -396,7 +396,7 @@ extension CustomerDirectoryViewController: UITableViewDelegate {
             completion(true)
         }
         editAction.image = UIImage(systemName: "pencil")
-        editAction.backgroundColor = .systemBlue
+        editAction.backgroundColor = AppTheme.primary
         
         return UISwipeActionsConfiguration(actions: [deleteAction, editAction])
     }
@@ -563,12 +563,19 @@ class CustomerCell: UITableViewCell {
     private let contactNameLabel = UILabel()
     private let inspectionCountLabel = UILabel()
     private let dateLabel = UILabel()
-    private let pendingSyncBadge: UILabel = {
+    private let pendingSyncBadge: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppTheme.monitor.withAlphaComponent(0.15)
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    private let pendingSyncLabel: UILabel = {
         let label = UILabel()
         label.text = "Pending sync"
         label.font = .preferredFont(forTextStyle: .caption2)
         label.adjustsFontForContentSizeCategory = true
-        label.textColor = .systemOrange
+        label.textColor = AppTheme.monitor
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -580,6 +587,11 @@ class CustomerCell: UITableViewCell {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        pendingSyncBadge.layer.cornerRadius = pendingSyncBadge.bounds.height / 2
     }
     
     private func setupUI() {
@@ -603,11 +615,12 @@ class CustomerCell: UITableViewCell {
         contactNameLabel.textColor = AppTheme.textSecondary
         contactNameLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        inspectionCountLabel.font = .preferredFont(forTextStyle: .caption1)
+        inspectionCountLabel.font = Self.countFont()
         inspectionCountLabel.adjustsFontForContentSizeCategory = true
-        inspectionCountLabel.textColor = .systemBlue
+        inspectionCountLabel.textColor = AppTheme.primary
         inspectionCountLabel.translatesAutoresizingMaskIntoConstraints = false
         
+        pendingSyncBadge.addSubview(pendingSyncLabel)
         contentView.addSubview(pendingSyncBadge)
         
         dateLabel.font = .preferredFont(forTextStyle: .caption1)
@@ -643,6 +656,11 @@ class CustomerCell: UITableViewCell {
             dateLabel.centerYAnchor.constraint(equalTo: inspectionCountLabel.centerYAnchor),
             dateLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
             
+            pendingSyncLabel.topAnchor.constraint(equalTo: pendingSyncBadge.topAnchor, constant: 2),
+            pendingSyncLabel.bottomAnchor.constraint(equalTo: pendingSyncBadge.bottomAnchor, constant: -2),
+            pendingSyncLabel.leadingAnchor.constraint(equalTo: pendingSyncBadge.leadingAnchor, constant: 8),
+            pendingSyncLabel.trailingAnchor.constraint(equalTo: pendingSyncBadge.trailingAnchor, constant: -8),
+
             pendingSyncBadge.centerYAnchor.constraint(equalTo: inspectionCountLabel.centerYAnchor),
             pendingSyncBadge.leadingAnchor.constraint(equalTo: inspectionCountLabel.trailingAnchor, constant: 8),
             pendingSyncBadge.trailingAnchor.constraint(lessThanOrEqualTo: dateLabel.leadingAnchor, constant: -8)
@@ -653,22 +671,13 @@ class CustomerCell: UITableViewCell {
         companyNameLabel.text = customer.name ?? "Unknown Company"
         
         // Show site if available
-        if let site = customer.site, !site.isEmpty {
-            siteLabel.text = "Site: \(site)"
-            siteLabel.isHidden = false
-        } else {
-            siteLabel.text = nil
-            siteLabel.isHidden = true
-        }
-        
-        // Show contact name if available
-        if let contactName = customer.contactName, !contactName.isEmpty {
-            contactNameLabel.text = "Contact: \(contactName)"
-            contactNameLabel.isHidden = false
-        } else {
-            contactNameLabel.text = nil
-            contactNameLabel.isHidden = true
-        }
+        let site = trimmed(customer.site)
+        siteLabel.text = site
+        siteLabel.isHidden = site == nil
+
+        let contactName = trimmed(customer.contactName)
+        contactNameLabel.text = contactName
+        contactNameLabel.isHidden = contactName == nil
         
         inspectionCountLabel.text = "\(inspectionCount) inspection\(inspectionCount == 1 ? "" : "s")"
 
@@ -678,10 +687,25 @@ class CustomerCell: UITableViewCell {
         pendingSyncBadge.isHidden = !showPendingSync
         
         let name = customer.name ?? "Unknown Company"
-        var a11y = "Customer, \(name), \(inspectionCount) inspection\(inspectionCount == 1 ? "" : "s")"
-        if showPendingSync { a11y += ", pending sync" }
-        a11y += ", Added: \(dateString)"
-        accessibilityLabel = a11y
+        var parts = ["Customer, \(name)"]
+        if let site { parts.append("Site, \(site)") }
+        if let contactName { parts.append("Contact, \(contactName)") }
+        parts.append("\(inspectionCount) inspection\(inspectionCount == 1 ? "" : "s")")
+        if showPendingSync { parts.append("pending sync") }
+        parts.append("Added: \(dateString)")
+        accessibilityLabel = parts.joined(separator: ", ")
+    }
+
+    private static func countFont() -> UIFont {
+        let style = UIFont.TextStyle.caption1
+        let size = UIFont.preferredFont(forTextStyle: style).pointSize
+        let font = UIFont.monospacedDigitSystemFont(ofSize: size, weight: .semibold)
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: font)
+    }
+
+    private func trimmed(_ value: String?) -> String? {
+        let text = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return text.isEmpty ? nil : text
     }
 }
 

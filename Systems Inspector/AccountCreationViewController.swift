@@ -68,11 +68,11 @@ class AccountCreationViewController: UIViewController {
             config.title = "Select a Security Question"
             config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)
             config.background.backgroundColor = UIColor.systemGray6
-            config.baseForegroundColor = .systemBlue
+            config.baseForegroundColor = AppTheme.primary
             button.configuration = config
         } else {
             button.backgroundColor = UIColor.systemGray6
-            button.setTitleColor(.systemBlue, for: .normal)
+            button.setTitleColor(AppTheme.primary, for: .normal)
             button.contentHorizontalAlignment = .left
             button.contentEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
         }
@@ -331,13 +331,6 @@ class AccountCreationViewController: UIViewController {
             return
         }
 
-        // Validate password strength - Use PasswordRecoveryManager for consistency
-        let validation = PasswordRecoveryManager.shared.validatePasswordStrength(password)
-        if !validation.isValid {
-            showAlert(title: "Weak Password", message: validation.message)
-            return
-        }
-
         if password != confirmPassword {
             showAlert(title: "Error", message: "Passwords do not match.")
             return
@@ -353,43 +346,26 @@ class AccountCreationViewController: UIViewController {
             showAlert(title: "Error", message: "Please provide an answer to your security question.")
             return
         }
-        
-        let answerCheck = PasswordRecoveryManager.shared.validateSecurityAnswer(securityAnswer)
-        if !answerCheck.isValid {
-            showAlert(title: "Error", message: answerCheck.message)
-            return
-        }
 
-        // Check if user already exists locally
-        if UserManager.shared.userExists(email: email) {
-            showAlert(title: "Error", message: "An account with this email already exists locally. Please try logging in or using a different email.")
-            return
-        }
-        
         showActivityIndicator(true)
         print("🔄 Starting account creation for: \(email)")
 
         Task {
-            let success = await UserManager.shared.createUser(
+            let outcome = await SessionOpening.live.start(
                 email: email,
                 password: password,
                 securityQuestion: securityQuestion,
                 securityAnswer: securityAnswer
             )
-            
-            if success {
-                await ClaimCheck.shared.sessionExists()
-                await MainActor.run {
-                    self.showActivityIndicator(false)
-                    self.showAlert(title: "Account Created", message: "Your account has been successfully created with password recovery!") {
+            await MainActor.run {
+                self.showActivityIndicator(false)
+                switch outcome {
+                case .started(let notice), .claimPending(let notice):
+                    self.showAlert(title: notice.title, message: notice.message) {
                         self.navigationController?.popViewController(animated: true)
                     }
-                }
-            } else {
-                await MainActor.run {
-                    self.showActivityIndicator(false)
-                    print("❌ Account creation failed")
-                    self.showAlert(title: "Account Creation Failed", message: "Failed to create account. Please check your internet connection and try again. If the problem persists, this email might already be registered.")
+                case .refused(let notice):
+                    self.showAlert(title: notice.title, message: notice.message)
                 }
             }
         }

@@ -13,7 +13,9 @@ final class FilterChipView: UIView {
         label.textColor = .secondaryLabel
         label.translatesAutoresizingMaskIntoConstraints = false
         
-        removeButton.setTitle("✕", for: .normal)
+        let symbol = UIImage.SymbolConfiguration(textStyle: .caption1)
+        removeButton.setImage(UIImage(systemName: "xmark", withConfiguration: symbol), for: .normal)
+        removeButton.tintColor = AppTheme.primary
         removeButton.accessibilityLabel = "Remove \(title)"
         removeButton.addTarget(self, action: #selector(removeTapped), for: .touchUpInside)
         removeButton.translatesAutoresizingMaskIntoConstraints = false

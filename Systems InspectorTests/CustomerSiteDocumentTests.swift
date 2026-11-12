@@ -76,6 +76,9 @@ final class CustomerSiteDocumentTests: XCTestCase {
             .tooLarge
         )
         XCTAssertEqual(Customer.acceptance(data: Data([1]), contentType: "public.data"), .wrongType)
+        XCTAssertNil(Customer.SiteDocumentAcceptance.allowed.message)
+        XCTAssertEqual(Customer.SiteDocumentAcceptance.tooLarge.message, "Each file must be 10 MB or smaller.")
+        XCTAssertEqual(Customer.SiteDocumentAcceptance.wrongType.message, "Use a photo or PDF.")
         XCTAssertEqual(
             Customer.acceptance(data: Data(count: Customer.maxSiteDocumentBytes + 1), contentType: "public.data"),
             .tooLarge

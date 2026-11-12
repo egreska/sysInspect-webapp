@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import CoreText
 import MessageUI // Keep this import for mail composer actions
 
 class SettingsViewController: UIViewController {
@@ -50,7 +51,9 @@ class SettingsViewController: UIViewController {
     private func setupTableView() {
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.translatesAutoresizingMaskIntoConstraints = false  // ADD THIS LINE
+        tableView.sectionHeaderHeight = UITableView.automaticDimension
+        tableView.estimatedSectionHeaderHeight = 32
+        tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
 
         NSLayoutConstraint.activate([
@@ -344,33 +347,23 @@ class SettingsViewController: UIViewController {
     }
 
     private func clearImageCache() {
-        // First, get the cache size
-        ImageCacheManager.shared.getCacheSize { [weak self] size in
-            let formattedSize = ImageCacheManager.shared.formatCacheSize(size)
-            
-            let alert = UIAlertController(
-                title: "Clear Image Cache",
-                message: "This will clear \(formattedSize) of cached images. Images will be reloaded from Core Data when needed.",
+        let alert = UIAlertController(
+            title: "Clear Image Cache",
+            message: "This clears cached photos in memory. They reload from the inspection item when needed.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Clear Cache", style: .destructive) { [weak self] _ in
+            ImageCacheManager.shared.clearMemoryCache()
+            let successAlert = UIAlertController(
+                title: "Cache Cleared",
+                message: "Image cache has been successfully cleared.",
                 preferredStyle: .alert
             )
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            
-            alert.addAction(UIAlertAction(title: "Clear Cache", style: .destructive) { _ in
-                ImageCacheManager.shared.clearMemoryCache()
-                ImageCacheManager.shared.clearDiskCache {
-                    let successAlert = UIAlertController(
-                        title: "Cache Cleared",
-                        message: "Image cache has been successfully cleared.",
-                        preferredStyle: .alert
-                    )
-                    successAlert.addAction(UIAlertAction(title: "OK", style: .default))
-                    self?.present(successAlert, animated: true)
-                }
-            })
-            
-            self?.present(alert, animated: true)
-        }
+            successAlert.addAction(UIAlertAction(title: "OK", style: .default))
+            self?.present(successAlert, animated: true)
+        })
+        present(alert, animated: true)
     }
     
     private func showPerformanceStats() {
@@ -404,7 +397,7 @@ class SettingsViewController: UIViewController {
 
         let alert = UIAlertController(
             title: "Photo Cache Cleared",
-            message: "The in-memory photo cache was cleared. Photos on disk were kept.",
+            message: "The in-memory photo cache was cleared.",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -580,14 +573,8 @@ extension SettingsViewController: UITableViewDataSource {
             cell.textLabel?.textColor = .label // Reset color for other cells
         }
         
-        // Show cache size for Clear Image Cache
         if settingName == "Clear Image Cache" {
-            // Get cache size asynchronously
-            ImageCacheManager.shared.getCacheSize { size in
-                DispatchQueue.main.async {
-                    cell.detailTextLabel?.text = ImageCacheManager.shared.formatCacheSize(size)
-                }
-            }
+            cell.detailTextLabel?.text = nil
         } else if settingName == "Performance Stats" {
             let memory = PerformanceOptimizer.shared.getMemoryUsage()
             cell.detailTextLabel?.text = "\(String(format: "%.1f", memory.used))MB"
@@ -607,6 +594,31 @@ extension SettingsViewController: UITableViewDataSource {
 
 // MARK: - UITableViewDelegate
 extension SettingsViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let header = UITableViewHeaderFooterView()
+        var content = UIListContentConfiguration.groupedHeader()
+        content.attributedText = NSAttributedString(
+            string: sections[section],
+            attributes: [
+                .font: Self.smallCapsCaptionFont(),
+                .foregroundColor: AppTheme.textSecondary
+            ]
+        )
+        header.contentConfiguration = content
+        return header
+    }
+
+    private static func smallCapsCaptionFont() -> UIFont {
+        let features: [[UIFontDescriptor.FeatureKey: Int]] = [
+            [.type: kLowerCaseType, .selector: kLowerCaseSmallCapsSelector],
+            [.type: kUpperCaseType, .selector: kUpperCaseSmallCapsSelector]
+        ]
+        let descriptor = UIFont.preferredFont(forTextStyle: .caption1)
+            .fontDescriptor
+            .addingAttributes([.featureSettings: features])
+        return UIFont(descriptor: descriptor, size: 0)
+    }
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
 

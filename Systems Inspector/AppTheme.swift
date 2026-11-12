@@ -12,18 +12,17 @@ enum AppTheme {
 
     // MARK: - Brand colors (adapt for light/dark where needed)
 
-    /// Primary brand color (e.g. nav bar, primary buttons)
+    /// Brand blue. Light mode is rgb(0, 0.4, 0.8). Dark mode keeps that hue and goes deeper so white titles stay above 4.5:1.
     static var primary: UIColor {
-        UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
+        UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.0, green: 0.34, blue: 0.68, alpha: 1)
+                : UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1)
+        }
     }
 
     /// Contrast color on primary (e.g. nav bar title, primary button title)
     static var primaryContrast: UIColor { .white }
-
-    /// Secondary / accent (links, secondary actions)
-    static var secondary: UIColor {
-        UIColor(red: 0.0, green: 0.4, blue: 0.8, alpha: 1.0)
-    }
 
     // MARK: - Semantic colors (system; adapt to Dark Mode)
 
@@ -38,43 +37,46 @@ enum AppTheme {
     static var success: UIColor { .systemGreen }
     static var placeholder: UIColor { .placeholderText }
 
+    /// Needs immediate attention on an InspectionItem.
+    static var attention: UIColor { .systemRed }
+
+    /// Monitor on an InspectionItem.
+    static var monitor: UIColor { .systemOrange }
+
     /// Overlay for modals / loading (e.g. dimmed)
     static var overlay: UIColor {
         UIColor.black.withAlphaComponent(0.5)
     }
 
-    /// Softer blue for gradient end (nav bar)
-    private static var primaryGradientEnd: UIColor {
-        UIColor(red: 0.12, green: 0.45, blue: 0.85, alpha: 1.0)
-    }
+    /// Space between controls. Tight inside a group, medium between groups, loose between sections.
+    static let spacing8: CGFloat = 8
+    static let spacing16: CGFloat = 16
+    static let spacing24: CGFloat = 24
 
-    /// Gradient image for navigation bar (primary → softer blue, left to right).
-    /// High contrast preserved for accessibility.
-    static func navigationBarGradientImage() -> UIImage? {
-        if let cached = cachedNavigationBarGradient { return cached }
-        let size = CGSize(width: 400, height: 64)
-        let rect = CGRect(origin: .zero, size: size)
-        UIGraphicsBeginImageContextWithOptions(size, true, 0)
-        defer { UIGraphicsEndImageContext() }
-        guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
-        let colors = [primary.cgColor, primaryGradientEnd.cgColor] as CFArray
-        guard let gradient = CGGradient(
-            colorsSpace: CGColorSpaceCreateDeviceRGB(),
-            colors: colors,
-            locations: [0, 1]
-        ) else { return nil }
-        ctx.drawLinearGradient(
-            gradient,
-            start: CGPoint(x: 0, y: rect.midY),
-            end: CGPoint(x: rect.maxX, y: rect.midY),
-            options: []
-        )
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        cachedNavigationBarGradient = image
-        return image
-    }
+    static let buttonCornerRadius: CGFloat = 8
+    static let cardCornerRadius: CGFloat = 12
 
-    private static var cachedNavigationBarGradient: UIImage?
+    /// Long forms stay this wide and centered on iPad.
+    static let readableContentWidth: CGFloat = 680
+
+    static func readableWidthConstraints(
+        for item: UIView,
+        width: NSLayoutDimension,
+        centerX: NSLayoutXAxisAnchor,
+        leading: NSLayoutXAxisAnchor,
+        trailing: NSLayoutXAxisAnchor,
+        margin: CGFloat
+    ) -> [NSLayoutConstraint] {
+        let fill = item.widthAnchor.constraint(equalTo: width, constant: -(margin * 2))
+        fill.priority = .defaultHigh
+        return [
+            item.centerXAnchor.constraint(equalTo: centerX),
+            fill,
+            item.widthAnchor.constraint(lessThanOrEqualToConstant: readableContentWidth),
+            item.leadingAnchor.constraint(greaterThanOrEqualTo: leading, constant: margin),
+            item.trailingAnchor.constraint(lessThanOrEqualTo: trailing, constant: -margin)
+        ]
+    }
 
     // MARK: - Typography (Dynamic Type)
 
@@ -90,6 +92,11 @@ enum AppTheme {
     /// Medium weight variant that keeps scaling with Dynamic Type.
     static func fontMedium(_ style: FontStyle) -> UIFont {
         scaledFont(for: style, weight: .medium)
+    }
+
+    /// Field name on the inspection form. Subheadline, semibold, scales with Dynamic Type.
+    static func fieldLabel() -> UIFont {
+        scaledFont(for: .subheadline, weight: .semibold)
     }
 
     private static func scaledFont(for style: FontStyle, weight: UIFont.Weight) -> UIFont {

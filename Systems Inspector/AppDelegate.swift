@@ -80,9 +80,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithOpaqueBackground()
         navAppearance.backgroundColor = AppTheme.primary
-        if let gradientImage = AppTheme.navigationBarGradientImage() {
-            navAppearance.backgroundImage = gradientImage
-        }
         navAppearance.titleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
         navAppearance.largeTitleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
         

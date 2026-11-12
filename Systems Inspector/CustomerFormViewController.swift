@@ -213,13 +213,9 @@ final class CustomerFormViewController: UIViewController {
     }
 
     @objc private func siteRackingTapped() {
-        let sheet = SiteRackingViewController(
-            siteRacking: form.siteRacking,
-            siteDocuments: form.siteDocuments
-        ) { [weak self] racking, docs in
+        let sheet = SiteRackingViewController(form: form) { [weak self] form in
             guard let self else { return }
-            self.form.siteRacking = racking
-            self.form.siteDocuments = docs
+            self.form = form
             self.updateSiteRackingSubtitle()
         }
         navigationController?.pushViewController(sheet, animated: true)
@@ -243,7 +239,7 @@ final class CustomerFormViewController: UIViewController {
             companyNameErrorLabel.isHidden = false
             companyNameTextField.layer.borderWidth = 1
             companyNameTextField.layer.borderColor = AppTheme.destructive.cgColor
-            companyNameTextField.layer.cornerRadius = 6
+            companyNameTextField.layer.cornerRadius = AppTheme.buttonCornerRadius
             companyNameTextField.becomeFirstResponder()
             return nil
         }

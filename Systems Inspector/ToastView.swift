@@ -19,15 +19,20 @@ final class ToastView: UIView {
         toast.messageLabel.text = message
         toast.messageLabel.font = AppTheme.font(.subheadline)
         toast.messageLabel.adjustsFontForContentSizeCategory = true
-        toast.messageLabel.textColor = AppTheme.primaryContrast
+        toast.messageLabel.textColor = AppTheme.textPrimary
         toast.messageLabel.numberOfLines = 2
-        toast.backgroundColor = UIColor(white: 0.15, alpha: 0.98)
-        toast.layer.cornerRadius = 10
+        toast.backgroundColor = .clear
+        toast.layer.cornerRadius = AppTheme.buttonCornerRadius
+        toast.clipsToBounds = true
         toast.actionHandler = action
+
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterial))
+        blur.translatesAutoresizingMaskIntoConstraints = false
+        blur.isUserInteractionEnabled = false
         
         if let title = actionTitle, action != nil {
             toast.actionButton.setTitle(title, for: .normal)
-            toast.actionButton.setTitleColor(.systemYellow, for: .normal)
+            toast.actionButton.setTitleColor(AppTheme.primary, for: .normal)
             toast.actionButton.titleLabel?.font = AppTheme.fontMedium(.subheadline)
             toast.actionButton.titleLabel?.adjustsFontForContentSizeCategory = true
             toast.actionButton.addTarget(toast, action: #selector(toast.actionTapped), for: .touchUpInside)
@@ -37,10 +42,15 @@ final class ToastView: UIView {
         
         toast.messageLabel.translatesAutoresizingMaskIntoConstraints = false
         toast.actionButton.translatesAutoresizingMaskIntoConstraints = false
+        toast.addSubview(blur)
         toast.addSubview(toast.messageLabel)
         toast.addSubview(toast.actionButton)
         
         NSLayoutConstraint.activate([
+            blur.topAnchor.constraint(equalTo: toast.topAnchor),
+            blur.bottomAnchor.constraint(equalTo: toast.bottomAnchor),
+            blur.leadingAnchor.constraint(equalTo: toast.leadingAnchor),
+            blur.trailingAnchor.constraint(equalTo: toast.trailingAnchor),
             toast.messageLabel.leadingAnchor.constraint(equalTo: toast.leadingAnchor, constant: 16),
             toast.messageLabel.topAnchor.constraint(equalTo: toast.topAnchor, constant: 16),
             toast.messageLabel.bottomAnchor.constraint(equalTo: toast.bottomAnchor, constant: -16),

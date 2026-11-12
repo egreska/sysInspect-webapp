@@ -17,11 +17,11 @@ class LoginViewController: UIViewController {
     private let emailTextField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "Email"
-        textField.font = AppTheme.font(.body)
-        textField.adjustsFontForContentSizeCategory = true
         textField.borderStyle = .roundedRect
         textField.keyboardType = .emailAddress
         textField.autocapitalizationType = .none
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -29,10 +29,10 @@ class LoginViewController: UIViewController {
     private let passwordTextField: UITextField = {
         let textField = UITextField()
         textField.placeholder = "Password"
-        textField.font = AppTheme.font(.body)
-        textField.adjustsFontForContentSizeCategory = true
         textField.borderStyle = .roundedRect
         textField.isSecureTextEntry = true
+        textField.font = AppTheme.font(.body)
+        textField.adjustsFontForContentSizeCategory = true
         textField.translatesAutoresizingMaskIntoConstraints = false
         return textField
     }()
@@ -50,9 +50,10 @@ class LoginViewController: UIViewController {
     private let facialRecognitionButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Log In with Face ID", for: .normal)
-        button.backgroundColor = .systemGray
-        button.setTitleColor(AppTheme.primaryContrast, for: .normal)
+        button.backgroundColor = .clear
+        button.setTitleColor(AppTheme.primary, for: .normal)
         button.layer.cornerRadius = 8
+        button.layer.borderWidth = 1
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -60,7 +61,7 @@ class LoginViewController: UIViewController {
     private let createAccountButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Create New Account", for: .normal)
-        button.setTitleColor(AppTheme.secondary, for: .normal)
+        button.setTitleColor(AppTheme.primary, for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -68,7 +69,7 @@ class LoginViewController: UIViewController {
     private let forgotPasswordButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Forgot Password?", for: .normal)
-        button.setTitleColor(AppTheme.secondary, for: .normal)
+        button.setTitleColor(AppTheme.primary, for: .normal)
         button.titleLabel?.font = .preferredFont(forTextStyle: .subheadline)
         button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -104,6 +105,10 @@ class LoginViewController: UIViewController {
         super.viewDidLoad()
         print("🔵 LoginViewController: viewDidLoad called")
         setupUI()
+        applyBiometricButtonBorder()
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (controller: Self, _: UITraitCollection) in
+            controller.applyBiometricButtonBorder()
+        }
         setupActions()
         setupKeyboardHandling()
         if UserDefaults.standard.bool(forKey: Self.biometricsExplainedKey) {
@@ -140,6 +145,7 @@ class LoginViewController: UIViewController {
         scrollView.addSubview(contentView)
 
         let stackView = UIStackView(arrangedSubviews: [
+            makeProductMark(),
             emailTextField,
             passwordTextField,
             loginButton,
@@ -148,12 +154,15 @@ class LoginViewController: UIViewController {
             createAccountButton
         ])
         stackView.axis = .vertical
-        stackView.spacing = 16
+        stackView.spacing = AppTheme.spacing16
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(stackView)
         view.addSubview(overlayView)
         overlayView.addSubview(activityIndicator)
+
+        let stackCenterY = stackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+        stackCenterY.priority = .defaultLow
 
         NSLayoutConstraint.activate([
             // Scroll view constraints
@@ -163,19 +172,25 @@ class LoginViewController: UIViewController {
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
             // Content view constraints
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            contentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.frameLayoutGuide.heightAnchor),
             
             // Stack view constraints
-            stackView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            stackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
-            stackView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 40),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -40),
+            stackCenterY,
+            stackView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: AppTheme.spacing24),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -AppTheme.spacing24),
+        ] + AppTheme.readableWidthConstraints(
+            for: stackView,
+            width: contentView.widthAnchor,
+            centerX: contentView.centerXAnchor,
+            leading: contentView.leadingAnchor,
+            trailing: contentView.trailingAnchor,
+            margin: 40
+        ) + [
 
             // Button height constraints
             emailTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
@@ -193,6 +208,33 @@ class LoginViewController: UIViewController {
             activityIndicator.centerXAnchor.constraint(equalTo: overlayView.centerXAnchor),
             activityIndicator.centerYAnchor.constraint(equalTo: overlayView.centerYAnchor)
         ])
+    }
+
+    private func makeProductMark() -> UIView {
+        let icon = UIImageView(image: UIImage(named: "LaunchIcon"))
+        icon.contentMode = .scaleAspectFit
+        icon.isAccessibilityElement = false
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        icon.widthAnchor.constraint(equalToConstant: 72).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: 72).isActive = true
+
+        let title = UILabel()
+        title.text = "Pallet Rack Safety"
+        title.font = AppTheme.fontBold(.largeTitle)
+        title.adjustsFontForContentSizeCategory = true
+        title.textAlignment = .center
+        title.numberOfLines = 0
+        title.textColor = AppTheme.textPrimary
+
+        let mark = UIStackView(arrangedSubviews: [icon, title])
+        mark.axis = .vertical
+        mark.alignment = .center
+        mark.spacing = AppTheme.spacing8
+        return mark
+    }
+
+    private func applyBiometricButtonBorder() {
+        facialRecognitionButton.layer.borderColor = AppTheme.primary.resolvedColor(with: traitCollection).cgColor
     }
 
     // MARK: - Keyboard Handling

@@ -46,16 +46,18 @@ class CustomerDetailsViewController: UIViewController {
         )
         
         navigationItem.rightBarButtonItem = editCustomerButton
+
+        registerForTraitChanges([
+            UITraitPreferredContentSizeCategory.self,
+            UITraitUserInterfaceStyle.self
+        ]) { (controller: Self, _: UITraitCollection) in
+            controller.setupCustomerInfoHeader()
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         fetchInspections()
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        startPulsingAnimationIfAllowed()
     }
     
     // MARK: - Edit Customer Action
@@ -72,15 +74,9 @@ class CustomerDetailsViewController: UIViewController {
 
     @objc private func siteRackingTapped() {
         let form = CustomerIntake.formState(from: customer)
-        let sheet = SiteRackingViewController(
-            siteRacking: form.siteRacking,
-            siteDocuments: form.siteDocuments
-        ) { [weak self] racking, docs in
+        let sheet = SiteRackingViewController(form: form) { [weak self] form in
             guard let self else { return }
-            var updated = CustomerIntake.formState(from: self.customer)
-            updated.siteRacking = racking
-            updated.siteDocuments = docs
-            if CustomerIntake.update(self.customer, form: updated) {
+            if CustomerIntake.update(self.customer, form: form) {
                 CustomerSearchIndex.refreshFromStore()
             }
             self.setupCustomerInfoHeader()
@@ -94,39 +90,25 @@ class CustomerDetailsViewController: UIViewController {
     }
     
     // MARK: - Add Inspection Action
-    @objc private func addInspectionTapped() {
-        newInspectionButton.layer.removeAnimation(forKey: "pulsing")
-        
-        if !UIAccessibility.isReduceMotionEnabled {
-            UIView.animate(withDuration: 0.1, animations: {
-                self.newInspectionButton.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
-            }) { _ in
-                UIView.animate(withDuration: 0.1, animations: {
-                    self.newInspectionButton.transform = CGAffineTransform.identity
-                }) { _ in
-                    self.startPulsingAnimationIfAllowed()
-                }
-            }
-        } else {
-            startPulsingAnimationIfAllowed()
+    @objc private func newInspectionTouchDown() {
+        HapticManager.lightImpact()
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        UIView.animate(withDuration: 0.1) {
+            self.newInspectionButton.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
         }
-        
-        // Navigate to inspection form
+    }
+
+    @objc private func newInspectionTouchEnded() {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        UIView.animate(withDuration: 0.1) {
+            self.newInspectionButton.transform = .identity
+        }
+    }
+
+    @objc private func addInspectionTapped() {
+        newInspectionTouchEnded()
         let inspectionFormVC = InspectionItemFormViewController(viewModel: InspectionFormViewModel(customer: customer))
         navigationController?.pushViewController(inspectionFormVC, animated: true)
-    }
-    
-    // MARK: - Pulsing Animation (respects Reduce Motion)
-    private func startPulsingAnimationIfAllowed() {
-        guard !UIAccessibility.isReduceMotionEnabled else { return }
-        let pulseAnimation = CABasicAnimation(keyPath: "transform.scale")
-        pulseAnimation.duration = 1.5
-        pulseAnimation.fromValue = 1.0
-        pulseAnimation.toValue = 1.05
-        pulseAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
-        pulseAnimation.autoreverses = true
-        pulseAnimation.repeatCount = .infinity
-        newInspectionButton.layer.add(pulseAnimation, forKey: "pulsing")
     }
     
     private func setupUI() {
@@ -135,18 +117,23 @@ class CustomerDetailsViewController: UIViewController {
         
         headerView.translatesAutoresizingMaskIntoConstraints = false
         headerView.backgroundColor = AppTheme.surface
+        headerView.layer.cornerRadius = AppTheme.cardCornerRadius
+        headerView.clipsToBounds = true
         
         newInspectionButton.setTitle("New Inspection", for: .normal)
         newInspectionButton.backgroundColor = AppTheme.primary
         newInspectionButton.setTitleColor(AppTheme.primaryContrast, for: .normal)
         newInspectionButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
         newInspectionButton.titleLabel?.adjustsFontForContentSizeCategory = true
-        newInspectionButton.layer.cornerRadius = 12
+        newInspectionButton.layer.cornerRadius = AppTheme.buttonCornerRadius
         newInspectionButton.layer.shadowColor = UIColor.label.cgColor
         newInspectionButton.layer.shadowOffset = CGSize(width: 0, height: 2)
         newInspectionButton.layer.shadowOpacity = 0.1
         newInspectionButton.layer.shadowRadius = 4
         newInspectionButton.translatesAutoresizingMaskIntoConstraints = false
+        newInspectionButton.addTarget(self, action: #selector(newInspectionTouchDown), for: .touchDown)
+        newInspectionButton.addTarget(self, action: #selector(newInspectionTouchEnded), for: .touchUpOutside)
+        newInspectionButton.addTarget(self, action: #selector(newInspectionTouchEnded), for: .touchCancel)
         newInspectionButton.addTarget(self, action: #selector(addInspectionTapped), for: .touchUpInside)
         newInspectionButton.accessibilityLabel = "New inspection"
         
@@ -170,10 +157,16 @@ class CustomerDetailsViewController: UIViewController {
         // Layout Constraints
         NSLayoutConstraint.activate([
             // Header view constraints
-            headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: AppTheme.spacing16),
             headerHeightConstraint,
+        ] + AppTheme.readableWidthConstraints(
+            for: headerView,
+            width: view.widthAnchor,
+            centerX: view.centerXAnchor,
+            leading: view.leadingAnchor,
+            trailing: view.trailingAnchor,
+            margin: AppTheme.spacing16
+        ) + [
             
             // New Inspection button constraints
             newInspectionButton.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 16),
@@ -190,72 +183,53 @@ class CustomerDetailsViewController: UIViewController {
     }
     
     private func setupCustomerInfoHeader() {
-        // Clear existing subviews
         headerView.subviews.forEach { $0.removeFromSuperview() }
-        
-        // Create a stack view for better layout management
+
         let stackView = UIStackView()
         stackView.axis = .vertical
-        stackView.spacing = 8
-        stackView.alignment = .leading
-        stackView.distribution = .fill
+        stackView.spacing = AppTheme.spacing8
+        stackView.alignment = .fill
         stackView.translatesAutoresizingMaskIntoConstraints = false
-        
         headerView.addSubview(stackView)
-        
-        // Create labels for all customer details in the specified order
-        // Company Name (required field, always show)
-        stackView.addArrangedSubview(createDetailLabel(title: "Company:", value: customer.name ?? "Unknown"))
-        
-        // Optional fields - only add if they have values
-        if let site = customer.site, !site.isEmpty {
+
+        let companyLabel = UILabel()
+        let companyName = trimmed(customer.name) ?? "Unknown"
+        companyLabel.text = companyName
+        companyLabel.font = AppTheme.fontBold(.title2)
+        companyLabel.adjustsFontForContentSizeCategory = true
+        companyLabel.textColor = AppTheme.textPrimary
+        companyLabel.numberOfLines = 0
+        stackView.addArrangedSubview(companyLabel)
+
+        if let site = trimmed(customer.site) {
             stackView.addArrangedSubview(createDetailLabel(title: "Site:", value: site))
         }
-        
-        if let contactName = customer.contactName, !contactName.isEmpty {
+        if let contactName = trimmed(customer.contactName) {
             stackView.addArrangedSubview(createDetailLabel(title: "Contact:", value: contactName))
         }
-        
-        if let phone = customer.phone, !phone.isEmpty {
+        if let phone = trimmed(customer.phone) {
             stackView.addArrangedSubview(createDetailLabel(title: "Phone:", value: phone))
         }
-        
-        if let address = customer.address, !address.isEmpty {
+        if let address = addressLine() {
             stackView.addArrangedSubview(createDetailLabel(title: "Address:", value: address))
-        }
-        
-        if let city = customer.city, !city.isEmpty {
-            stackView.addArrangedSubview(createDetailLabel(title: "City:", value: city))
-        }
-        
-        if let state = customer.state, !state.isEmpty {
-            stackView.addArrangedSubview(createDetailLabel(title: "State:", value: state))
-        }
-        
-        if let zipCode = customer.zipCode, !zipCode.isEmpty {
-            stackView.addArrangedSubview(createDetailLabel(title: "Zip:", value: zipCode))
         }
 
         let siteButton = UIButton(type: .system)
         siteButton.setTitle("Site racking & documents", for: .normal)
         siteButton.contentHorizontalAlignment = .left
         siteButton.titleLabel?.font = AppTheme.font(.body)
+        siteButton.titleLabel?.adjustsFontForContentSizeCategory = true
         siteButton.addTarget(self, action: #selector(siteRackingTapped), for: .touchUpInside)
         siteButton.accessibilityLabel = "Site racking and documents"
         stackView.addArrangedSubview(siteButton)
         let subtitle = UILabel()
         subtitle.text = CustomerIntake.formState(from: customer).siteRackingSubtitle
         subtitle.font = AppTheme.font(.footnote)
+        subtitle.adjustsFontForContentSizeCategory = true
         subtitle.textColor = AppTheme.textSecondary
         subtitle.numberOfLines = 0
         stackView.addArrangedSubview(subtitle)
-        
-        // Always show these fields
-        stackView.addArrangedSubview(createDetailLabel(
-            title: "Added:",
-            value: DateFormatters.format(customer.createdDate ?? Date(), using: DateFormatters.medium)
-        ))
-        
+
         stackView.addArrangedSubview(createDetailLabel(
             title: "Inspections:",
             value: "\(inspections.count)"
@@ -263,10 +237,10 @@ class CustomerDetailsViewController: UIViewController {
         
         // Layout constraints for stack view
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 16),
-            stackView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
-            stackView.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: headerView.bottomAnchor, constant: -16)
+            stackView.topAnchor.constraint(equalTo: headerView.topAnchor, constant: AppTheme.spacing16),
+            stackView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: AppTheme.spacing16),
+            stackView.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -AppTheme.spacing16),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: headerView.bottomAnchor, constant: -AppTheme.spacing16)
         ])
         
         // Calculate and update header height
@@ -299,22 +273,26 @@ class CustomerDetailsViewController: UIViewController {
     }
 
     private func updateInspectionCountInHeader() {
-        // Since we're using a stack view now, we need to find and update the inspection count label
-        guard let stackView = headerView.subviews.first as? UIStackView else { return }
-        
-        // Find the last arranged subview (should be the inspection count label)
-        if let lastLabel = stackView.arrangedSubviews.last as? UILabel {
-            // Create a new label with updated count
-            let updatedLabel = createDetailLabel(
-                title: "Inspections:",
-                value: "\(inspections.count)"
-            )
-            
-            // Remove the old label and add the new one
-            stackView.removeArrangedSubview(lastLabel)
-            lastLabel.removeFromSuperview()
-            stackView.addArrangedSubview(updatedLabel)
+        setupCustomerInfoHeader()
+    }
+
+    private func trimmed(_ value: String?) -> String? {
+        let text = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return text.isEmpty ? nil : text
+    }
+
+    /// Street, city, state, and zip on one line. Empty parts are left out.
+    private func addressLine() -> String? {
+        let street = trimmed(customer.address) ?? ""
+        let city = trimmed(customer.city) ?? ""
+        let state = trimmed(customer.state) ?? ""
+        let zip = trimmed(customer.zipCode) ?? ""
+        var cityState = [city, state].filter { !$0.isEmpty }.joined(separator: ", ")
+        if !zip.isEmpty {
+            cityState = cityState.isEmpty ? zip : "\(cityState) \(zip)"
         }
+        let line = [street, cityState].filter { !$0.isEmpty }.joined(separator: ", ")
+        return line.isEmpty ? nil : line
     }
 
     private func updateEmptyState() {
@@ -345,24 +323,19 @@ class CustomerDetailsViewController: UIViewController {
     private func createDetailLabel(title: String, value: String) -> UILabel {
         let label = UILabel()
         label.numberOfLines = 0
+        label.adjustsFontForContentSizeCategory = true
         label.translatesAutoresizingMaskIntoConstraints = false
-        
-        let attributedString = NSMutableAttributedString()
-        
-        // Title (bold)
+
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.boldSystemFont(ofSize: 16),
-            .foregroundColor: UIColor.label
+            .font: AppTheme.fieldLabel(),
+            .foregroundColor: AppTheme.textSecondary
         ]
-        attributedString.append(NSAttributedString(string: title + " ", attributes: titleAttributes))
-        
-        // Value (regular)
         let valueAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 16),
-            .foregroundColor: UIColor.label
+            .font: AppTheme.font(.body),
+            .foregroundColor: AppTheme.textPrimary
         ]
+        let attributedString = NSMutableAttributedString(string: title + " ", attributes: titleAttributes)
         attributedString.append(NSAttributedString(string: value, attributes: valueAttributes))
-        
         label.attributedText = attributedString
         
         // Set content hugging and compression resistance priorities
@@ -387,38 +360,22 @@ class CustomerDetailsViewController: UIViewController {
             tableView.reloadData()
         }
         
-        let customerID = customer.objectID
-        
-        CoreDataManager.shared.performBackgroundTask { [weak self] context in
-            guard let self = self else { return }
+        let customer = self.customer
+        let viewContext = CoreDataManager.shared.context
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             do {
-                guard let bgCustomer = try? context.existingObject(with: customerID) as? Customer else {
-                    DispatchQueue.main.async {
-                        self.isLoadingInspections = false
-                        self.tableView.reloadData()
-                        self.updateInspectionCountInHeader()
-                        self.updateEmptyState()
-                    }
-                    return
-                }
-                let result = try fetchSessionInspections(for: bgCustomer, userId: currentUserID, in: context)
-                let objectIDs = result.map(\.objectID)
-                DispatchQueue.main.async {
-                    let mainContext = CoreDataManager.shared.context
-                    let mainResult = objectIDs.compactMap { try? mainContext.existingObject(with: $0) as? Inspection }
-                    self.isLoadingInspections = false
-                    self.inspections = mainResult
-                    self.tableView.reloadData()
-                    self.updateInspectionCountInHeader()
-                    self.updateEmptyState()
-                }
+                let result = try await sessionInspections(for: customer, userId: currentUserID, in: viewContext)
+                self.isLoadingInspections = false
+                self.inspections = result
+                self.tableView.reloadData()
+                self.updateInspectionCountInHeader()
+                self.updateEmptyState()
             } catch {
-                DispatchQueue.main.async {
-                    self.isLoadingInspections = false
-                    self.tableView.reloadData()
-                    self.updateInspectionCountInHeader()
-                    self.updateEmptyState()
-                }
+                self.isLoadingInspections = false
+                self.tableView.reloadData()
+                self.updateInspectionCountInHeader()
+                self.updateEmptyState()
             }
         }
     }
@@ -656,24 +613,16 @@ class InspectionDetailsViewController: UIViewController, UITableViewDataSource, 
             DispatchQueue.main.async { self.tableView.reloadData() }
             return
         }
-        let inspectionID = inspection.objectID
-        CoreDataManager.shared.performBackgroundTask { [weak self] context in
-            guard let self = self else { return }
+        let inspection = self.inspection
+        let viewContext = CoreDataManager.shared.context
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             do {
-                guard let bgInspection = try? context.existingObject(with: inspectionID) as? Inspection else {
-                    DispatchQueue.main.async { self.tableView.reloadData() }
-                    return
-                }
-                let result = try fetchSessionInspectionItems(for: bgInspection, userId: currentUserID, in: context)
-                let sorted = RecordedOrder.sorted(result) { $0.sequenceNumber }
-                let objectIDs = sorted.map(\.objectID)
-                DispatchQueue.main.async {
-                    let mainContext = CoreDataManager.shared.context
-                    self.inspectionItems = objectIDs.compactMap { try? mainContext.existingObject(with: $0) as? InspectionItem }
-                    self.tableView.reloadData()
-                }
+                let result = try await sessionInspectionItems(for: inspection, userId: currentUserID, in: viewContext)
+                self.inspectionItems = RecordedOrder.sorted(result) { $0.sequenceNumber }
+                self.tableView.reloadData()
             } catch {
-                DispatchQueue.main.async { self.tableView.reloadData() }
+                self.tableView.reloadData()
             }
         }
     }
@@ -823,6 +772,8 @@ class InspectionItemDetailViewController: UIViewController {
     private let inspectionItem: InspectionItem
     private let scrollView = UIScrollView()
     private let contentView = UIView()
+    private let detailStack = UIStackView()
+    private var didInstallChrome = false
     
     init(inspectionItem: InspectionItem) {
         self.inspectionItem = inspectionItem
@@ -835,111 +786,115 @@ class InspectionItemDetailViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
+        showItem()
     }
-    
-    private func setupUI() {
-        // Updated title to use new field format
-        let primaryLocation = inspectionItem.location ?? "N/A"
-        let secondaryLocation = inspectionItem.bayNumber ?? "N/A"
-        title = "\(primaryLocation) - \(secondaryLocation)"
+
+    private func installChrome() {
         view.backgroundColor = AppTheme.background
-        
-        // Add Edit button to navigation bar
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             title: "Edit",
             style: .plain,
             target: self,
             action: #selector(editButtonTapped)
         )
-        
-        // Setup scroll view
+
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
-        
+        detailStack.axis = .vertical
+        detailStack.spacing = 16
+        detailStack.translatesAutoresizingMaskIntoConstraints = false
+
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
-        
+        contentView.addSubview(detailStack)
+
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
+
             contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            detailStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            detailStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            detailStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            detailStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
-        
-        // Display inspection item details
-        let stackView = UIStackView()
-        stackView.axis = .vertical
-        stackView.spacing = 16
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        
-        contentView.addSubview(stackView)
-        
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
-        ])
-        
+        didInstallChrome = true
+    }
+
+    private func showItem() {
+        if !didInstallChrome {
+            installChrome()
+        }
+        let primaryLocation = inspectionItem.location ?? "N/A"
+        let secondaryLocation = inspectionItem.bayNumber ?? "N/A"
+        title = "\(primaryLocation) - \(secondaryLocation)"
+        detailStack.arrangedSubviews.forEach {
+            detailStack.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+
         // Add inspection details with updated labels
-        addDetailLabel(to: stackView, title: "Primary Location (Area/Aisle)", value: inspectionItem.location ?? "N/A")
-        addDetailLabel(to: stackView, title: "Secondary Location (Bay/Level)", value: inspectionItem.bayNumber ?? "N/A")
-        let importance = Importance(stored: inspectionItem.importance)
-        let mark = importance.isImmediate ? "􀇾" : "􀋭"
-        let importanceDisplay = "\(mark) \(importance.phrase)"
-        addDetailLabel(to: stackView, title: "Importance", value: importanceDisplay)
-           
-        // Add each component group
-        addSectionHeader(to: stackView, title: "Issues")
+        addDetailLabel(to: detailStack, title: "Primary Location (Area/Aisle)", value: inspectionItem.location ?? "N/A")
+        addDetailLabel(to: detailStack, title: "Secondary Location (Bay/Level)", value: inspectionItem.bayNumber ?? "N/A")
+        addImportanceRow(to: detailStack, importance: Importance(stored: inspectionItem.importance))
+
+        addSectionHeader(to: detailStack, title: "Issues")
             
         let issueStrings = Issue.labels(from: inspectionItem.recordedIssues())
         if issueStrings.isEmpty {
             let noIssuesLabel = UILabel()
             noIssuesLabel.text = "No issues recorded"
-            noIssuesLabel.font = UIFont.systemFont(ofSize: 16)
-            noIssuesLabel.textColor = .systemGray
-            stackView.addArrangedSubview(noIssuesLabel)
+            noIssuesLabel.font = AppTheme.font(.body)
+            noIssuesLabel.adjustsFontForContentSizeCategory = true
+            noIssuesLabel.textColor = AppTheme.textSecondary
+            detailStack.addArrangedSubview(noIssuesLabel)
         } else {
             for issueString in issueStrings {
                 let issueLabel = UILabel()
                 issueLabel.text = issueString
-                issueLabel.font = UIFont.systemFont(ofSize: 16)
+                issueLabel.font = AppTheme.font(.body)
+                issueLabel.adjustsFontForContentSizeCategory = true
+                issueLabel.textColor = AppTheme.textPrimary
                 issueLabel.numberOfLines = 0
-                stackView.addArrangedSubview(issueLabel)
+                detailStack.addArrangedSubview(issueLabel)
             }
         }
-        
-        // Add comments
+
         if let comments = inspectionItem.comments, !comments.isEmpty {
-            addSectionHeader(to: stackView, title: "Comments")
+            addSectionHeader(to: detailStack, title: "Comments")
             
             let commentsLabel = UILabel()
             commentsLabel.text = comments
             commentsLabel.numberOfLines = 0
-            commentsLabel.font = UIFont.systemFont(ofSize: 16)
+            commentsLabel.font = AppTheme.font(.body)
+            commentsLabel.adjustsFontForContentSizeCategory = true
+            commentsLabel.textColor = AppTheme.textPrimary
             
-            stackView.addArrangedSubview(commentsLabel)
+            detailStack.addArrangedSubview(commentsLabel)
         }
-        
+
         let photos = inspectionItem.photoBytes().compactMap { UIImage(data: $0) }
         if !photos.isEmpty {
-            addSectionHeader(to: stackView, title: photos.count == 1 ? "Photo" : "Photos")
+            addSectionHeader(to: detailStack, title: photos.count == 1 ? "Photo" : "Photos")
             let location = inspectionItem.location ?? "inspection item"
             for (index, photo) in photos.enumerated() {
                 let imageView = UIImageView(image: photo)
                 imageView.contentMode = .scaleAspectFit
+                imageView.layer.cornerRadius = 12
+                imageView.clipsToBounds = true
+                imageView.backgroundColor = AppTheme.surface
                 imageView.translatesAutoresizingMaskIntoConstraints = false
                 imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
                 imageView.isAccessibilityElement = true
                 imageView.accessibilityLabel = "Photo \(index + 1) of \(photos.count), \(location)"
-                stackView.addArrangedSubview(imageView)
+                detailStack.addArrangedSubview(imageView)
             }
         }
     }
@@ -971,13 +926,15 @@ class InspectionItemDetailViewController: UIViewController {
     
     private func addSectionHeader(to stackView: UIStackView, title: String) {
         let separator = UIView()
-        separator.backgroundColor = .lightGray
+        separator.backgroundColor = AppTheme.separator
         separator.translatesAutoresizingMaskIntoConstraints = false
         separator.heightAnchor.constraint(equalToConstant: 1).isActive = true
         
         let headerLabel = UILabel()
         headerLabel.text = title
-        headerLabel.font = UIFont.boldSystemFont(ofSize: 18)
+        headerLabel.font = AppTheme.fontBold(.headline)
+        headerLabel.adjustsFontForContentSizeCategory = true
+        headerLabel.textColor = AppTheme.textPrimary
         headerLabel.accessibilityTraits = .header
         
         stackView.addArrangedSubview(UIView()) // Add some space
@@ -985,6 +942,36 @@ class InspectionItemDetailViewController: UIViewController {
         stackView.addArrangedSubview(headerLabel)
     }
     
+    private func addImportanceRow(to stackView: UIStackView, importance: Importance) {
+        let titleLabel = UILabel()
+        titleLabel.text = "Importance"
+        titleLabel.font = .preferredFont(forTextStyle: .subheadline)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.textColor = .secondaryLabel
+        titleLabel.numberOfLines = 0
+
+        let symbolName = importance.isImmediate ? "exclamationmark.triangle.fill" : "eye.fill"
+        let icon = UIImageView(image: UIImage(systemName: symbolName))
+        icon.tintColor = importance.isImmediate ? AppTheme.attention : AppTheme.monitor
+        icon.setContentHuggingPriority(.required, for: .horizontal)
+        icon.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        let phrase = UILabel()
+        phrase.text = importance.phrase
+        phrase.font = AppTheme.font(.body)
+        phrase.adjustsFontForContentSizeCategory = true
+        phrase.textColor = importance.isImmediate ? AppTheme.attention : AppTheme.textPrimary
+        phrase.numberOfLines = 0
+
+        let row = UIStackView(arrangedSubviews: [icon, phrase])
+        row.axis = .horizontal
+        row.spacing = 8
+        row.alignment = .center
+
+        stackView.addArrangedSubview(titleLabel)
+        stackView.addArrangedSubview(row)
+    }
+
     private func addComponentGroup(to stackView: UIStackView, title: String, isChecked: Bool) {
         let container = UIView()
         
@@ -1020,10 +1007,7 @@ class InspectionItemDetailViewController: UIViewController {
 
 extension InspectionItemDetailViewController: InspectionItemFormDelegate {
     func didSaveInspectionItem() {
-        // Refresh the display with updated data
-        DispatchQueue.main.async {
-            self.setupUI() // This will update the title and content
-        }
+        showItem()
     }
 }
 

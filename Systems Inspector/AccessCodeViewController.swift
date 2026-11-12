@@ -63,24 +63,53 @@ final class AccessCodeViewController: UIViewController {
         view.backgroundColor = AppTheme.background
         title = "Access Code"
 
-        let stack = UIStackView(arrangedSubviews: [messageLabel, codeField, actionButton])
+        let stack = UIStackView(arrangedSubviews: [makeProductMark(), messageLabel, codeField, actionButton])
         stack.axis = .vertical
-        stack.spacing = 16
+        stack.spacing = AppTheme.spacing16
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
         view.addSubview(activityIndicator)
         actionButton.addTarget(self, action: #selector(actionTapped), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 40),
-            stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -40),
             stack.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+        ] + AppTheme.readableWidthConstraints(
+            for: stack,
+            width: view.safeAreaLayoutGuide.widthAnchor,
+            centerX: view.safeAreaLayoutGuide.centerXAnchor,
+            leading: view.safeAreaLayoutGuide.leadingAnchor,
+            trailing: view.safeAreaLayoutGuide.trailingAnchor,
+            margin: 40
+        ) + [
             codeField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
             actionButton.heightAnchor.constraint(equalToConstant: 50),
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            activityIndicator.topAnchor.constraint(equalTo: stack.bottomAnchor, constant: 24)
+            activityIndicator.topAnchor.constraint(equalTo: stack.bottomAnchor, constant: AppTheme.spacing24)
         ])
         apply(route)
+    }
+
+    private func makeProductMark() -> UIView {
+        let icon = UIImageView(image: UIImage(named: "LaunchIcon"))
+        icon.contentMode = .scaleAspectFit
+        icon.isAccessibilityElement = false
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        icon.widthAnchor.constraint(equalToConstant: 72).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: 72).isActive = true
+
+        let title = UILabel()
+        title.text = "Pallet Rack Safety"
+        title.font = AppTheme.fontBold(.largeTitle)
+        title.adjustsFontForContentSizeCategory = true
+        title.textAlignment = .center
+        title.numberOfLines = 0
+        title.textColor = AppTheme.textPrimary
+
+        let mark = UIStackView(arrangedSubviews: [icon, title])
+        mark.axis = .vertical
+        mark.alignment = .center
+        mark.spacing = AppTheme.spacing8
+        return mark
     }
 
     func apply(_ route: AccessRoute) {

@@ -120,7 +120,7 @@ final class SettingsUITests: XCTestCase {
             // Then: Should show result alert
             let alert = app.alerts.firstMatch
             XCTAssertTrue(alert.waitForExistence(timeout: 5))
-            XCTAssertTrue(alert.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Photos on disk were kept'")).firstMatch.exists)
+            XCTAssertTrue(alert.staticTexts.containing(NSPredicate(format: "label CONTAINS 'in-memory photo cache was cleared'")).firstMatch.exists)
             
             alert.buttons["OK"].tap()
         }

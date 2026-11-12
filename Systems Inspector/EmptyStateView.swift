@@ -48,7 +48,7 @@ final class EmptyStateView: UIView {
         button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.backgroundColor = AppTheme.primary
         button.setTitleColor(AppTheme.primaryContrast, for: .normal)
-        button.layer.cornerRadius = 10
+        button.layer.cornerRadius = AppTheme.buttonCornerRadius
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true
         return button

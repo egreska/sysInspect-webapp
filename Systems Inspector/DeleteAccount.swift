@@ -154,8 +154,8 @@ final class DeleteAccount {
 
     private func deleteRecords(in context: NSManagedObjectContext) -> Bool {
         let names = ["SiteDocument", "InspectionItem", "Inspection", "Customer", "CatalogName", "User"]
-        var deleted = false
-        context.performAndWait {
+        let outcome: (deleted: Bool, emails: [String]) = context.performAndWait {
+            var emails: [String] = []
             do {
                 let users = try context.fetch(NSFetchRequest<User>(entityName: "User"))
                 for user in users {
@@ -163,9 +163,7 @@ final class DeleteAccount {
                         UserManager.shared.secrets.delete(userId: id)
                     }
                     if let email = user.email?.lowercased() {
-                        defaults.removeObject(forKey: "securityQuestion_\(email)")
-                        defaults.removeObject(forKey: "securityAnswer_\(email)")
-                        defaults.removeObject(forKey: "securityAnswerSalt_\(email)")
+                        emails.append(email)
                     }
                 }
                 for name in names {
@@ -178,12 +176,17 @@ final class DeleteAccount {
                 if context.hasChanges {
                     try context.save()
                 }
-                deleted = true
+                return (true, emails)
             } catch {
-                deleted = false
+                return (false, emails)
             }
         }
-        return deleted
+        for email in outcome.emails {
+            defaults.removeObject(forKey: "securityQuestion_\(email)")
+            defaults.removeObject(forKey: "securityAnswer_\(email)")
+            defaults.removeObject(forKey: "securityAnswerSalt_\(email)")
+        }
+        return outcome.deleted
     }
 
     private func clearProfile(email: String?) {
@@ -198,11 +201,9 @@ final class DeleteAccount {
 
     private static func clearSharedImageCache() async {
         ImageCacheManager.shared.clearMemoryCache()
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            ImageCacheManager.shared.clearDiskCache {
-                continuation.resume()
-            }
-        }
+        let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ImageCache", isDirectory: true)
+        try? FileManager.default.removeItem(at: directory)
     }
 }
 

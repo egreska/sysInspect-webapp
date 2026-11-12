@@ -61,8 +61,8 @@ The iOS module at the seam between CustomerFormState and Customer, in both direc
 _Avoid_: mapper, AddCustomerViewController, EditCustomerViewController
 
 **Session**:
-The logged-in user's id on iOS, owned by UserManager. Entity `userId` attributes are data stamped from session, not session itself. Password writes (create, change, reset) go through UserManager. Screens do not read `currentUserEmail` or `isLoggedIn`. Wipe uses verify-without-login, not `authenticateUser`. Wipe ends Session through UserManager.
-_Avoid_: CoreDataManager.currentUserID, PasswordRecoveryManager hashing, duplicate PBKDF2, UserDefaults Session keys outside UserManager, LastUser
+The logged-in user's id on iOS, owned by UserManager. The Create Account button starts one. Entity `userId` attributes are data stamped from session, not session itself. Password writes (create, change, reset) go through UserManager. Screens do not read `currentUserEmail` or `isLoggedIn`. Wipe uses verify-without-login, not `authenticateUser`. Wipe ends Session through UserManager.
+_Avoid_: Account, CoreDataManager.currentUserID, PasswordRecoveryManager hashing, duplicate PBKDF2, UserDefaults Session keys outside UserManager, LastUser
 
 **Security Answer**:
 A secret that travels with the Session to the Inspector's other phones and resets its password. It is not an inspection record. The question text is only the prompt. A wrong guess counts toward that phone's email lock. A correct one ends that lock.
@@ -89,7 +89,7 @@ A credential issued for exactly one Inspector before any Claim. Whoever has the 
 _Avoid_: promo code, offer code, Apple redemption code, license key, company code, device license
 
 **Claim**:
-The binding of one Access Code to one Inspector. It follows the code. sessionReady records that a Session exists for that Claim. Until that record is updated, the Claim does not yet say so.
+The binding of one Access Code to one Inspector. It follows the code. sessionReady records that a Session exists for that Claim. A Session may already exist on this phone before that record is updated, and the Inspector still enters the app. Until that record is updated, the Claim does not yet say so.
 _Avoid_: redemption, login, registration, Session
 
 **Retired**:

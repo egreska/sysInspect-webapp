@@ -127,7 +127,7 @@ class ForgotPasswordViewController: UIViewController {
     private let cancelButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Cancel", for: .normal)
-        button.setTitleColor(AppTheme.secondary, for: .normal)
+        button.setTitleColor(AppTheme.primary, for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -276,14 +276,11 @@ class ForgotPasswordViewController: UIViewController {
             return
         }
         
-        if let locked = PasswordRecoveryManager.shared.lockMessage(for: email) {
-            showAlert(title: "Account Locked", message: locked)
-            return
-        }
-
-        switch PasswordRecoveryManager.shared.recoveryState(for: email) {
-        case .waiting:
-            showAlert(title: SessionSecretMessage.waitingTitle, message: SessionSecretMessage.waiting)
+        switch SessionOpening.live.recovery(for: email) {
+        case .locked(let message):
+            showAlert(title: "Account Locked", message: message)
+        case .waiting(let notice):
+            showAlert(title: notice.title, message: notice.message)
         case .question(let question):
             currentEmail = email
             securityQuestionLabel.text = question
@@ -293,11 +290,8 @@ class ForgotPasswordViewController: UIViewController {
                 self.checkEmailButton.alpha = 0.5
                 self.emailTextField.isEnabled = false
             }
-        case .unavailable:
-            showAlert(
-                title: "Security Question Not Set",
-                message: "This account doesn't have a security question set up. Please contact support or create a new account."
-            )
+        case .unavailable(let notice):
+            showAlert(title: notice.title, message: notice.message)
         }
     }
     
@@ -323,19 +317,12 @@ class ForgotPasswordViewController: UIViewController {
             showAlert(title: "Error", message: "Passwords do not match.")
             return
         }
-        
-        // Validate password strength
-        let validation = PasswordRecoveryManager.shared.validatePasswordStrength(newPassword)
-        guard validation.isValid else {
-            showAlert(title: "Weak Password", message: validation.message)
-            return
-        }
-        
+
         activityIndicator.startAnimating()
         
         Task { [weak self] in
-            let result = await PasswordRecoveryManager.shared.resetPassword(
-                for: email,
+            let result = await SessionOpening.live.reset(
+                email: email,
                 newPassword: newPassword,
                 securityAnswer: answer
             )
@@ -346,7 +333,7 @@ class ForgotPasswordViewController: UIViewController {
                 
                 if result.success {
                     let alert = UIAlertController(
-                        title: "Success",
+                        title: result.title,
                         message: result.message,
                         preferredStyle: .alert
                     )
@@ -355,7 +342,7 @@ class ForgotPasswordViewController: UIViewController {
                     })
                     self.present(alert, animated: true)
                 } else {
-                    self.showAlert(title: "Error", message: result.message)
+                    self.showAlert(title: result.title, message: result.message)
                 }
             }
         }

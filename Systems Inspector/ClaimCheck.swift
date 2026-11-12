@@ -97,11 +97,13 @@ final class ClaimCheck {
         return resolution.route
     }
 
-    func sessionExists() async {
-        guard var entitlement = cache.load() else { return }
-        guard await cloud.markSessionReady(code: entitlement.code) else { return }
+    @discardableResult
+    func sessionExists() async -> Bool {
+        guard var entitlement = cache.load() else { return false }
+        guard await cloud.markSessionReady(code: entitlement.code) else { return false }
         entitlement.sessionReady = true
         cache.save(entitlement)
+        return true
     }
 
     func routeForLogout() -> AccessRoute {

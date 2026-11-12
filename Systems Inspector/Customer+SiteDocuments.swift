@@ -11,6 +11,14 @@ extension Customer {
         case allowed
         case tooLarge
         case wrongType
+
+        var message: String? {
+            switch self {
+            case .allowed: return nil
+            case .tooLarge: return "Each file must be 10 MB or smaller."
+            case .wrongType: return "Use a photo or PDF."
+            }
+        }
     }
 
     static let maxSiteDocumentCount = 5

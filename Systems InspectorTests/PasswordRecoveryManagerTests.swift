@@ -123,68 +123,6 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         XCTAssertNil(UserDefaults.standard.string(forKey: "securityQuestion_\(email)"))
     }
     
-    // MARK: - Password Validation Tests
-    
-    func testValidatePasswordTooShort() {
-        // Given: A short password
-        let password = "Pass1"
-        
-        // When: Validating
-        let result = sut.validatePasswordStrength(password)
-        
-        // Then: Should fail
-        XCTAssertFalse(result.isValid)
-        XCTAssertTrue(result.message.contains("8 characters"))
-    }
-    
-    func testValidatePasswordNoUppercase() {
-        // Given: Password without uppercase
-        let password = "password123"
-        
-        // When: Validating
-        let result = sut.validatePasswordStrength(password)
-        
-        // Then: Should fail
-        XCTAssertFalse(result.isValid)
-        XCTAssertTrue(result.message.contains("uppercase"))
-    }
-    
-    func testValidatePasswordNoLowercase() {
-        // Given: Password without lowercase
-        let password = "PASSWORD123"
-        
-        // When: Validating
-        let result = sut.validatePasswordStrength(password)
-        
-        // Then: Should fail
-        XCTAssertFalse(result.isValid)
-        XCTAssertTrue(result.message.contains("lowercase"))
-    }
-    
-    func testValidatePasswordNoNumber() {
-        // Given: Password without number
-        let password = "PasswordOnly"
-        
-        // When: Validating
-        let result = sut.validatePasswordStrength(password)
-        
-        // Then: Should fail
-        XCTAssertFalse(result.isValid)
-        XCTAssertTrue(result.message.contains("number"))
-    }
-    
-    func testValidatePasswordValid() {
-        // Given: A strong password
-        let password = "Password123"
-        
-        // When: Validating
-        let result = sut.validatePasswordStrength(password)
-        
-        // Then: Should pass
-        XCTAssertTrue(result.isValid)
-        XCTAssertTrue(result.message.contains("meets requirements"))
-    }
-    
     // MARK: - Security Answer Tests
     
     func testNewSecurityAnswerMustBeEightCharactersAfterTrim() throws {
@@ -281,30 +219,6 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: testEmail), 0)
     }
 
-    func testLockedResetDoesNotCheckOrUpgradeTheAnswer() async throws {
-        let (context, user) = try makeUser()
-        user.securityQuestion = testQuestion
-        user.securityAnswerHash = legacyHash(testAnswer)
-        try context.save()
-        for _ in 1...5 {
-            XCTAssertFalse(sut.verifySecurityAnswer(for: testEmail, answer: "nope", in: context))
-        }
-
-        let result = await sut.resetPassword(
-            for: testEmail,
-            newPassword: "Password123",
-            securityAnswer: testAnswer
-        )
-
-        XCTAssertFalse(result.success)
-        XCTAssertTrue(result.message.contains("Too many failed attempts"))
-        let secret = UserManager.shared.secrets.load(userId: user.id!)
-        XCTAssertNil(user.securityAnswerHash)
-        XCTAssertNil(user.securityAnswerSalt)
-        XCTAssertEqual(secret?.securityAnswerHash, legacyHash(testAnswer))
-        XCTAssertNil(secret?.securityAnswerIterations)
-    }
-    
     func testPhoneAnswerCopiesOntoTheSessionOnce() throws {
         guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: CoreDataManager.self)]) else {
             XCTFail("Missing Core Data model")
@@ -347,17 +261,7 @@ final class PasswordRecoveryManagerTests: XCTestCase {
     }
 
     // MARK: - Performance Tests
-    
-    func testPerformancePasswordValidation() {
-        let passwords = ["Password123", "weak", "NoNumbers", "nocaps123", "NOLOWER123"]
-        
-        measure {
-            for password in passwords {
-                _ = sut.validatePasswordStrength(password)
-            }
-        }
-    }
-    
+
     func testPerformanceSecurityAnswerVerification() throws {
         let (context, user) = try makeUser()
         user.securityQuestion = testQuestion

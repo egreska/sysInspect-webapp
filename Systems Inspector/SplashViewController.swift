@@ -22,7 +22,9 @@ final class SplashViewController: UIViewController {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.text = "Pallet Rack Safety"
-        label.font = .boldSystemFont(ofSize: 32)
+        label.font = AppTheme.fontBold(.largeTitle)
+        label.adjustsFontForContentSizeCategory = true
+        label.numberOfLines = 0
         label.textAlignment = .center
         label.textColor = UIColor(named: "LaunchText") ?? AppTheme.primaryContrast
         label.translatesAutoresizingMaskIntoConstraints = false

@@ -70,22 +70,26 @@ class UserManager {
                     email: email,
                     password: password,
                     securityQuestion: securityQuestion,
-                    securityAnswer: securityAnswer
+                    securityAnswer: securityAnswer,
+                    in: self.coreDataManager.context
                 )
                 continuation.resume(returning: result)
             }
         }
     }
     
-    private func performUserCreation(
+    func performUserCreation(
         email: String,
         password: String,
         securityQuestion: String,
-        securityAnswer: String
+        securityAnswer: String,
+        in context: NSManagedObjectContext
     ) -> Bool {
-        let context = CoreDataManager.shared.context
-        if userExists(email: email) {
+        if userExists(email: email, in: context) {
             print("❌ Error creating user: User already exists with this email.")
+            return false
+        }
+        guard PasswordRecoveryManager.shared.validatePasswordStrength(password).isValid else {
             return false
         }
         let answer = SessionSecretRules.normalizedAnswer(securityAnswer)
@@ -191,18 +195,16 @@ class UserManager {
     
     // MARK: - User Queries
     func userExists(email: String) -> Bool {
-        // This method is called from UI before `waitForStoreToLoad` in `createUser`.
-        // It defensively returns false if stores aren't loaded, which is generally acceptable
-        // for an immediate UI check, as the `createUser` path will wait for store load.
         guard coreDataManager.isStoreLoaded else {
             print("CoreDataManager: Cannot check user existence - stores not loaded yet (UserManager.userExists)")
             return false
         }
-        
-        let context = CoreDataManager.shared.context
+        return userExists(email: email, in: CoreDataManager.shared.context)
+    }
+
+    func userExists(email: String, in context: NSManagedObjectContext) -> Bool {
         let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "email == %@", email.lowercased())
-        
         do {
             let count = try context.count(for: fetchRequest)
             return count > 0

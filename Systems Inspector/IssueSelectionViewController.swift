@@ -17,6 +17,22 @@ class IssueSelectionViewController: UIViewController {
     private let nodes = Issue.flattened()
     private var filtered: [Issue.Node] = []
     private let searchController = UISearchController(searchResultsController: nil)
+    private let emptyStateView: EmptyStateView = {
+        let view = EmptyStateView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    private lazy var emptyStateContainer: UIView = {
+        let container = UIView()
+        container.addSubview(emptyStateView)
+        NSLayoutConstraint.activate([
+            emptyStateView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
+            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32)
+        ])
+        return container
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -73,6 +89,20 @@ class IssueSelectionViewController: UIViewController {
         dismiss(animated: true)
     }
 
+    private func updateEmptyState() {
+        let query = searchController.searchBar.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard filtered.isEmpty, !query.isEmpty else {
+            tableView.backgroundView = nil
+            return
+        }
+        emptyStateView.configure(
+            symbolNames: ["magnifyingglass"],
+            title: "No matching issues",
+            message: "No issues match \"\(query)\"."
+        )
+        tableView.backgroundView = emptyStateContainer
+    }
+
     @objc private func doneTapped() {
         delegate?.didSelectIssues(selected)
         dismiss(animated: true)
@@ -88,10 +118,13 @@ extension IssueSelectionViewController: UITableViewDataSource, UITableViewDelega
         let node = filtered[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
         let level = max(node.path.segments.count - 1, 0)
-        let indentation = String(repeating: "    ", count: level)
         let isSelected = Issue.isDisplayedAsSelected(node.path, in: selected)
-        cell.textLabel?.text = indentation + node.path.name
+        cell.textLabel?.text = node.path.name
+        cell.indentationLevel = level
+        cell.indentationWidth = 16
+        cell.separatorInset = UIEdgeInsets(top: 0, left: 16 + CGFloat(level) * 16, bottom: 0, right: 0)
         cell.accessoryType = isSelected ? .checkmark : .none
+        cell.tintColor = AppTheme.primary
         cell.accessibilityLabel = node.path.name
         cell.accessibilityValue = isSelected ? "Selected" : "Not selected"
         return cell
@@ -100,6 +133,7 @@ extension IssueSelectionViewController: UITableViewDataSource, UITableViewDelega
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let node = filtered[indexPath.row]
         selected = Issue.toggling(node.path, in: selected)
+        HapticManager.lightImpact()
         tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -108,6 +142,7 @@ extension IssueSelectionViewController: UITableViewDataSource, UITableViewDelega
 extension IssueSelectionViewController: UISearchResultsUpdating {
     func updateSearchResults(for searchController: UISearchController) {
         filterNodes(for: searchController.searchBar.text)
+        updateEmptyState()
         tableView.reloadData()
     }
 }

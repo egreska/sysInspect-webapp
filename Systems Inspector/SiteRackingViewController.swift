@@ -11,10 +11,11 @@ import UIKit
 import UniformTypeIdentifiers
 
 final class SiteRackingViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIDocumentPickerDelegate, PHPickerViewControllerDelegate, QLPreviewControllerDataSource {
+    private let form: CustomerFormState
     private var racking: SiteRacking
     private var documents: [SiteDocumentFile]
     private let context: NSManagedObjectContext
-    private let onDone: (SiteRacking, [SiteDocumentFile]) -> Void
+    private let onDone: (CustomerFormState) -> Void
     private var previewURL: URL?
 
     private enum CardID: String {
@@ -35,13 +36,13 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     private var expandedCards: Set<CardID> = [.siteInformation]
 
     init(
-        siteRacking: SiteRacking,
-        siteDocuments: [SiteDocumentFile],
+        form: CustomerFormState,
         context: NSManagedObjectContext = CoreDataManager.shared.context,
-        onDone: @escaping (SiteRacking, [SiteDocumentFile]) -> Void
+        onDone: @escaping (CustomerFormState) -> Void
     ) {
-        self.racking = siteRacking
-        self.documents = siteDocuments
+        self.form = form
+        self.racking = form.siteRacking
+        self.documents = form.siteDocuments
         self.context = context
         self.onDone = onDone
         super.init(nibName: nil, bundle: nil)
@@ -345,7 +346,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         button.accessibilityHint = expanded ? "Collapses this section" : "Expands this section"
         button.accessibilityTraits.insert(.header)
         let icon = UIImageView(image: UIImage(systemName: symbolName))
-        icon.tintColor = AppTheme.secondary
+        icon.tintColor = AppTheme.primary
         icon.contentMode = .scaleAspectFit
         icon.translatesAutoresizingMaskIntoConstraints = false
         icon.widthAnchor.constraint(equalToConstant: 22).isActive = true
@@ -472,7 +473,7 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     private func documentTile(file: SiteDocumentFile, index: Int) -> UIView {
         let column = UIStackView()
         column.axis = .vertical
-        column.spacing = 4
+        column.spacing = AppTheme.spacing8
         column.alignment = .center
         let button = UIButton(type: .system)
         let kind = file.contentType == "public.pdf" ? "PDF" : "Photo"
@@ -894,11 +895,12 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
     }
 
     @objc private func doneTapped() {
-        if let message = racking.validationMessage() {
+        var committed = form
+        if let message = committed.commitSite(racking: racking, documents: documents) {
             presentAlert(message)
             return
         }
-        onDone(racking, documents)
+        onDone(committed)
         dismissOrPop()
     }
 
@@ -1004,15 +1006,13 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
 
     private func addDocument(data: Data, filename: String, contentType: String) {
         guard documents.count < Customer.maxSiteDocumentCount else { return }
-        switch Customer.acceptance(data: data, contentType: contentType) {
-        case .allowed:
-            documents.append(SiteDocumentFile(id: nil, filename: filename, contentType: contentType, data: data))
-            rebuild()
-        case .tooLarge:
-            presentAlert("Each file must be 10 MB or smaller.")
-        case .wrongType:
-            presentAlert("Use a photo or PDF.")
+        let acceptance = Customer.acceptance(data: data, contentType: contentType)
+        if let message = acceptance.message {
+            presentAlert(message)
+            return
         }
+        documents.append(SiteDocumentFile(id: nil, filename: filename, contentType: contentType, data: data))
+        rebuild()
     }
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {

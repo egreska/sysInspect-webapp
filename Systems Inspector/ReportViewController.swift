@@ -82,15 +82,15 @@ class ReportViewController: UIViewController {
         tableView.allowsMultipleSelection = true
         
         // Setup Filter Button
-        filterButton.setTitle("Filter", for: .normal)
+        configureChoiceButton(filterButton, title: "Filter", symbolName: "line.3.horizontal.decrease")
         filterButton.accessibilityLabel = "Filter"
         filterButton.addTarget(self, action: #selector(showFilterOptions), for: .touchUpInside)
         filterButton.translatesAutoresizingMaskIntoConstraints = false
         
         // Setup Sort Button
-        sortButton.setTitle("Sort By: Entry Order", for: .normal)
+        configureChoiceButton(sortButton, title: "Entry Order", symbolName: "arrow.up.arrow.down")
         sortButton.accessibilityLabel = "Sort"
-        sortButton.accessibilityValue = "Sort By: Entry Order"
+        sortButton.accessibilityValue = "Entry Order"
         sortButton.addTarget(self, action: #selector(showSortOptions), for: .touchUpInside)
         sortButton.translatesAutoresizingMaskIntoConstraints = false
         
@@ -104,12 +104,9 @@ class ReportViewController: UIViewController {
         generatePDFButton.translatesAutoresizingMaskIntoConstraints = false
         
         // Setup Generate CSV Button
-        generateCSVButton.setTitle("Generate CSV Report", for: .normal)
+        configureCSVButton()
         generateCSVButton.accessibilityLabel = "Generate CSV report"
         generateCSVButton.addTarget(self, action: #selector(generateCSVReport), for: .touchUpInside)
-        generateCSVButton.backgroundColor = AppTheme.primary
-        generateCSVButton.setTitleColor(AppTheme.primaryContrast, for: .normal)
-        generateCSVButton.layer.cornerRadius = 8
         generateCSVButton.translatesAutoresizingMaskIntoConstraints = false
         
         // Create button stack
@@ -412,7 +409,7 @@ class ReportViewController: UIViewController {
                 title: createSortTitle("As Entered (Original Order)", isItemLevel: true, isSelected: selectedSortCriteria == .entryOrder),
                 style: .default
             ) { [weak self] _ in
-                self?.updateSortCriteria(.entryOrder, title: "Sort By: Entry Order")
+                self?.updateSortCriteria(.entryOrder, title: "Entry Order")
             }
             alertController.addAction(entryOrderAction)
             
@@ -420,7 +417,7 @@ class ReportViewController: UIViewController {
                 title: createSortTitle("By Importance", isItemLevel: true, isSelected: selectedSortCriteria == .importance),
                 style: .default
             ) { [weak self] _ in
-                self?.updateSortCriteria(.importance, title: "Sort By: Importance")
+                self?.updateSortCriteria(.importance, title: "Importance")
             }
             alertController.addAction(importanceAction)
             
@@ -428,7 +425,7 @@ class ReportViewController: UIViewController {
                 title: createSortTitle("By Primary Location", isItemLevel: true, isSelected: selectedSortCriteria == .primaryLocation),
                 style: .default
             ) { [weak self] _ in
-                self?.updateSortCriteria(.primaryLocation, title: "Sort By: Primary Location")
+                self?.updateSortCriteria(.primaryLocation, title: "Primary Location")
             }
             alertController.addAction(primaryLocationAction)
             
@@ -436,7 +433,7 @@ class ReportViewController: UIViewController {
                 title: createSortTitle("By Issue Type", isItemLevel: true, isSelected: selectedSortCriteria == .issue),
                 style: .default
             ) { [weak self] _ in
-                self?.updateSortCriteria(.issue, title: "Sort By: Issue Type")
+                self?.updateSortCriteria(.issue, title: "Issue Type")
             }
             alertController.addAction(issueAction)
             
@@ -452,7 +449,7 @@ class ReportViewController: UIViewController {
                 title: createSortTitle("By Date", isItemLevel: false, isSelected: selectedSortCriteria == .date),
                 style: .default
             ) { [weak self] _ in
-                self?.updateSortCriteria(.date, title: "Sort By: Date")
+                self?.updateSortCriteria(.date, title: "Date")
             }
             alertController.addAction(dateAction)
             
@@ -460,7 +457,7 @@ class ReportViewController: UIViewController {
                 title: createSortTitle("By Customer", isItemLevel: false, isSelected: selectedSortCriteria == .customer),
                 style: .default
             ) { [weak self] _ in
-                self?.updateSortCriteria(.customer, title: "Sort By: Customer")
+                self?.updateSortCriteria(.customer, title: "Customer")
             }
             alertController.addAction(customerAction)
             
@@ -468,7 +465,7 @@ class ReportViewController: UIViewController {
                 title: createSortTitle("By Status", isItemLevel: false, isSelected: selectedSortCriteria == .inspectionStatus),
                 style: .default
             ) { [weak self] _ in
-                self?.updateSortCriteria(.inspectionStatus, title: "Sort By: Status")
+                self?.updateSortCriteria(.inspectionStatus, title: "Status")
             }
             alertController.addAction(statusAction)
             
@@ -502,10 +499,48 @@ class ReportViewController: UIViewController {
         
         private func updateSortCriteria(_ criteria: SortCriteria, title: String) {
             selectedSortCriteria = criteria
-            sortButton.setTitle(title, for: .normal)
+            configureChoiceButton(sortButton, title: title, symbolName: "arrow.up.arrow.down")
             sortButton.accessibilityLabel = "Sort"
             sortButton.accessibilityValue = title
             fetchInspections()
+        }
+
+        private func configureChoiceButton(_ button: UIButton, title: String, symbolName: String) {
+            var config = UIButton.Configuration.plain()
+            config.title = title
+            config.image = UIImage(systemName: symbolName)
+            config.imagePlacement = .leading
+            config.imagePadding = 6
+            config.baseForegroundColor = AppTheme.primary
+            config.background.backgroundColor = AppTheme.surface
+            config.background.cornerRadius = 8
+            config.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+            config.titleLineBreakMode = .byTruncatingTail
+            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+                var outgoing = incoming
+                outgoing.font = AppTheme.font(.subheadline)
+                return outgoing
+            }
+            button.configuration = config
+        }
+
+        private func configureCSVButton() {
+            var config = UIButton.Configuration.plain()
+            config.title = "Generate CSV Report"
+            config.image = UIImage(systemName: "square.and.arrow.up")
+            config.imagePadding = 6
+            config.baseForegroundColor = AppTheme.primary
+            config.background.backgroundColor = .clear
+            config.background.strokeColor = AppTheme.primary
+            config.background.strokeWidth = 1
+            config.background.cornerRadius = 8
+            config.titleLineBreakMode = .byTruncatingTail
+            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+                var outgoing = incoming
+                outgoing.font = AppTheme.fontMedium(.subheadline)
+                return outgoing
+            }
+            generateCSVButton.configuration = config
         }
         
         // MARK: - Report

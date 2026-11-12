@@ -80,7 +80,7 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate, UINa
             syncIndicatorView.accessibilityValue = "Synced"
         case .inProgress:
             syncIndicatorView.image = UIImage(systemName: "arrow.triangle.2.circlepath.icloud")
-            syncIndicatorView.tintColor = .systemBlue
+            syncIndicatorView.tintColor = AppTheme.primary
             syncIndicatorView.accessibilityValue = "Syncing"
         case .failed:
             syncIndicatorView.image = UIImage(systemName: "exclamationmark.icloud.fill")
@@ -262,9 +262,6 @@ class MainTabBarController: UITabBarController, UITabBarControllerDelegate, UINa
             let appearance = UINavigationBarAppearance()
             appearance.configureWithOpaqueBackground()
             appearance.backgroundColor = AppTheme.primary
-            if let gradientImage = AppTheme.navigationBarGradientImage() {
-                appearance.backgroundImage = gradientImage
-            }
             appearance.titleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
             appearance.largeTitleTextAttributes = [.foregroundColor: AppTheme.primaryContrast]
             

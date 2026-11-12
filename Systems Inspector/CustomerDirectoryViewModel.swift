@@ -53,40 +53,32 @@ class CustomerDirectoryViewModel {
         isLoadingMore = true
         if isFirstPage { isLoading = true }
         let page = currentPage
-        let offset = page * sessionCustomerPageSize
+        let viewContext = coreDataManager.context
         PerformanceOptimizer.shared.startTiming("fetchCustomers")
-        coreDataManager.performBackgroundTask { [weak self] context in
-            guard let self = self else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             do {
-                let fetched = try fetchSessionCustomers(.page(offset: offset), userId: currentUserID, in: context)
-                let objectIDs = fetched.customers.map(\.objectID)
-                let total = fetched.total ?? 0
-                DispatchQueue.main.async {
-                    let mainContext = self.coreDataManager.context
-                    let newCustomers = objectIDs.compactMap { try? mainContext.existingObject(with: $0) as? Customer }
-                    if page == 0 {
-                        self.customers = newCustomers
-                        self.originalCustomers = newCustomers
-                        self.currentPage = 1
-                    } else {
-                        self.customers.append(contentsOf: newCustomers)
-                        self.originalCustomers.append(contentsOf: newCustomers)
-                        self.currentPage += 1
-                    }
-                    self.totalCustomerCount = total
-                    self.hasMoreCustomers = self.customers.count < total
-                    self.isLoadingMore = false
-                    self.isLoading = false
-                    PerformanceOptimizer.shared.endTiming("fetchCustomers")
+                let fetched = try await sessionCustomerPage(page, userId: currentUserID, in: viewContext)
+                if page == 0 {
+                    self.customers = fetched.customers
+                    self.originalCustomers = fetched.customers
+                    self.currentPage = 1
+                } else {
+                    self.customers.append(contentsOf: fetched.customers)
+                    self.originalCustomers.append(contentsOf: fetched.customers)
+                    self.currentPage += 1
                 }
+                self.totalCustomerCount = fetched.total
+                self.hasMoreCustomers = self.customers.count < fetched.total
+                self.isLoadingMore = false
+                self.isLoading = false
+                PerformanceOptimizer.shared.endTiming("fetchCustomers")
             } catch {
-                DispatchQueue.main.async {
-                    self.isLoadingMore = false
-                    self.isLoading = false
-                    self.hasMoreCustomers = false
-                    PerformanceOptimizer.shared.endTiming("fetchCustomers")
-                    self.errorMessage = "Could not load customers. Pull down to try again."
-                }
+                self.isLoadingMore = false
+                self.isLoading = false
+                self.hasMoreCustomers = false
+                PerformanceOptimizer.shared.endTiming("fetchCustomers")
+                self.errorMessage = "Could not load customers. Pull down to try again."
             }
         }
     }

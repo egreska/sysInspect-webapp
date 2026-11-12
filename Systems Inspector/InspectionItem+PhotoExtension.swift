@@ -107,7 +107,8 @@ extension InspectionItem {
 
     func clearPhotoCache() {
         for index in 0..<Self.maxPhotoCount {
-            ImageCacheManager.shared.removeImage(forKey: getCacheKey(at: index))
+            guard let key = cacheKey(at: index) else { continue }
+            ImageCacheManager.shared.removeImage(forKey: key)
         }
     }
 
@@ -147,9 +148,13 @@ extension InspectionItem {
     }
 
     private func getPhotoThumbnail(at index: Int, maxDimension: CGFloat = 300, completion: @escaping (UIImage?) -> Void) {
-        let cacheKey = getCacheKey(at: index)
+        let key = cacheKey(at: index)
         if let data = photoData(at: index) {
-            ImageCacheManager.shared.getThumbnail(forKey: cacheKey, maxDimension: maxDimension, data: data) { completion($0) }
+            if let key {
+                ImageCacheManager.shared.getThumbnail(forKey: key, maxDimension: maxDimension, data: data, completion: completion)
+            } else {
+                ImageCacheManager.shared.uncachedThumbnail(from: data, maxDimension: maxDimension, completion: completion)
+            }
             return
         }
         if let photoPath = photoURLString(at: index), FileManager.default.fileExists(atPath: photoPath) {
@@ -158,8 +163,12 @@ extension InspectionItem {
                     DispatchQueue.main.async { completion(nil) }
                     return
                 }
-                ImageCacheManager.shared.cacheImage(localImage, forKey: cacheKey)
-                ImageCacheManager.shared.getThumbnail(forKey: cacheKey, maxDimension: maxDimension, data: nil) { completion($0) }
+                guard let key else {
+                    DispatchQueue.main.async { completion(localImage) }
+                    return
+                }
+                ImageCacheManager.shared.cacheImage(localImage, forKey: key)
+                ImageCacheManager.shared.getThumbnail(forKey: key, maxDimension: maxDimension, data: nil, completion: completion)
             }
         } else {
             completion(nil)
@@ -167,30 +176,35 @@ extension InspectionItem {
     }
 
     private func getPhotoSync(at index: Int) -> UIImage? {
-        let cacheKey = getCacheKey(at: index)
-        if let cachedImage = ImageCacheManager.shared.getImageFromMemory(forKey: cacheKey) {
+        let key = cacheKey(at: index)
+        if let key, let cachedImage = ImageCacheManager.shared.getImageFromMemory(forKey: key) {
             return cachedImage
         }
         if let data = photoData(at: index), let image = UIImage(data: data) {
-            ImageCacheManager.shared.cacheImage(image, forKey: cacheKey)
+            if let key {
+                ImageCacheManager.shared.cacheImage(image, forKey: key)
+            }
             return image
         }
         if let photoPath = photoURLString(at: index),
            FileManager.default.fileExists(atPath: photoPath),
            let image = UIImage(contentsOfFile: photoPath) {
-            ImageCacheManager.shared.cacheImage(image, forKey: cacheKey)
+            if let key {
+                ImageCacheManager.shared.cacheImage(image, forKey: key)
+            }
             return image
         }
         return nil
     }
 
-    private func getCacheKey(at index: Int) -> String {
+    /// Stable only when this item has an id, or a leftover file name. A missing identity is not cached.
+    private func cacheKey(at index: Int) -> String? {
         if let itemID = self.id?.uuidString {
             return "photo_\(itemID)_\(index)"
         }
         if let photoPath = photoURLString(at: index) {
             return "photo_\(URL(fileURLWithPath: photoPath).lastPathComponent)"
         }
-        return "photo_\(UUID().uuidString)"
+        return nil
     }
 }

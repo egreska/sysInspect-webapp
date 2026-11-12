@@ -110,7 +110,7 @@ class PasswordRecoveryManager {
         let manager = UserManager.shared
         manager.absorbSyncedSecrets(for: user, defaults: .standard, in: context)
         guard let secret = manager.secrets.load(userId: userId) else { return false }
-        guard let storedHash = secret.securityAnswerHash else {
+        guard secret.securityAnswerHash != nil else {
             AccountLockoutManager.shared.recordFailedAttempt(email: normalized)
             return false
         }
@@ -188,14 +188,38 @@ class PasswordRecoveryManager {
         newPassword: String,
         securityAnswer: String
     ) async -> (success: Bool, message: String) {
+        let ready = await withCheckedContinuation { continuation in
+            CoreDataManager.shared.waitForStoreToLoad { ready in
+                continuation.resume(returning: ready)
+            }
+        }
+        guard ready else { return (false, "Failed to reset password.") }
+        return resetPassword(
+            for: email,
+            newPassword: newPassword,
+            securityAnswer: securityAnswer,
+            in: loadedSharedContext()
+        )
+    }
+
+    func resetPassword(
+        for email: String,
+        newPassword: String,
+        securityAnswer: String,
+        in context: NSManagedObjectContext?
+    ) -> (success: Bool, message: String) {
         if let locked = lockMessage(for: email) {
             return (false, locked)
         }
 
-        if case .waiting = recoveryState(for: email) {
+        if case .waiting = recoveryState(for: email, in: context) {
             return (false, SessionSecretMessage.waiting)
         }
-        guard verifySecurityAnswer(for: email, answer: securityAnswer) else {
+        let strength = validatePasswordStrength(newPassword)
+        guard strength.isValid else {
+            return (false, strength.message)
+        }
+        guard verifySecurityAnswer(for: email, answer: securityAnswer, in: context) else {
             AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
             if let locked = lockMessage(for: email) {
                 return (false, locked)
@@ -203,8 +227,11 @@ class PasswordRecoveryManager {
             return (false, "Security answer is incorrect.")
         }
 
-        let replaced = await UserManager.shared.replacePassword(email: email, newPassword: newPassword)
-        guard replaced else {
+        guard let context, UserManager.shared.replacePassword(
+            email: email,
+            newPassword: newPassword,
+            in: context
+        ) else {
             return (false, "Failed to reset password.")
         }
 

@@ -49,9 +49,10 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
     private let exitButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Exit Inspection", for: .normal)
-        button.backgroundColor = AppTheme.destructive
-        button.setTitleColor(AppTheme.primaryContrast, for: .normal)
-        button.layer.cornerRadius = 8
+        button.setTitleColor(AppTheme.primary, for: .normal)
+        button.titleLabel?.font = AppTheme.fontMedium(.body)
+        button.titleLabel?.adjustsFontForContentSizeCategory = true
+        button.backgroundColor = .clear
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -71,7 +72,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
     private let stackView: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
-        stackView.spacing = 16
+        stackView.spacing = AppTheme.spacing16
         stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
@@ -110,14 +111,15 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let button = UIButton(type: .system)
         button.setTitle("Select Issue", for: .normal)
         button.backgroundColor = UIColor.systemGray6
-        button.setTitleColor(.systemBlue, for: .normal)
-        button.layer.cornerRadius = 8
+        button.setTitleColor(AppTheme.primary, for: .normal)
+        button.layer.cornerRadius = AppTheme.buttonCornerRadius
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.systemGray4.cgColor
         button.contentHorizontalAlignment = .left
         if #available(iOS 15.0, *) {
             var config = UIButton.Configuration.plain()
             config.title = "Select Issue"
+            config.baseForegroundColor = AppTheme.primary
             config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
             button.configuration = config
         } else {
@@ -139,10 +141,6 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
 
     private let importanceToggleButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.systemGray6
-        button.layer.cornerRadius = 8
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.systemGray4.cgColor
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -152,7 +150,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let textView = UITextView()
         textView.layer.borderWidth = 1
         textView.layer.borderColor = AppTheme.separator.cgColor
-        textView.layer.cornerRadius = 5
+        textView.layer.cornerRadius = AppTheme.buttonCornerRadius
         textView.font = AppTheme.font(.body)
         textView.adjustsFontForContentSizeCategory = true
         textView.translatesAutoresizingMaskIntoConstraints = false
@@ -163,7 +161,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
 
     private let cameraButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.systemBlue
+        button.backgroundColor = AppTheme.primary
         button.tintColor = AppTheme.primaryContrast
         button.layer.cornerRadius = 30
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -214,7 +212,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             primaryLocationErrorLabel.isHidden = false
             primaryLocationTextField.layer.borderWidth = 1
             primaryLocationTextField.layer.borderColor = AppTheme.destructive.cgColor
-            primaryLocationTextField.layer.cornerRadius = 6
+            primaryLocationTextField.layer.cornerRadius = AppTheme.buttonCornerRadius
             primaryLocationTextField.becomeFirstResponder()
             return nil
         }
@@ -298,10 +296,16 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: AppTheme.spacing16),
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -AppTheme.spacing16),
+        ] + AppTheme.readableWidthConstraints(
+            for: stackView,
+            width: contentView.widthAnchor,
+            centerX: contentView.centerXAnchor,
+            leading: contentView.leadingAnchor,
+            trailing: contentView.trailingAnchor,
+            margin: AppTheme.spacing16
+        ) + [
             commentsMinHeightConstraint()
         ])
         updateCommentsMinHeight()
@@ -490,7 +494,8 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let container = UIView()
         let label = UILabel()
         label.text = labelText
-        label.font = UIFont.boldSystemFont(ofSize: 16)
+        label.font = AppTheme.fieldLabel()
+        label.adjustsFontForContentSizeCategory = true
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
         container.addSubview(field)
@@ -505,7 +510,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         if let err = errorLabel {
             container.addSubview(err)
             constraints += [
-                err.topAnchor.constraint(equalTo: field.bottomAnchor, constant: 4),
+                err.topAnchor.constraint(equalTo: field.bottomAnchor, constant: AppTheme.spacing8),
                 err.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 err.trailingAnchor.constraint(equalTo: container.trailingAnchor),
                 err.bottomAnchor.constraint(equalTo: container.bottomAnchor)
@@ -521,7 +526,8 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let container = UIView()
         let label = UILabel()
         label.text = "Issue:"
-        label.font = UIFont.boldSystemFont(ofSize: 16)
+        label.font = AppTheme.fieldLabel()
+        label.adjustsFontForContentSizeCategory = true
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
         container.addSubview(issueDropdownButton)
@@ -547,7 +553,8 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         let container = UIView()
         let label = UILabel()
         label.text = "Importance:"
-        label.font = UIFont.boldSystemFont(ofSize: 16)
+        label.font = AppTheme.fieldLabel()
+        label.adjustsFontForContentSizeCategory = true
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
         container.addSubview(importanceToggleButton)
@@ -583,30 +590,46 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
     }
 
     private func updateImportanceToggleDisplay() {
-        let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        if form.importance.isImmediate {
-            importanceToggleButton.setImage(UIImage(systemName: "exclamationmark.triangle.fill", withConfiguration: configuration), for: .normal)
-            importanceToggleButton.setTitle("  \(form.importance.phrase)", for: .normal)
-            importanceToggleButton.tintColor = .systemRed
-            importanceToggleButton.setTitleColor(.systemRed, for: .normal)
-        } else {
-            importanceToggleButton.setImage(UIImage(systemName: "eye.fill", withConfiguration: configuration), for: .normal)
-            importanceToggleButton.setTitle("  \(form.importance.phrase)", for: .normal)
-            importanceToggleButton.tintColor = .systemYellow
-            importanceToggleButton.setTitleColor(.systemYellow, for: .normal)
-        }
-        importanceToggleButton.contentHorizontalAlignment = .left
-        if #available(iOS 15.0, *) {
-            var config = importanceToggleButton.configuration ?? UIButton.Configuration.plain()
-            config.imagePadding = 8
-            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 0)
-            importanceToggleButton.configuration = config
-        } else {
-            importanceToggleButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
-            importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
-        }
+        let urgent = form.importance.isImmediate
+        let stateColor = urgent ? AppTheme.attention : AppTheme.monitor
+        let titleColor = urgent ? AppTheme.attention : AppTheme.textPrimary
+        let symbolName = urgent ? "exclamationmark.triangle.fill" : "eye.fill"
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
+        let image = UIImage(systemName: symbolName, withConfiguration: symbolConfig)?
+            .withTintColor(stateColor, renderingMode: .alwaysOriginal)
+
         importanceToggleButton.accessibilityLabel = "Importance"
         importanceToggleButton.accessibilityValue = form.importance.phrase
+        importanceToggleButton.contentHorizontalAlignment = .left
+
+        if #available(iOS 15.0, *) {
+            var config = UIButton.Configuration.plain()
+            config.title = form.importance.phrase
+            config.image = image
+            config.imagePadding = 8
+            config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)
+            config.baseForegroundColor = titleColor
+            config.background.backgroundColor = stateColor.withAlphaComponent(0.15)
+            config.background.cornerRadius = 8
+            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+                var outgoing = incoming
+                outgoing.font = AppTheme.font(.body)
+                return outgoing
+            }
+            importanceToggleButton.configuration = config
+        } else {
+            importanceToggleButton.setImage(image, for: .normal)
+            importanceToggleButton.setTitle("  \(form.importance.phrase)", for: .normal)
+            importanceToggleButton.tintColor = stateColor
+            importanceToggleButton.setTitleColor(titleColor, for: .normal)
+            importanceToggleButton.backgroundColor = stateColor.withAlphaComponent(0.15)
+            importanceToggleButton.layer.cornerRadius = 8
+            importanceToggleButton.clipsToBounds = true
+            importanceToggleButton.titleLabel?.font = AppTheme.font(.body)
+            importanceToggleButton.titleLabel?.adjustsFontForContentSizeCategory = true
+            importanceToggleButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 0)
+            importanceToggleButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 0)
+        }
     }
 
     private func updateSelectedIssueDisplay() {
@@ -737,7 +760,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             })
             present(alert, animated: true)
         case .denied, .restricted:
-            showAlert(message: "Enable camera access in Settings to photograph inspection items.")
+            presentInspectionCameraSettingsAlert()
         @unknown default:
             showAlert(message: "Camera is not available")
         }
@@ -748,12 +771,26 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
             DispatchQueue.main.async {
                 guard let self else { return }
                 guard granted else {
-                    self.showAlert(message: "Enable camera access in Settings to photograph inspection items.")
+                    self.presentInspectionCameraSettingsAlert()
                     return
                 }
                 self.presentInspectionCamera()
             }
         }
+    }
+
+    private func presentInspectionCameraSettingsAlert() {
+        let alert = UIAlertController(
+            title: "Camera Access",
+            message: "Enable camera access in Settings to photograph this inspection item.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+            UIApplication.shared.open(url)
+        })
+        present(alert, animated: true)
     }
 
     private func presentInspectionCamera() {
