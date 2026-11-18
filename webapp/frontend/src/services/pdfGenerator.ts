@@ -1,7 +1,5 @@
 /**
- * Client-side PDF generator matching iOS app layout.
- * Landscape orientation with table columns:
- * Image | Primary Location | Importance | Issue | Comments
+ * Client-side PDF generator. Table columns and widths come from pdfTableLayout.
  */
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
@@ -9,6 +7,7 @@ import { importancePhrase, isImmediate } from '../importance';
 import type { Inspection, InspectionItem } from '../types';
 import { Issue } from '../issue';
 import { LIST_STOPPED_EARLY } from './load';
+import { resolvePdfTableLayout, secondaryLocationText, type PdfColumn } from './pdfTableLayout';
 
 const PAGE_WIDTH = 792;   // 11" landscape
 const PAGE_HEIGHT = 612;  // 8.5" landscape
@@ -19,9 +18,7 @@ const EXTRA_PHOTO_STRIP = 72;
 const HEADER_ROW_HEIGHT = 28;
 const FOOTER_HEIGHT = 30;
 
-const COL_WIDTHS = [60, 120, 72, 200, CONTENT_WIDTH - 60 - 120 - 72 - 200];
-
-function drawTableHeader(doc: jsPDF, y: number): number {
+function drawTableHeader(doc: jsPDF, y: number, columns: PdfColumn[]): number {
   doc.setFillColor(230, 230, 230);
   doc.rect(MARGIN, y, CONTENT_WIDTH, HEADER_ROW_HEIGHT, 'F');
 
@@ -29,16 +26,15 @@ function drawTableHeader(doc: jsPDF, y: number): number {
   doc.setFontSize(8);
   doc.setTextColor(0);
 
-  const headers = ['Image', 'Primary\nLocation', 'Importance', 'Issue', 'Comments'];
   let x = MARGIN;
-  for (let i = 0; i < headers.length; i++) {
-    const lines = headers[i].split('\n');
+  for (const column of columns) {
+    const lines = column.header.split('\n');
     const lineH = 10;
     const startY = y + (HEADER_ROW_HEIGHT - lines.length * lineH) / 2 + 8;
     lines.forEach((line, li) => {
-      doc.text(line, x + COL_WIDTHS[i] / 2, startY + li * lineH, { align: 'center' });
+      doc.text(line, x + column.width / 2, startY + li * lineH, { align: 'center' });
     });
-    x += COL_WIDTHS[i];
+    x += column.width;
   }
 
   doc.setDrawColor(0);
@@ -92,9 +88,59 @@ function itemRowHeight(item: InspectionItem): number {
   return ROW_HEIGHT + ((item.photoUrls?.length ?? 0) > 1 ? EXTRA_PHOTO_STRIP : 0);
 }
 
+function issueText(item: InspectionItem): string {
+  const labels = Issue.labels(item.issues);
+  return labels.length > 0 ? labels.join('\n') : 'No issues';
+}
+
+function drawWrappedCell(doc: jsPDF, text: string, x: number, y: number, width: number) {
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(0);
+  doc.text(wrapText(doc, text, width - 10).slice(0, 8), x + 5, y + 12);
+}
+
+function drawImportanceCell(doc: jsPDF, item: InspectionItem, x: number, y: number, width: number) {
+  doc.setFontSize(8);
+  if (isImmediate(item.importance)) {
+    doc.setTextColor(200, 0, 0);
+    doc.setFont('helvetica', 'bold');
+  } else {
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'normal');
+  }
+  doc.text(wrapText(doc, importancePhrase(item.importance), width - 10), x + 5, y + 14);
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'normal');
+}
+
+function drawImageCell(doc: jsPDF, src: string | undefined, x: number, y: number, width: number) {
+  if (src) {
+    try {
+      doc.addImage(src, 'JPEG', x + 5, y + 5, width - 10, ROW_HEIGHT - 10);
+      return;
+    } catch {
+      /* fall through to the missing-photo label */
+    }
+  }
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(150);
+  doc.text('No Photo', x + 5, y + ROW_HEIGHT / 2);
+  doc.setTextColor(0);
+}
+
 export async function generatePDF(inspection: Inspection): Promise<Blob> {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
   const items = inspection.items || [];
+  const columns = resolvePdfTableLayout(
+    items.map((item) => ({
+      photoCount: item.photoUrls?.length ?? 0,
+      bayNumber: item.bayNumber,
+      comments: item.comments,
+    })),
+    CONTENT_WIDTH
+  );
 
   // Pre-load all photo URLs as base64 for embedding in PDF
   const photoCache = new Map<string, string[]>();
@@ -147,7 +193,7 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
   y += 20;
 
   // --- Table ---
-  y = drawTableHeader(doc, y);
+  y = drawTableHeader(doc, y, columns);
 
   const maxBottomY = PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT;
 
@@ -172,7 +218,7 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
       doc.addPage();
       currentPage++;
       y = MARGIN;
-      y = drawTableHeader(doc, y);
+      y = drawTableHeader(doc, y, columns);
     }
 
     let x = MARGIN;
@@ -181,80 +227,41 @@ export async function generatePDF(inspection: Inspection): Promise<Blob> {
     doc.setDrawColor(200);
     doc.setLineWidth(0.3);
     let sepX = MARGIN;
-    for (let c = 0; c < COL_WIDTHS.length - 1; c++) {
-      sepX += COL_WIDTHS[c];
+    for (let c = 0; c < columns.length - 1; c++) {
+      sepX += columns[c].width;
       doc.line(sepX, y, sepX, y + ROW_HEIGHT);
     }
 
-    // Image column
-    const imgW = COL_WIDTHS[0];
     const cached = photoCache.get(item.id) || [];
-    const imgSrc = cached[0] || null;
-    if (imgSrc) {
-      try {
-        const maxImgW = imgW - 10;
-        const maxImgH = ROW_HEIGHT - 10;
-        doc.addImage(imgSrc, 'JPEG', x + 5, y + 5, maxImgW, maxImgH);
-      } catch {
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'italic');
-        doc.text('No Photo', x + 5, y + ROW_HEIGHT / 2);
+    for (const column of columns) {
+      switch (column.kind) {
+        case 'image':
+          drawImageCell(doc, cached[0], x, y, column.width);
+          break;
+        case 'primaryLocation':
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(0);
+          doc.text(wrapText(doc, item.location || 'N/A', column.width - 10), x + 5, y + 14);
+          break;
+        case 'secondaryLocation':
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(0);
+          doc.text(secondaryLocationText(item.bayNumber), x + 5, y + 14);
+          break;
+        case 'importance':
+          drawImportanceCell(doc, item, x, y, column.width);
+          break;
+        case 'issue':
+          drawWrappedCell(doc, issueText(item), x, y, column.width);
+          break;
+        case 'comments':
+          drawWrappedCell(doc, item.comments || '', x, y, column.width);
+          break;
       }
-    } else {
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(150);
-      doc.text('No Photo', x + 5, y + ROW_HEIGHT / 2);
-      doc.setTextColor(0);
+      x += column.width;
     }
-    x += imgW;
-
-    // Primary Location
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(0);
-    const locW = COL_WIDTHS[1] - 10;
-    const locLines = wrapText(doc, item.location || 'N/A', locW);
-    doc.text(locLines, x + 5, y + 14);
-    if (item.bayNumber) {
-      doc.setFontSize(7);
-      doc.setTextColor(100);
-      doc.text(`Bay: ${item.bayNumber}`, x + 5, y + 14 + locLines.length * 10 + 2);
-      doc.setTextColor(0);
-    }
-    x += COL_WIDTHS[1];
-
-    // Importance
-    const impW = COL_WIDTHS[2] - 10;
-    const impStr = importancePhrase(item.importance);
-    doc.setFontSize(8);
-    if (isImmediate(item.importance)) {
-      doc.setTextColor(200, 0, 0);
-      doc.setFont('helvetica', 'bold');
-    } else {
-      doc.setTextColor(0);
-      doc.setFont('helvetica', 'normal');
-    }
-    const impLines = wrapText(doc, impStr, impW);
-    doc.text(impLines, x + 5, y + 14);
-    doc.setTextColor(0);
-    doc.setFont('helvetica', 'normal');
-    x += COL_WIDTHS[2];
-
-    // Issue (hierarchical like iOS)
-    const issueW = COL_WIDTHS[3] - 10;
-    const issueStrings = Issue.labels(item.issues);
-    const issueText = issueStrings.length > 0 ? issueStrings.join('\n') : 'No issues';
-    doc.setFontSize(7);
-    const issueLines = wrapText(doc, issueText, issueW);
-    doc.text(issueLines.slice(0, 8), x + 5, y + 12);
-    x += COL_WIDTHS[3];
-
-    // Comments
-    const commentW = COL_WIDTHS[4] - 10;
-    doc.setFontSize(7);
-    const commentLines = wrapText(doc, item.comments || '', commentW);
-    doc.text(commentLines.slice(0, 8), x + 5, y + 12);
 
     // Row bottom border
     doc.setDrawColor(200);

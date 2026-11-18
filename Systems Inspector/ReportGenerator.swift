@@ -676,10 +676,10 @@ class ReportGenerator {
             return
         }
         let rects = PDFResolvedTableLayout.photoRects(count: photos.count, in: bounds)
+        let pixels = PDFResolvedTableLayout.photoPixelSize(in: bounds)
         var drew = false
         for (data, slot) in zip(photos, rects) {
-            let pixels = max(slot.width, slot.height)
-            guard let image = StoredPhoto.thumbnail(from: data, maxPixelSize: pixels) ?? UIImage(data: data) else {
+            guard let image = StoredPhoto.displayImage(from: data, maxPixelSize: pixels) else {
                 continue
             }
             drew = true
@@ -794,35 +794,33 @@ class ReportGenerator {
 
         var zipEntries: [(name: String, contents: Data)] = []
             
-        for inspection in inspections {
+        for sorted in sortedItems(from: inspections, sortCriteria: sortCriteria) {
+            let inspection = sorted.inspection
+            let item = sorted.item
             let customerName = inspection.customer?.name ?? "N/A"
             let customerAddress = inspection.customer?.address ?? "N/A"
             let inspectionDate = inspection.date ?? Date()
             let inspectorName = inspection.inspectorName ?? "N/A"
             let dateString = DateFormatters.format(inspectionDate, using: DateFormatters.dateTime)
-            let items = sortedItems(from: [inspection], sortCriteria: sortCriteria).map(\.item)
-
-            for item in items {
-                let primaryLocation = item.location.isEmpty ? "N/A" : item.location
-                let secondaryLocation = item.bayNumber ?? "N/A"
-                let phrase = item.importance.phrase
-                let importance = item.importance.isImmediate ? "▲ \(phrase)" : phrase
-                let issueStrings = Issue.labels(from: item.issues)
-                let issues = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "; ")
-                let comments = item.comments ?? ""
-                var photoNames: [String] = []
-                let itemID = item.id.uuidString
-                for (index, photoData) in item.photos.enumerated() {
-                    let uniquePhotoName = "photo_\(itemID)_\(index + 1).jpg"
-                    zipEntries.append((uniquePhotoName, photoData))
-                    photoNames.append(uniquePhotoName)
-                }
-                let photoFileName = photoNames.joined(separator: "; ")
-                let row = [customerName, customerAddress, dateString, inspectorName, primaryLocation, secondaryLocation, importance, issues, comments, photoFileName]
-                    .map { Self.escapeCSVField($0) }
-                    .joined(separator: ",")
-                csvString += row + "\n"
+            let primaryLocation = item.location.isEmpty ? "N/A" : item.location
+            let secondaryLocation = item.bayNumber ?? "N/A"
+            let phrase = item.importance.phrase
+            let importance = item.importance.isImmediate ? "▲ \(phrase)" : phrase
+            let issueStrings = Issue.labels(from: item.issues)
+            let issues = issueStrings.isEmpty ? "No issues" : issueStrings.joined(separator: "; ")
+            let comments = item.comments ?? ""
+            var photoNames: [String] = []
+            let itemID = item.id.uuidString
+            for (index, photoData) in item.photos.enumerated() {
+                let uniquePhotoName = "photo_\(itemID)_\(index + 1).jpg"
+                zipEntries.append((uniquePhotoName, photoData))
+                photoNames.append(uniquePhotoName)
             }
+            let photoFileName = photoNames.joined(separator: "; ")
+            let line = [customerName, customerAddress, dateString, inspectorName, primaryLocation, secondaryLocation, importance, issues, comments, photoFileName]
+                .map { Self.escapeCSVField($0) }
+                .joined(separator: ",")
+            csvString += line + "\n"
         }
 
         guard var csvData = csvString.data(using: .utf8) else {
@@ -857,19 +855,18 @@ class ReportGenerator {
     }
 
     private func sortedItems(from inspections: [ReportInspectionSnapshot], sortCriteria: SortCriteria? = nil) -> [SortedItem] {
-        let criteria = sortCriteria ?? .entryOrder
-        let ordered = inspections.sorted { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
-        switch criteria {
-        case .importance, .primaryLocation, .issue:
-            let items = ordered.flatMap { inspection in
-                inspection.items.map { SortedItem(inspection: inspection, item: $0) }
-            }
-            return sortItems(items, sortCriteria: criteria)
-        case .entryOrder, .date, .customer, .inspectionStatus:
-            return ordered.flatMap { inspection in
-                sortItems(inspection.items.map { SortedItem(inspection: inspection, item: $0) }, sortCriteria: .entryOrder)
-            }
-        }
+        ReportOrder.rows(
+            inspections,
+            by: sortCriteria ?? .entryOrder,
+            date: { $0.date },
+            customerName: { $0.customer?.name ?? "" },
+            items: { $0.items },
+            sequence: { $0.sequenceNumber },
+            importance: { $0.importance },
+            location: { $0.location },
+            bayNumber: { $0.bayNumber },
+            issues: { $0.issues }
+        ).map { SortedItem(inspection: $0.inspection, item: $0.item) }
     }
 
     private func layoutInputs(for items: [SortedItem], includeDate: Bool) -> [PDFItemLayoutInput] {
@@ -900,39 +897,6 @@ class ReportGenerator {
             return "Dates: \(DateFormatters.format(first, using: DateFormatters.long)) – \(DateFormatters.format(last, using: DateFormatters.long))"
         }
         return "Date: \(DateFormatters.format(first, using: DateFormatters.long))"
-    }
-
-    private func sortItems(_ items: [SortedItem], sortCriteria: SortCriteria) -> [SortedItem] {
-        switch sortCriteria {
-        case .importance:
-            return items.sorted { lhs, rhs in
-                if lhs.item.importance != rhs.item.importance {
-                    return lhs.item.importance < rhs.item.importance
-                }
-                return lhs.item.location < rhs.item.location
-            }
-        case .primaryLocation:
-            return items.sorted { lhs, rhs in
-                let result = lhs.item.location.compare(rhs.item.location, options: [.numeric, .caseInsensitive])
-                if result == .orderedSame {
-                    let bay1 = lhs.item.bayNumber ?? ""
-                    let bay2 = rhs.item.bayNumber ?? ""
-                    return bay1.compare(bay2, options: [.numeric, .caseInsensitive]) == .orderedAscending
-                }
-                return result == .orderedAscending
-            }
-        case .issue:
-            return items.sorted { lhs, rhs in
-                let issue1 = Issue.primaryParentLabel(from: lhs.item.issues)
-                let issue2 = Issue.primaryParentLabel(from: rhs.item.issues)
-                if issue1 == issue2 {
-                    return lhs.item.location < rhs.item.location
-                }
-                return issue1 < issue2
-            }
-        case .entryOrder, .date, .customer, .inspectionStatus:
-            return RecordedOrder.sorted(items) { $0.item.sequenceNumber }
-        }
     }
 
     /// Escapes a CSV field: wraps in quotes and doubles internal quotes (RFC 4180).

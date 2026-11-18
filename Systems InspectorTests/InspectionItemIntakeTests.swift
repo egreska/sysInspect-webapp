@@ -56,6 +56,14 @@ final class InspectionItemIntakeTests: XCTestCase {
         }
     }
 
+    private func entryBytes(for images: [UIImage]) -> [Data] {
+        images.compactMap { $0.jpegData(compressionQuality: 0.8) }
+    }
+
+    private func entered(_ images: [UIImage]) -> [InspectionItemFormState.Photo] {
+        zip(images, entryBytes(for: images)).map { InspectionItemFormState.Photo(image: $0.0, jpeg: $0.1) }
+    }
+
     func testCreateSetsSequenceIssuesAndPhotoData() {
         let inspection = makeInspection()
         let damage = Issue.Path(segments: ["Upright", "Front", "Damage"])
@@ -65,7 +73,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             importance: .needsImmediateAttention,
             comments: "Dented",
             issues: [damage],
-            photos: [pixelImage()],
+            photos: entered([pixelImage()]),
             photosChanged: true
         )
         let item = InspectionItemIntake.create(into: inspection, form: form, sequenceNumber: 7)
@@ -135,7 +143,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             into: inspection,
             form: InspectionItemFormState(
                 location: "D",
-                photos: [pixelImage()],
+                photos: entered([pixelImage()]),
                 photosChanged: true
             ),
             sequenceNumber: 1
@@ -160,7 +168,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             into: inspection,
             form: InspectionItemFormState(
                 location: "E",
-                photos: images,
+                photos: entered(images),
                 photosChanged: true
             ),
             sequenceNumber: 1
@@ -204,7 +212,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             into: inspection,
             form: InspectionItemFormState(
                 location: "F",
-                photos: [pixelImage(.red), pixelImage(.green), pixelImage(.blue)],
+                photos: entered([pixelImage(.red), pixelImage(.green), pixelImage(.blue)]),
                 photosChanged: true
             ),
             sequenceNumber: 1
@@ -214,7 +222,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             item,
             form: InspectionItemFormState(
                 location: "F",
-                photos: [pixelImage(.red), pixelImage(.blue)],
+                photos: entered([pixelImage(.red), pixelImage(.blue)]),
                 photosChanged: true
             )
         )
@@ -228,7 +236,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             into: inspection,
             form: InspectionItemFormState(
                 location: "G",
-                photos: [pixelImage(), pixelImage(.blue)],
+                photos: entered([pixelImage(), pixelImage(.blue)]),
                 photosChanged: true
             ),
             sequenceNumber: 1
@@ -249,7 +257,7 @@ final class InspectionItemIntakeTests: XCTestCase {
             into: inspection,
             form: InspectionItemFormState(
                 location: "H",
-                photos: [pixelImage()],
+                photos: entered([pixelImage()]),
                 photosChanged: false
             ),
             sequenceNumber: 1
@@ -287,7 +295,7 @@ final class InspectionItemIntakeTests: XCTestCase {
                 importance: .needsImmediateAttention,
                 comments: "Dented",
                 issues: [damage],
-                photos: [image],
+                photos: entered([image]),
                 photosChanged: true
             ),
             sequenceNumber: 1
@@ -302,6 +310,49 @@ final class InspectionItemIntakeTests: XCTestCase {
         XCTAssertTrue(form.issues.contains(damage))
         XCTAssertEqual(form.photos.count, 1)
         XCTAssertFalse(form.photosChanged)
+    }
+
+    func testHydrateCanSkipPhotoDecode() {
+        let inspection = makeInspection()
+        let item = InspectionItemIntake.create(
+            into: inspection,
+            form: InspectionItemFormState(
+                location: "Aisle",
+                photos: entered([pixelImage()]),
+                photosChanged: true
+            ),
+            sequenceNumber: 1
+        )
+        let form = InspectionItemIntake.formState(from: item, includingPhotos: false)
+        XCTAssertEqual(form.location, "Aisle")
+        XCTAssertTrue(form.photos.isEmpty)
+        XCTAssertFalse(form.photosChanged)
+    }
+
+    func testDecodedPhotosDropBytesThatAreNotImages() async throws {
+        let jpeg = try XCTUnwrap(pixelImage().jpegData(compressionQuality: 0.8))
+        let images = await InspectionItemIntake.decodedPhotos(from: [Data([0x01, 0x02]), jpeg])
+        XCTAssertEqual(images.count, 1)
+    }
+
+    func testUpdateWritesTheFormJPEG() throws {
+        let inspection = makeInspection()
+        let item = InspectionItemIntake.create(
+            into: inspection,
+            form: InspectionItemFormState(location: "A", photosChanged: false),
+            sequenceNumber: 1
+        )
+        let jpeg = try XCTUnwrap(pixelImage(.blue).jpegData(compressionQuality: 0.8))
+        InspectionItemIntake.update(
+            item,
+            form: InspectionItemFormState(
+                location: "B",
+                photos: [InspectionItemFormState.Photo(image: pixelImage(), jpeg: jpeg)],
+                photosChanged: true
+            )
+        )
+        XCTAssertEqual(item.location, "B")
+        XCTAssertEqual(item.photoBytes(), [jpeg])
     }
 
     func testHydrateSkipsABlobThatIsNotAnImage() throws {

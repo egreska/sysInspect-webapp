@@ -649,10 +649,18 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
-                ("Type", spec.type),
-                ("Height", spec.height),
-                ("Depth", spec.depth),
-                ("Capacity", spec.capacity)
+                ("Type", spec.type, { [weak self] text in
+                    self?.racking.uprights[index].type = Self.optionalText(text)
+                }),
+                ("Height", spec.height, { [weak self] text in
+                    self?.racking.uprights[index].height = Self.optionalText(text)
+                }),
+                ("Depth", spec.depth, { [weak self] text in
+                    self?.racking.uprights[index].depth = Self.optionalText(text)
+                }),
+                ("Capacity", spec.capacity, { [weak self] text in
+                    self?.racking.uprights[index].capacity = Self.optionalText(text)
+                })
             ],
             footerControl: constructionToggle(spec.construction) { [weak self] construction in
                 self?.racking.uprights[index].construction = construction
@@ -660,14 +668,6 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
             onManufacturer: { [weak self] name in
                 self?.racking.uprights[index].manufacturer = name
                 self?.replaceCard(.uprights)
-            },
-            onField: { [weak self] fieldIndex, text in
-                switch fieldIndex {
-                case 0: self?.racking.uprights[index].type = Self.optionalText(text)
-                case 1: self?.racking.uprights[index].height = Self.optionalText(text)
-                case 2: self?.racking.uprights[index].depth = Self.optionalText(text)
-                default: self?.racking.uprights[index].capacity = Self.optionalText(text)
-                }
             }
         )
     }
@@ -677,24 +677,25 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
-                ("Type", spec.type),
-                ("Length", spec.length),
-                ("Face", spec.face),
-                ("Step Dimensions", spec.stepDimensions),
-                ("Capacity", spec.capacity)
+                ("Type", spec.type, { [weak self] text in
+                    self?.racking.beams[index].type = Self.optionalText(text)
+                }),
+                ("Length", spec.length, { [weak self] text in
+                    self?.racking.beams[index].length = Self.optionalText(text)
+                }),
+                ("Face", spec.face, { [weak self] text in
+                    self?.racking.beams[index].face = Self.optionalText(text)
+                }),
+                ("Step Dimensions", spec.stepDimensions, { [weak self] text in
+                    self?.racking.beams[index].stepDimensions = Self.optionalText(text)
+                }),
+                ("Capacity", spec.capacity, { [weak self] text in
+                    self?.racking.beams[index].capacity = Self.optionalText(text)
+                })
             ],
             onManufacturer: { [weak self] name in
                 self?.racking.beams[index].manufacturer = name
                 self?.replaceCard(.beams)
-            },
-            onField: { [weak self] fieldIndex, text in
-                switch fieldIndex {
-                case 0: self?.racking.beams[index].type = Self.optionalText(text)
-                case 1: self?.racking.beams[index].length = Self.optionalText(text)
-                case 2: self?.racking.beams[index].face = Self.optionalText(text)
-                case 3: self?.racking.beams[index].stepDimensions = Self.optionalText(text)
-                default: self?.racking.beams[index].capacity = Self.optionalText(text)
-                }
             }
         )
     }
@@ -737,13 +738,14 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         let spec = racking.crossBars[index]
         return specCard(
             manufacturer: spec.manufacturer,
-            fields: [("Size", spec.size)],
+            fields: [
+                ("Size", spec.size, { [weak self] text in
+                    self?.racking.crossBars[index].size = Self.optionalText(text)
+                })
+            ],
             onManufacturer: { [weak self] name in
                 self?.racking.crossBars[index].manufacturer = name
                 self?.replaceCard(.crossBars)
-            },
-            onField: { [weak self] _, text in
-                self?.racking.crossBars[index].size = Self.optionalText(text)
             }
         )
     }
@@ -752,13 +754,14 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         let spec = racking.anchors[index]
         return specCard(
             manufacturer: spec.manufacturer,
-            fields: [("Size", spec.size)],
+            fields: [
+                ("Size", spec.size, { [weak self] text in
+                    self?.racking.anchors[index].size = Self.optionalText(text)
+                })
+            ],
             onManufacturer: { [weak self] name in
                 self?.racking.anchors[index].manufacturer = name
                 self?.replaceCard(.anchors)
-            },
-            onField: { [weak self] _, text in
-                self?.racking.anchors[index].size = Self.optionalText(text)
             }
         )
     }
@@ -768,19 +771,16 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         return specCard(
             manufacturer: spec.manufacturer,
             fields: [
-                ("Length", spec.length),
-                ("Width", spec.width)
+                ("Length", spec.length, { [weak self] text in
+                    self?.racking.rowSpacers[index].length = Self.optionalText(text)
+                }),
+                ("Width", spec.width, { [weak self] text in
+                    self?.racking.rowSpacers[index].width = Self.optionalText(text)
+                })
             ],
             onManufacturer: { [weak self] name in
                 self?.racking.rowSpacers[index].manufacturer = name
                 self?.replaceCard(.rowSpacers)
-            },
-            onField: { [weak self] fieldIndex, text in
-                if fieldIndex == 0 {
-                    self?.racking.rowSpacers[index].length = Self.optionalText(text)
-                } else {
-                    self?.racking.rowSpacers[index].width = Self.optionalText(text)
-                }
             }
         )
     }
@@ -819,11 +819,10 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
 
     private func specCard(
         manufacturer: String,
-        fields: [(String, String?)],
+        fields: [(String, String?, (String) -> Void)],
         extraControl: UIView? = nil,
         footerControl: UIView? = nil,
-        onManufacturer: @escaping (String) -> Void,
-        onField: @escaping (Int, String) -> Void
+        onManufacturer: @escaping (String) -> Void
     ) -> UIView {
         let card = UIStackView()
         card.axis = .vertical
@@ -837,18 +836,8 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         if let extraControl {
             card.addArrangedSubview(extraControl)
         }
-        for (fieldIndex, field) in fields.enumerated() {
-            let textField = UITextField()
-            textField.placeholder = field.0
-            textField.text = field.1
-            textField.borderStyle = .roundedRect
-            textField.font = AppTheme.font(.body)
-            textField.adjustsFontForContentSizeCategory = true
-            textField.heightAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
-            textField.addAction(UIAction { _ in
-                onField(fieldIndex, textField.text ?? "")
-            }, for: .editingChanged)
-            card.addArrangedSubview(textField)
+        for field in fields {
+            card.addArrangedSubview(textField(placeholder: field.0, text: field.1, onChange: field.2))
         }
         if let footerControl {
             card.addArrangedSubview(footerControl)
@@ -1043,23 +1032,31 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         present(picker, animated: true)
     }
 
-    private func addDocument(data: Data, filename: String, contentType: String) {
-        guard documents.count < Customer.maxSiteDocumentCount else { return }
-        let acceptance = Customer.acceptance(data: data, contentType: contentType)
-        if let message = acceptance.message {
-            presentAlert(message)
-            return
+    private func receive(_ entry: Customer.SiteDocumentEntry) {
+        switch entry {
+        case .document(let file):
+            documents.append(file)
+            replaceCard(.documents)
+        case .refused(let acceptance):
+            if let message = acceptance.message {
+                presentAlert(message)
+            }
+        case .unreadable, .full:
+            break
         }
-        documents.append(SiteDocumentFile(id: nil, filename: filename, contentType: contentType, data: data))
-        replaceCard(.documents)
     }
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
         picker.dismiss(animated: true)
         guard let image = info[.originalImage] as? UIImage else { return }
+        let count = documents.count
         Task { @MainActor in
-            guard let prepared = await StoredPhoto.prepared(from: image) else { return }
-            addDocument(data: prepared.jpeg, filename: "site-photo.jpg", contentType: "public.jpeg")
+            let entry = await Customer.siteDocumentEntry(
+                image: image,
+                filename: "site-photo.jpg",
+                existingCount: count
+            )
+            self.receive(entry)
         }
     }
 
@@ -1071,35 +1068,20 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         picker.dismiss(animated: true)
         guard let provider = results.first?.itemProvider else { return }
         if provider.hasItemConformingToTypeIdentifier(UTType.jpeg.identifier) {
-            provider.loadDataRepresentation(forTypeIdentifier: UTType.jpeg.identifier) { [weak self] data, _ in
-                guard let data,
-                      let stored = StoredPhoto.siteDocumentPhoto(
-                        data: data,
-                        contentType: "public.jpeg",
-                        filename: "site-photo.jpg"
-                      ) else { return }
-                DispatchQueue.main.async {
-                    self?.addDocument(data: stored.data, filename: stored.filename, contentType: stored.contentType)
-                }
-            }
+            loadLibraryFile(provider, type: .jpeg, filename: "site-photo.jpg")
         } else if provider.hasItemConformingToTypeIdentifier(UTType.png.identifier) {
-            provider.loadDataRepresentation(forTypeIdentifier: UTType.png.identifier) { [weak self] data, _ in
-                guard let data,
-                      let stored = StoredPhoto.siteDocumentPhoto(
-                        data: data,
-                        contentType: "public.png",
-                        filename: "site-photo.png"
-                      ) else { return }
-                DispatchQueue.main.async {
-                    self?.addDocument(data: stored.data, filename: stored.filename, contentType: stored.contentType)
-                }
-            }
+            loadLibraryFile(provider, type: .png, filename: "site-photo.png")
         } else if provider.canLoadObject(ofClass: UIImage.self) {
             provider.loadObject(ofClass: UIImage.self) { [weak self] object, _ in
-                guard let image = object as? UIImage,
-                      let jpeg = StoredPhoto.jpegData(from: image) else { return }
-                DispatchQueue.main.async {
-                    self?.addDocument(data: jpeg, filename: "site-photo.jpg", contentType: "public.jpeg")
+                guard let image = object as? UIImage else { return }
+                Task { @MainActor in
+                    guard let self else { return }
+                    let entry = await Customer.siteDocumentEntry(
+                        image: image,
+                        filename: "site-photo.jpg",
+                        existingCount: self.documents.count
+                    )
+                    self.receive(entry)
                 }
             }
         }
@@ -1116,13 +1098,32 @@ final class SiteRackingViewController: UIViewController, UIImagePickerController
         else if ext == "png" { type = "public.png" }
         else { type = "public.jpeg" }
         let filename = url.lastPathComponent
-        if type == "public.pdf" {
-            addDocument(data: data, filename: filename, contentType: type)
-            return
-        }
+        let count = documents.count
         Task { @MainActor in
-            guard let stored = await StoredPhoto.siteDocumentPhotoOffMain(data: data, contentType: type, filename: filename) else { return }
-            addDocument(data: stored.data, filename: stored.filename, contentType: stored.contentType)
+            let entry = await Customer.siteDocumentEntry(
+                data: data,
+                contentType: type,
+                filename: filename,
+                existingCount: count
+            )
+            self.receive(entry)
+        }
+    }
+
+    private func loadLibraryFile(_ provider: NSItemProvider, type: UTType, filename: String) {
+        let contentType = type == .png ? "public.png" : "public.jpeg"
+        provider.loadDataRepresentation(forTypeIdentifier: type.identifier) { [weak self] data, _ in
+            guard let data else { return }
+            Task { @MainActor in
+                guard let self else { return }
+                let entry = await Customer.siteDocumentEntry(
+                    data: data,
+                    contentType: contentType,
+                    filename: filename,
+                    existingCount: self.documents.count
+                )
+                self.receive(entry)
+            }
         }
     }
 

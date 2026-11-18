@@ -20,17 +20,22 @@ class CustomerDirectoryViewModel {
     private var isLoadingMore = false
     @Published var hasMoreCustomers = true
     private var totalCustomerCount = 0
+    private var listGeneration = 0
+    private var inspectionCounts: [NSManagedObjectID: Int] = [:]
     
     // MARK: - Public Methods
     
     /// Fetch initial page of customers
     func fetchCustomers() {
         errorMessage = nil
+        listGeneration += 1
         currentPage = 0
+        hasMoreCustomers = true
+        isLoadingMore = false
+        isLoading = true
+        inspectionCounts = [:]
         customers = []
         originalCustomers = []
-        hasMoreCustomers = true
-        isLoading = true
         fetchNextPage()
     }
     
@@ -53,11 +58,14 @@ class CustomerDirectoryViewModel {
         isLoadingMore = true
         if isFirstPage { isLoading = true }
         let page = currentPage
+        let generation = listGeneration
         let viewContext = coreDataManager.context
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 let fetched = try await sessionCustomerPage(page, userId: currentUserID, in: viewContext)
+                guard generation == self.listGeneration else { return }
+                self.recordInspectionCounts(for: fetched.customers, replacing: page == 0)
                 if page == 0 {
                     self.customers = fetched.customers
                     self.originalCustomers = fetched.customers
@@ -72,6 +80,7 @@ class CustomerDirectoryViewModel {
                 self.isLoadingMore = false
                 self.isLoading = false
             } catch {
+                guard generation == self.listGeneration else { return }
                 self.isLoadingMore = false
                 self.isLoading = false
                 self.hasMoreCustomers = false
@@ -97,17 +106,18 @@ class CustomerDirectoryViewModel {
         }
 
         if searchText.isEmpty {
-            // Reset to paginated view
             fetchCustomers()
             return
         }
-        
-        // Disable pagination during search
+
+        listGeneration += 1
+        isLoadingMore = false
         hasMoreCustomers = false
         
         do {
             errorMessage = nil
             let fetched = try fetchSessionCustomers(.search(searchText), userId: currentUserID, in: coreDataManager.context)
+            recordInspectionCounts(for: fetched.customers, replacing: true)
             customers = fetched.customers
             #if DEBUG
             print("🔍 Search returned \(customers.count) results")
@@ -131,6 +141,10 @@ class CustomerDirectoryViewModel {
         return customer
     }
     
+    func inspectionCount(for customer: Customer) -> Int {
+        inspectionCounts[customer.objectID] ?? 0
+    }
+
     /// Re-inserts a customer that was removed via removeCustomerFromList (undo).
     func restoreCustomer(_ customer: Customer) {
         if !customers.contains(where: { $0.objectID == customer.objectID }) {
@@ -138,6 +152,19 @@ class CustomerDirectoryViewModel {
             originalCustomers.append(customer)
             customers.sort { ($0.name ?? "") < ($1.name ?? "") }
             originalCustomers.sort { ($0.name ?? "") < ($1.name ?? "") }
+            recordInspectionCounts(for: [customer], replacing: false)
+        }
+    }
+
+    private func recordInspectionCounts(for customers: [Customer], replacing: Bool) {
+        guard let userId = UserManager.shared.sessionUserId else { return }
+        let counts = sessionInspectionCounts(for: customers, userId: userId, in: coreDataManager.context)
+        if replacing {
+            inspectionCounts = counts
+        } else {
+            for (id, count) in counts {
+                inspectionCounts[id] = count
+            }
         }
     }
     

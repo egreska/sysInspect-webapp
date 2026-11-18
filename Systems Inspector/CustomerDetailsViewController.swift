@@ -11,6 +11,7 @@ class CustomerDetailsViewController: UIViewController {
     
     private var customer: Customer
     private var inspections: [Inspection] = []
+    private var itemCounts: [NSManagedObjectID: Int] = [:]
     private var isLoadingInspections = false
     private static let skeletonRowCount = 4
     private let tableView = UITableView()
@@ -348,6 +349,7 @@ class CustomerDetailsViewController: UIViewController {
     private func fetchInspections() {
         guard let currentUserID = UserManager.shared.sessionUserId else {
             inspections = []
+            itemCounts = [:]
             DispatchQueue.main.async {
                 self.tableView.reloadData()
                 self.updateInspectionCountInHeader()
@@ -367,6 +369,7 @@ class CustomerDetailsViewController: UIViewController {
             do {
                 let result = try await sessionInspections(for: customer, userId: currentUserID, in: viewContext)
                 self.isLoadingInspections = false
+                self.itemCounts = sessionInspectionItemCounts(for: result, userId: currentUserID, in: viewContext)
                 self.inspections = result
                 self.tableView.reloadData()
                 self.updateInspectionCountInHeader()
@@ -404,13 +407,7 @@ extension CustomerDetailsViewController: UITableViewDataSource {
 
         cell.textLabel?.text = "Inspection on \(dateString)"
 
-        let itemCount: Int
-        if let userId = UserManager.shared.sessionUserId,
-           let context = inspection.managedObjectContext {
-            itemCount = (try? sessionInspectionItemCount(for: inspection, userId: userId, in: context)) ?? 0
-        } else {
-            itemCount = 0
-        }
+        let itemCount = itemCounts[inspection.objectID] ?? 0
         cell.detailTextLabel?.text = "\(itemCount) item\(itemCount == 1 ? "" : "s")"
 
         cell.accessoryType = .disclosureIndicator

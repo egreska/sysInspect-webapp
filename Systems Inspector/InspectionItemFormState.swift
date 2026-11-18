@@ -6,12 +6,18 @@
 import UIKit
 
 struct InspectionItemFormState {
+    /// The image and the JPEG from when that photo entered the form.
+    struct Photo {
+        var image: UIImage
+        var jpeg: Data
+    }
+
     var location: String = ""
     var bayNumber: String?
     var importance: Importance = .monitor
     var comments: String?
     var issues: Set<Issue.Path> = []
-    private(set) var photos: [UIImage] = []
+    private(set) var photos: [Photo] = []
     private(set) var photosChanged = false
 
     init(
@@ -20,7 +26,7 @@ struct InspectionItemFormState {
         importance: Importance = .monitor,
         comments: String? = nil,
         issues: Set<Issue.Path> = [],
-        photos: [UIImage] = [],
+        photos: [Photo] = [],
         photosChanged: Bool = false
     ) {
         self.location = location
@@ -56,10 +62,11 @@ struct InspectionItemFormState {
         importance = importance.toggled
     }
 
+    /// Stores the image and JPEG produced when the photo entered the form. Does not fit or encode again.
     @discardableResult
-    mutating func addPhoto(_ image: UIImage) -> Bool {
+    mutating func addPhoto(image: UIImage, jpeg: Data) -> Bool {
         guard photos.count < InspectionItem.maxPhotoCount else { return false }
-        photos.append(StoredPhoto.fitting(image))
+        photos.append(Photo(image: image, jpeg: jpeg))
         photosChanged = true
         return true
     }
@@ -68,6 +75,11 @@ struct InspectionItemFormState {
         guard photos.indices.contains(index) else { return }
         photos.remove(at: index)
         photosChanged = true
+    }
+
+    mutating func showStoredPhotos(_ stored: [(image: UIImage, jpeg: Data)]) {
+        guard !photosChanged else { return }
+        photos = stored.prefix(InspectionItem.maxPhotoCount).map { Photo(image: $0.image, jpeg: $0.jpeg) }
     }
 
     mutating func reset() {

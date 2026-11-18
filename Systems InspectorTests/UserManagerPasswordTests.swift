@@ -36,6 +36,7 @@ final class UserManagerPasswordTests: XCTestCase {
     }
 
     override func tearDown() {
+        UserManager.shared.use(secrets: KeychainSessionSecretStore())
         secrets = nil
         context = nil
         container = nil
@@ -47,185 +48,122 @@ final class UserManagerPasswordTests: XCTestCase {
         return secrets.load(userId: id)
     }
 
-    private func makeActiveUser(email: String, password: String) -> User {
+    private func makeActiveUser(email: String) -> User {
         let user = User(context: context)
         user.id = UUID()
         user.email = email.lowercased()
         user.isActive = true
-        UserManager.shared.applyPassword(password, to: user)
         return user
     }
 
-    func testApplyPasswordRoundTripsThroughVerify() {
-        let user = makeActiveUser(email: "roundtrip@example.com", password: "Secret1a")
+    func testReplacePasswordOffMainRoundTripsThroughCheckPassword() async {
+        let user = makeActiveUser(email: "roundtrip@example.com")
+        let wrote = await UserManager.shared.replacePasswordOffMain(
+            email: "roundtrip@example.com",
+            newPassword: "Secret1a",
+            in: context
+        )
+        XCTAssertTrue(wrote)
         let secret = storedSecret(for: user)
         XCTAssertNil(user.passwordHash)
         XCTAssertNil(user.passwordSalt)
         XCTAssertNotNil(secret?.passwordHash)
         XCTAssertNotNil(secret?.passwordSalt)
-        XCTAssertTrue(
-            UserManager.shared.verifyPasswordSecure(
-                "Secret1a",
-                hash: secret!.passwordHash!,
-                salt: secret!.passwordSalt!
-            )
-        )
-        XCTAssertFalse(
-            UserManager.shared.verifyPasswordSecure(
-                "Wrong1a",
-                hash: secret!.passwordHash!,
-                salt: secret!.passwordSalt!
-            )
-        )
+        let match = await UserManager.shared.checkPassword("Secret1a", forEmail: "roundtrip@example.com", in: context)
+        guard case .match = match else {
+            return XCTFail("Expected a match")
+        }
+        let miss = await UserManager.shared.checkPassword("Wrong1a", forEmail: "roundtrip@example.com", in: context)
+        guard case .mismatch = miss else {
+            return XCTFail("Expected a mismatch")
+        }
     }
 
-    func testReplacePasswordWritesHashThatVerifies() {
-        _ = makeActiveUser(email: "replace@example.com", password: "OldPass1")
-        XCTAssertTrue(
-            UserManager.shared.replacePassword(
-                email: "replace@example.com",
-                newPassword: "NewPass1",
-                in: context
-            )
+    func testReplacePasswordOffMainReplacesTheHash() async {
+        _ = makeActiveUser(email: "replace@example.com")
+        let first = await UserManager.shared.replacePasswordOffMain(
+            email: "replace@example.com",
+            newPassword: "OldPass1",
+            in: context
         )
-        let request: NSFetchRequest<User> = User.fetchRequest()
-        request.predicate = NSPredicate(format: "email == %@", "replace@example.com")
-        let user = try? context.fetch(request).first
-        let secret = user.flatMap { storedSecret(for: $0) }
-        XCTAssertNil(user?.passwordHash)
-        XCTAssertNotNil(secret?.passwordSalt)
-        XCTAssertTrue(
-            UserManager.shared.verifyPasswordSecure(
-                "NewPass1",
-                hash: secret!.passwordHash!,
-                salt: secret!.passwordSalt!
-            )
+        XCTAssertTrue(first)
+        let second = await UserManager.shared.replacePasswordOffMain(
+            email: "replace@example.com",
+            newPassword: "NewPass1",
+            in: context
         )
-        XCTAssertFalse(
-            UserManager.shared.verifyPasswordSecure(
-                "OldPass1",
-                hash: secret!.passwordHash!,
-                salt: secret!.passwordSalt!
-            )
-        )
+        XCTAssertTrue(second)
+        let match = await UserManager.shared.checkPassword("NewPass1", forEmail: "replace@example.com", in: context)
+        guard case .match = match else {
+            return XCTFail("Expected the new password to match")
+        }
+        let old = await UserManager.shared.checkPassword("OldPass1", forEmail: "replace@example.com", in: context)
+        guard case .mismatch = old else {
+            return XCTFail("Expected the old password to miss")
+        }
     }
 
-    func testReplacePasswordFailsForInactiveUser() {
-        let user = makeActiveUser(email: "inactive@example.com", password: "Secret1a")
+    func testReplacePasswordOffMainFailsForInactiveUser() async {
+        let user = makeActiveUser(email: "inactive@example.com")
+        let first = await UserManager.shared.replacePasswordOffMain(
+            email: "inactive@example.com",
+            newPassword: "Secret1a",
+            in: context
+        )
+        XCTAssertTrue(first)
+        let before = storedSecret(for: user)?.passwordHash
         user.isActive = false
-        XCTAssertFalse(
-            UserManager.shared.replacePassword(
-                email: "inactive@example.com",
-                newPassword: "NewPass1",
-                in: context
-            )
+        let second = await UserManager.shared.replacePasswordOffMain(
+            email: "inactive@example.com",
+            newPassword: "NewPass1",
+            in: context
         )
+        XCTAssertFalse(second)
+        XCTAssertEqual(storedSecret(for: user)?.passwordHash, before)
     }
 
-    func testChangePasswordFailsOnWrongOldPassword() {
-        _ = makeActiveUser(email: "change@example.com", password: "OldPass1")
-        XCTAssertFalse(
-            UserManager.shared.changePassword(
-                email: "change@example.com",
-                oldPassword: "Wrong1a",
-                newPassword: "NewPass1",
-                in: context
-            )
+    func testCheckPasswordDoesNotChangeTheSession() async {
+        _ = makeActiveUser(email: "wipe@example.com")
+        let wrote = await UserManager.shared.replacePasswordOffMain(
+            email: "wipe@example.com",
+            newPassword: "Secret1a",
+            in: context
         )
-        let request: NSFetchRequest<User> = User.fetchRequest()
-        request.predicate = NSPredicate(format: "email == %@", "change@example.com")
-        let user = try? context.fetch(request).first
-        let secret = user.flatMap { storedSecret(for: $0) }
-        XCTAssertTrue(
-            UserManager.shared.verifyPasswordSecure(
-                "OldPass1",
-                hash: secret!.passwordHash!,
-                salt: secret!.passwordSalt!
-            )
-        )
-    }
-
-    func testChangePasswordSucceedsOnCorrectOldPassword() {
-        _ = makeActiveUser(email: "changeok@example.com", password: "OldPass1")
-        XCTAssertTrue(
-            UserManager.shared.changePassword(
-                email: "changeok@example.com",
-                oldPassword: "OldPass1",
-                newPassword: "NewPass1",
-                in: context
-            )
-        )
-        let request: NSFetchRequest<User> = User.fetchRequest()
-        request.predicate = NSPredicate(format: "email == %@", "changeok@example.com")
-        let user = try? context.fetch(request).first
-        let secret = user.flatMap { storedSecret(for: $0) }
-        XCTAssertTrue(
-            UserManager.shared.verifyPasswordSecure(
-                "NewPass1",
-                hash: secret!.passwordHash!,
-                salt: secret!.passwordSalt!
-            )
-        )
-    }
-
-    func testVerifyPasswordSucceedsWithoutChangingSession() {
-        _ = makeActiveUser(email: "wipe@example.com", password: "Secret1a")
+        XCTAssertTrue(wrote)
         let previousID = UserManager.shared.sessionUserId
-        XCTAssertTrue(
-            UserManager.shared.verifyPassword(
-                "Secret1a",
-                forEmail: "wipe@example.com",
-                in: context
-            )
-        )
+        let match = await UserManager.shared.checkPassword("Secret1a", forEmail: "wipe@example.com", in: context)
+        guard case .match = match else {
+            return XCTFail("Expected a match")
+        }
+        XCTAssertEqual(UserManager.shared.sessionUserId, previousID)
+        let miss = await UserManager.shared.checkPassword("Wrong1a", forEmail: "wipefail@example.com", in: context)
+        guard case .absent = miss else {
+            return XCTFail("Expected an absent user")
+        }
         XCTAssertEqual(UserManager.shared.sessionUserId, previousID)
     }
 
-    func testVerifyPasswordFailsWithoutChangingSession() {
-        _ = makeActiveUser(email: "wipefail@example.com", password: "Secret1a")
-        let previousID = UserManager.shared.sessionUserId
-        XCTAssertFalse(
-            UserManager.shared.verifyPassword(
-                "Wrong1a",
-                forEmail: "wipefail@example.com",
-                in: context
-            )
-        )
-        XCTAssertEqual(UserManager.shared.sessionUserId, previousID)
-    }
-
-    func testLegacySyncedHashMovesIntoTheSecretAndUpgradesOnMatch() {
-        let user = User(context: context)
-        user.id = UUID()
-        user.email = "legacy@example.com"
-        user.isActive = true
+    func testLegacySyncedHashMovesIntoTheSecretAndUpgradesOnMatch() async {
+        let user = makeActiveUser(email: "legacy@example.com")
         let hashed = SHA256.hash(data: Data("Secret1a".utf8))
         user.passwordHash = hashed.compactMap { String(format: "%02x", $0) }.joined()
 
-        XCTAssertEqual(
-            UserManager.shared.passwordAvailability(forEmail: "legacy@example.com", in: context),
-            .ready
-        )
-        XCTAssertNil(user.passwordHash)
-        XCTAssertTrue(
-            UserManager.shared.verifyPassword("Secret1a", forEmail: "legacy@example.com", in: context)
-        )
+        let match = await UserManager.shared.checkPassword("Secret1a", forEmail: "legacy@example.com", in: context)
+        guard case .match = match else {
+            return XCTFail("Expected a match")
+        }
         let secret = storedSecret(for: user)
         XCTAssertEqual(secret?.passwordIterations, SessionSecretRules.iterations)
         XCTAssertNotNil(secret?.passwordSalt)
         XCTAssertNil(user.passwordHash)
     }
 
-    func testMissingSecretWaitsAndDoesNotCountAsAWrongPassword() {
-        let user = User(context: context)
-        user.id = UUID()
-        user.email = "wait@example.com"
-        user.isActive = true
-
-        XCTAssertEqual(
-            UserManager.shared.passwordAvailability(forEmail: "wait@example.com", in: context),
-            .waiting
-        )
+    func testMissingSecretWaitsAndDoesNotCountAsAWrongPassword() async {
+        _ = makeActiveUser(email: "wait@example.com")
+        let outcome = await UserManager.shared.checkPassword("Secret1a", forEmail: "wait@example.com", in: context)
+        guard case .waiting = outcome else {
+            return XCTFail("Expected waiting")
+        }
         XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: "wait@example.com"), 0)
     }
 

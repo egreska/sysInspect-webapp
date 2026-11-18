@@ -174,21 +174,299 @@ final class SessionOpeningTests: XCTestCase {
         user.isActive = true
         try context.save()
         for _ in 1...5 {
-            XCTAssertFalse(PasswordRecoveryManager.shared.verifySecurityAnswer(
-                for: email,
-                answer: "nope",
-                in: context
-            ))
+            let miss = await opening.reset(email: email, newPassword: password, securityAnswer: "nope")
+            XCTAssertFalse(miss.success)
         }
 
         let result = await opening.reset(email: email, newPassword: password, securityAnswer: "Fluffy")
         XCTAssertFalse(result.success)
+        XCTAssertEqual(result.title, "Account Locked")
         XCTAssertTrue(result.message.contains("Too many failed attempts"))
         let secret = UserManager.shared.secrets.load(userId: user.id!)
         XCTAssertNil(user.securityAnswerHash)
         XCTAssertNil(user.securityAnswerSalt)
         XCTAssertEqual(secret?.securityAnswerHash, legacyHash("Fluffy"))
         XCTAssertNil(secret?.securityAnswerIterations)
+    }
+
+    func testLoginStartsTheSessionAndClearsTheCount() async throws {
+        let email = freshEmail("login")
+        let (context, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+        UserManager.shared.clearSession()
+
+        let miss = await opening.login(email: email, password: "WrongPass1")
+        guard case .refused(let refused) = miss else {
+            return XCTFail("Expected a refusal")
+        }
+        XCTAssertEqual(refused.title, "Login Failed")
+        XCTAssertTrue(refused.message.contains("4 attempts remaining"))
+        XCTAssertNil(UserManager.shared.sessionUserId)
+
+        let started = await opening.login(email: email, password: password)
+        guard case .started = started else {
+            return XCTFail("Expected the Session to start")
+        }
+        let user = try XCTUnwrap(fetchUser(email, in: context))
+        XCTAssertEqual(UserManager.shared.sessionUserId, user.id)
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 0)
+    }
+
+    func testUnknownEmailCountsAsALoginMiss() async throws {
+        let email = freshEmail("missing")
+        let (_, opening) = try makeOpening()
+        let outcome = await opening.login(email: email, password: password)
+        guard case .refused(let notice) = outcome else {
+            return XCTFail("Expected a refusal")
+        }
+        XCTAssertEqual(notice.title, "Login Failed")
+        XCTAssertTrue(notice.message.contains("4 attempts remaining"))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 1)
+        XCTAssertNil(UserManager.shared.sessionUserId)
+    }
+
+    func testFifthLoginMissLocksAndALaterPasswordDoesNotClearIt() async throws {
+        let email = freshEmail("lock-login")
+        defer { AccountLockoutManager.shared.manuallyUnlock(email: email) }
+        let (context, opening) = try makeOpening()
+        let user = User(context: context)
+        user.id = UUID()
+        user.email = email
+        user.isActive = true
+        let legacy = SHA256.hash(data: Data(password.utf8)).compactMap { String(format: "%02x", $0) }.joined()
+        user.passwordHash = legacy
+        try context.save()
+
+        for index in 1...4 {
+            let miss = await opening.login(email: email, password: "WrongPass1")
+            guard case .refused = miss else {
+                return XCTFail("Miss \(index) should be a refusal")
+            }
+        }
+        let locking = await opening.login(email: email, password: "WrongPass1")
+        guard case .locked(let locked) = locking else {
+            return XCTFail("The fifth miss should lock")
+        }
+        XCTAssertEqual(locked.title, "Account Locked")
+        XCTAssertTrue(locked.message.hasPrefix("Too many failed attempts. Try again in"))
+
+        let ignored = await opening.login(email: email, password: password)
+        guard case .locked = ignored else {
+            return XCTFail("A locked email stays locked")
+        }
+        XCTAssertNil(UserManager.shared.sessionUserId)
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 5)
+        let secret = UserManager.shared.secrets.load(userId: user.id!)
+        XCTAssertEqual(secret?.passwordHash, legacy)
+        XCTAssertNil(secret?.passwordIterations)
+    }
+
+    func testLoginWaitingDoesNotCount() async throws {
+        let email = freshEmail("login-wait")
+        let (context, opening) = try makeOpening()
+        let user = User(context: context)
+        user.id = UUID()
+        user.email = email
+        user.isActive = true
+        try context.save()
+
+        let outcome = await opening.login(email: email, password: password)
+        guard case .waiting(let notice) = outcome else {
+            return XCTFail("Expected waiting")
+        }
+        XCTAssertEqual(notice, SessionOpening.waitingNotice)
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 0)
+        XCTAssertNil(UserManager.shared.sessionUserId)
+    }
+
+    func testFourLoginMissesAndOneWrongAnswerLock() async throws {
+        let email = freshEmail("mix-login")
+        defer { AccountLockoutManager.shared.manuallyUnlock(email: email) }
+        let (_, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+        UserManager.shared.clearSession()
+
+        for index in 1...4 {
+            let miss = await opening.login(email: email, password: "WrongPass1")
+            guard case .refused = miss else {
+                return XCTFail("Login miss \(index) should be a refusal")
+            }
+        }
+        let locking = await opening.reset(email: email, newPassword: password, securityAnswer: "not-the-answer")
+        XCTAssertFalse(locking.success)
+        XCTAssertEqual(locking.title, "Account Locked")
+        XCTAssertTrue(locking.message.hasPrefix("Too many failed attempts. Try again in"))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 5)
+    }
+
+    func testFourWrongAnswersAndOneLoginMissLock() async throws {
+        let email = freshEmail("mix-answer")
+        defer { AccountLockoutManager.shared.manuallyUnlock(email: email) }
+        let (_, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+        UserManager.shared.clearSession()
+
+        for index in 1...4 {
+            let miss = await opening.reset(email: email, newPassword: password, securityAnswer: "not-the-answer")
+            XCTAssertFalse(miss.success, "Answer miss \(index)")
+            XCTAssertEqual(miss.title, "Error")
+        }
+        let locking = await opening.login(email: email, password: "WrongPass1")
+        guard case .locked(let locked) = locking else {
+            return XCTFail("The fifth miss should lock")
+        }
+        XCTAssertEqual(locked.title, "Account Locked")
+        XCTAssertTrue(locked.message.hasPrefix("Too many failed attempts. Try again in"))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 5)
+    }
+
+    func testUnknownEmailResetLeavesTheCountUnchanged() async throws {
+        let email = freshEmail("unknown-reset")
+        let (_, opening) = try makeOpening()
+        let result = await opening.reset(email: email, newPassword: password, securityAnswer: "not-the-answer")
+        XCTAssertFalse(result.success)
+        XCTAssertEqual(result.title, "Error")
+        XCTAssertTrue(result.message.contains("Security answer is incorrect."))
+        XCTAssertTrue(result.message.contains("5 attempts remaining"))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 0)
+    }
+
+    func testResetWithNoSecurityAnswerCountsAsAMiss() async throws {
+        let email = freshEmail("no-answer")
+        defer { AccountLockoutManager.shared.manuallyUnlock(email: email) }
+        let (context, opening) = try makeOpening()
+        let user = User(context: context)
+        user.id = UUID()
+        user.email = email
+        user.isActive = true
+        try context.save()
+        var secret = SessionSecret()
+        secret.passwordHash = "stored"
+        XCTAssertTrue(UserManager.shared.secrets.save(secret, userId: try XCTUnwrap(user.id)))
+
+        let result = await opening.reset(email: email, newPassword: password, securityAnswer: "not-the-answer")
+        XCTAssertFalse(result.success)
+        XCTAssertEqual(result.title, "Error")
+        XCTAssertTrue(result.message.contains("Security answer is incorrect."))
+        XCTAssertTrue(result.message.contains("4 attempts remaining"))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 1)
+    }
+
+    func testResetAcceptsASecurityAnswerInAnyCase() async throws {
+        let email = freshEmail("case")
+        let (_, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+        let result = await opening.reset(email: email, newPassword: "NewPassword1", securityAnswer: "FLUFFY12")
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.title, "Success")
+        XCTAssertEqual(result.message, "Password has been reset successfully!")
+    }
+
+    func testResetTrimsTheSecurityAnswer() async throws {
+        let email = freshEmail("trim")
+        let (_, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+        let result = await opening.reset(email: email, newPassword: "NewPassword1", securityAnswer: "  Fluffy12  ")
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.title, "Success")
+    }
+
+    func testResetUpgradesALegacySecurityAnswer() async throws {
+        let email = freshEmail("legacy-answer")
+        let (context, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+        let user = try XCTUnwrap(fetchUser(email, in: context))
+        let userId = try XCTUnwrap(user.id)
+        var secret = try XCTUnwrap(UserManager.shared.secrets.load(userId: userId))
+        secret.securityAnswerHash = legacyHash(answer)
+        secret.securityAnswerSalt = nil
+        secret.securityAnswerIterations = nil
+        XCTAssertTrue(UserManager.shared.secrets.save(secret, userId: userId))
+
+        let result = await opening.reset(email: email, newPassword: "NewPassword1", securityAnswer: "  FLUFFY12 ")
+        XCTAssertTrue(result.success)
+        let upgraded = UserManager.shared.secrets.load(userId: userId)
+        XCTAssertNotNil(upgraded?.securityAnswerSalt)
+        XCTAssertEqual(upgraded?.securityAnswerIterations, SessionSecretRules.iterations)
+        XCTAssertNotEqual(upgraded?.securityAnswerHash, legacyHash(answer))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 0)
+    }
+
+    func testResetWrongAnswerReportsAttemptsLeft() async throws {
+        let email = freshEmail("reset-count")
+        defer { AccountLockoutManager.shared.manuallyUnlock(email: email) }
+        let (_, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+
+        let result = await opening.reset(email: email, newPassword: password, securityAnswer: "not-the-answer")
+        XCTAssertFalse(result.success)
+        XCTAssertEqual(result.title, "Error")
+        XCTAssertTrue(result.message.contains("Security answer is incorrect."))
+        XCTAssertTrue(result.message.contains("4 attempts remaining"))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 1)
+    }
+
+    func testConfirmDeletionIgnoresTheLockAndAWrongPassword() async throws {
+        let email = freshEmail("delete")
+        defer { AccountLockoutManager.shared.manuallyUnlock(email: email) }
+        let (context, opening) = try makeOpening()
+        try await startSession(email: email, opening: opening)
+        for _ in 1...2 {
+            _ = await opening.login(email: email, password: "WrongPass1")
+        }
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 2)
+
+        let wrong = await opening.confirmDeletion(password: "WrongPass1")
+        guard case .refused(let refused) = wrong else {
+            return XCTFail("Expected a refusal")
+        }
+        XCTAssertEqual(refused, SessionOpening.deletionRefused)
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 2)
+
+        for _ in 1...3 {
+            _ = await opening.login(email: email, password: "WrongPass1")
+        }
+        XCTAssertTrue(AccountLockoutManager.shared.isAccountLocked(email: email))
+        let user = try XCTUnwrap(fetchUser(email, in: context))
+        UserManager.shared.startSession(userId: try XCTUnwrap(user.id))
+
+        let matched = await opening.confirmDeletion(password: password)
+        guard case .matched = matched else {
+            return XCTFail("A locked email can still confirm Delete Account")
+        }
+        XCTAssertTrue(AccountLockoutManager.shared.isAccountLocked(email: email))
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 5)
+    }
+
+    func testConfirmDeletionWaitingDoesNotCount() async throws {
+        let email = freshEmail("delete-wait")
+        let (context, opening) = try makeOpening()
+        let user = User(context: context)
+        user.id = UUID()
+        user.email = email
+        user.isActive = true
+        try context.save()
+        UserManager.shared.startSession(userId: try XCTUnwrap(user.id))
+
+        let outcome = await opening.confirmDeletion(password: password)
+        guard case .waiting(let notice) = outcome else {
+            return XCTFail("Expected waiting")
+        }
+        XCTAssertEqual(notice, SessionOpening.waitingNotice)
+        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: email), 0)
+    }
+
+    private func startSession(email: String, opening: SessionOpening) async throws {
+        let started = await opening.start(
+            email: email,
+            password: password,
+            securityQuestion: question,
+            securityAnswer: answer
+        )
+        guard case .started = started else {
+            XCTFail("Expected a Session")
+            return
+        }
     }
 
     private func assertPasswordRefusal(_ password: String, fragment: String) async throws {

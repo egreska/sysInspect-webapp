@@ -39,7 +39,7 @@ enum StoredPhoto {
         }
     }
 
-    /// A SiteDocument photo becomes a JPEG. A PDF is returned unchanged.
+    /// Encodes one SiteDocument. A photo is fitted and encoded once. A PDF is the file bytes.
     static func siteDocumentPhoto(
         data: Data,
         contentType: String,
@@ -48,8 +48,15 @@ enum StoredPhoto {
         if contentType == "public.pdf" {
             return (data, contentType, filename)
         }
-        guard contentType == "public.jpeg" || contentType == "public.png" else { return nil }
-        guard let image = UIImage(data: data), let jpeg = jpegData(from: image) else { return nil }
+        guard let image = UIImage(data: data) else { return nil }
+        return siteDocumentPhoto(image: image, filename: filename)
+    }
+
+    static func siteDocumentPhoto(
+        image: UIImage,
+        filename: String
+    ) -> (data: Data, contentType: String, filename: String)? {
+        guard let jpeg = jpegData(from: image) else { return nil }
         return (jpeg, "public.jpeg", jpegFilename(filename))
     }
 
@@ -61,6 +68,32 @@ enum StoredPhoto {
         await offMain {
             siteDocumentPhoto(data: data, contentType: contentType, filename: filename)
         }
+    }
+
+    static func siteDocumentPhotoOffMain(
+        image: UIImage,
+        filename: String
+    ) async -> (data: Data, contentType: String, filename: String)? {
+        await offMain {
+            siteDocumentPhoto(image: image, filename: filename)
+        }
+    }
+
+    /// The one display read. `maxPixelSize` is the longer side, in pixels. Stored size uses the image's own longer side.
+    static func displayImage(from data: Data, maxPixelSize: CGFloat) -> UIImage? {
+        thumbnail(from: data, maxPixelSize: maxPixelSize)
+    }
+
+    static func displayImage(from data: Data) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = props[kCGImagePropertyPixelWidth] as? NSNumber,
+              let height = props[kCGImagePropertyPixelHeight] as? NSNumber else {
+            return nil
+        }
+        let longEdge = max(CGFloat(width.doubleValue), CGFloat(height.doubleValue))
+        guard longEdge > 0 else { return nil }
+        return thumbnail(from: data, maxPixelSize: longEdge)
     }
 
     static func thumbnail(from data: Data, maxPixelSize: CGFloat) -> UIImage? {

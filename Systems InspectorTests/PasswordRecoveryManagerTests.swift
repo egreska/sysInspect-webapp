@@ -14,7 +14,6 @@ import CryptoKit
 final class PasswordRecoveryManagerTests: XCTestCase {
     
     var sut: PasswordRecoveryManager!
-    private var container: NSPersistentContainer!
     let testEmail = "test@example.com"
     let testQuestion = "What was the name of your first pet?"
     let testAnswer = "Fluffy"
@@ -31,7 +30,6 @@ final class PasswordRecoveryManagerTests: XCTestCase {
     override func tearDown() {
         clearSecurityQuestion(for: testEmail)
         sut = nil
-        container = nil
         super.tearDown()
     }
     
@@ -53,28 +51,6 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         UserDefaults.standard.set(legacyHash(answer), forKey: "securityAnswer_\(email)")
     }
 
-    private func makeUser() throws -> (NSManagedObjectContext, User) {
-        guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: CoreDataManager.self)]) else {
-            throw NSError(domain: "PasswordRecoveryManagerTests", code: 1)
-        }
-        let container = NSPersistentContainer(name: "Systems_Inspector", managedObjectModel: model)
-        let description = NSPersistentStoreDescription()
-        description.type = NSInMemoryStoreType
-        description.shouldAddStoreAsynchronously = false
-        container.persistentStoreDescriptions = [description]
-        var loadError: Error?
-        container.loadPersistentStores { _, error in loadError = error }
-        if let loadError { throw loadError }
-        self.container = container
-        let context = container.viewContext
-        let user = User(context: context)
-        user.id = UUID()
-        user.email = testEmail.lowercased()
-        user.isActive = true
-        try context.save()
-        return (context, user)
-    }
-    
     // MARK: - Security Question Tests
     
     func testAvailableQuestionsNotEmpty() {
@@ -104,119 +80,12 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         XCTAssertNil(question, "Should not have security question initially")
     }
     
-    // MARK: - Set Security Question Tests
-    
-    func testSetSecurityQuestionSuccess() throws {
-        let (context, _) = try makeUser()
-        let email = testEmail.lowercased()
-        UserDefaults.standard.set(testQuestion, forKey: "securityQuestion_\(email)")
-
-        XCTAssertTrue(sut.setSecurityQuestion(
-            for: testEmail,
-            question: testQuestion,
-            answer: "Fluffy12",
-            in: context
-        ))
-
-        XCTAssertTrue(sut.hasSecurityQuestion(for: testEmail, in: context))
-        XCTAssertEqual(sut.getSecurityQuestion(for: testEmail, in: context), testQuestion)
-        XCTAssertNil(UserDefaults.standard.string(forKey: "securityQuestion_\(email)"))
-    }
-    
-    // MARK: - Security Answer Tests
-    
-    func testNewSecurityAnswerMustBeEightCharactersAfterTrim() throws {
-        guard let model = NSManagedObjectModel.mergedModel(from: [Bundle(for: CoreDataManager.self)]) else {
-            XCTFail("Missing Core Data model")
-            return
-        }
-        let container = NSPersistentContainer(name: "Systems_Inspector", managedObjectModel: model)
-        let description = NSPersistentStoreDescription()
-        description.type = NSInMemoryStoreType
-        description.shouldAddStoreAsynchronously = false
-        container.persistentStoreDescriptions = [description]
-        var loadError: Error?
-        container.loadPersistentStores { _, error in loadError = error }
-        XCTAssertNil(loadError)
-        let context = container.viewContext
-        let user = User(context: context)
-        user.id = UUID()
-        user.email = testEmail.lowercased()
-        user.isActive = true
-        try context.save()
-
+    func testNewSecurityAnswerMustBeEightCharactersAfterTrim() {
         let short = sut.validateSecurityAnswer("  fluffy  ")
         XCTAssertFalse(short.isValid)
-        XCTAssertFalse(sut.setSecurityQuestion(
-            for: testEmail,
-            question: testQuestion,
-            answer: "  fluffy  ",
-            in: context
-        ))
-        XCTAssertNil(user.securityAnswerHash)
-
+        XCTAssertTrue(short.message.contains("8 characters"))
         let long = sut.validateSecurityAnswer("  Fluffy12  ")
         XCTAssertTrue(long.isValid)
-        XCTAssertTrue(sut.setSecurityQuestion(
-            for: testEmail,
-            question: testQuestion,
-            answer: "  Fluffy12  ",
-            in: context
-        ))
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy12", in: context))
-    }
-
-    func testVerifySecurityAnswerCaseInsensitive() throws {
-        let (context, user) = try makeUser()
-        user.securityQuestion = testQuestion
-        user.securityAnswerHash = legacyHash(testAnswer)
-        try context.save()
-
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "FLUFFY", in: context))
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "Fluffy", in: context))
-    }
-
-    func testVerifySecurityAnswerTrimsWhitespace() throws {
-        let (context, user) = try makeUser()
-        user.securityQuestion = testQuestion
-        user.securityAnswerHash = legacyHash(testAnswer)
-        try context.save()
-
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "  fluffy  ", in: context))
-    }
-
-    func testVerifySecurityAnswerWrongAnswer() throws {
-        let (context, user) = try makeUser()
-        user.securityQuestion = testQuestion
-        user.securityAnswerHash = legacyHash(testAnswer)
-        try context.save()
-
-        XCTAssertFalse(sut.verifySecurityAnswer(for: testEmail, answer: "WrongAnswer", in: context))
-    }
-
-    func testLegacyAnswerIsSavedWithSaltAfterOneMatch() throws {
-        let (context, user) = try makeUser()
-        user.securityQuestion = testQuestion
-        user.securityAnswerHash = legacyHash(testAnswer)
-        try context.save()
-
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
-
-        let email = testEmail.lowercased()
-        let secret = UserManager.shared.secrets.load(userId: user.id!)
-        XCTAssertNil(user.securityAnswerHash)
-        XCTAssertNil(user.securityAnswerSalt)
-        XCTAssertNotNil(secret?.securityAnswerSalt)
-        XCTAssertNotEqual(secret?.securityAnswerHash, legacyHash(testAnswer))
-        XCTAssertNil(UserDefaults.standard.data(forKey: "securityAnswerSalt_\(email)"))
-        XCTAssertTrue(UserManager.shared.verifyPasswordSecure(
-            "fluffy",
-            hash: secret!.securityAnswerHash!,
-            salt: secret!.securityAnswerSalt!
-        ))
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "  FLUFFY ", in: context))
-        XCTAssertEqual(AccountLockoutManager.shared.getFailedAttempts(email: testEmail), 0)
     }
 
     func testPhoneAnswerCopiesOntoTheSessionOnce() throws {
@@ -250,27 +119,11 @@ final class PasswordRecoveryManagerTests: XCTestCase {
         XCTAssertEqual(secret?.securityAnswerHash, legacyHash(testAnswer))
         XCTAssertNil(secret?.securityAnswerIterations)
         XCTAssertNil(UserDefaults.standard.string(forKey: "securityAnswer_\(email)"))
-        XCTAssertTrue(sut.verifySecurityAnswer(for: testEmail, answer: "fluffy", in: context))
-        let upgraded = UserManager.shared.secrets.load(userId: user.id!)
-        XCTAssertNotNil(upgraded?.securityAnswerSalt)
-        let kept = upgraded?.securityAnswerHash
+        let kept = secret?.securityAnswerHash
         UserDefaults.standard.set(legacyHash("other"), forKey: "securityAnswer_\(email)")
         sut.adoptPhoneAnswer(for: testEmail, in: context)
         XCTAssertEqual(UserManager.shared.secrets.load(userId: user.id!)?.securityAnswerHash, kept)
         XCTAssertNil(UserDefaults.standard.string(forKey: "securityAnswer_\(email)"))
     }
 
-    // MARK: - Performance Tests
-
-    func testPerformanceSecurityAnswerVerification() throws {
-        let (context, user) = try makeUser()
-        user.securityQuestion = testQuestion
-        user.securityAnswerHash = legacyHash(testAnswer)
-        try context.save()
-
-        _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer, in: context)
-        measure {
-            _ = sut.verifySecurityAnswer(for: testEmail, answer: testAnswer, in: context)
-        }
-    }
 }

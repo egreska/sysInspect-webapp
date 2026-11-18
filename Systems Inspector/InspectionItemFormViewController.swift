@@ -188,7 +188,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
 
     init(inspectionItem: InspectionItem) {
         self.mode = .edit(inspectionItem)
-        self.form = InspectionItemIntake.formState(from: inspectionItem)
+        self.form = InspectionItemIntake.formState(from: inspectionItem, includingPhotos: false)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -236,6 +236,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         commentsTextView.delegate = self
         applyFormToFields()
         setupChrome()
+        loadStoredPhotosIfNeeded()
         registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (controller: Self, _: UITraitCollection) in
             controller.updateCommentsMinHeight()
         }
@@ -375,8 +376,18 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         stackView.addArrangedSubview(cameraContainerView)
     }
 
-    @discardableResult
-    private func persistValidatedForm() -> Bool {
+    private var isPersisting = false
+
+    private func setPersisting(_ persisting: Bool) {
+        isPersisting = persisting
+        navigationItem.rightBarButtonItem?.isEnabled = !persisting
+        addItemButton.isEnabled = !persisting
+        exitButton.isEnabled = !persisting
+        cameraButton.isEnabled = !persisting
+        photoStripView.isUserInteractionEnabled = !persisting
+    }
+
+    private func persistValidatedForm() async -> Bool {
         guard let form = validatedForm() else { return false }
         switch mode {
         case .create(let viewModel):
@@ -387,12 +398,34 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
         return true
     }
 
+    private func loadStoredPhotosIfNeeded() {
+        guard case .edit(let item) = mode else { return }
+        let bytes = item.photoBytes()
+        guard !bytes.isEmpty else { return }
+        cameraButton.isEnabled = false
+        Task { @MainActor [weak self] in
+            let stored = await InspectionItemIntake.storedPhotos(from: bytes)
+            guard let self else { return }
+            self.form.showStoredPhotos(stored)
+            self.refreshPhotoStrip()
+            if !self.isPersisting {
+                self.cameraButton.isEnabled = true
+            }
+        }
+    }
+
     @objc private func addItemTapped() {
-        guard persistValidatedForm() else { return }
-        reset()
-        HapticManager.success()
-        flashAddButtonSuccess()
-        showTemporaryMessage("Item added successfully!")
+        guard !isPersisting else { return }
+        setPersisting(true)
+        Task { @MainActor in
+            let saved = await persistValidatedForm()
+            setPersisting(false)
+            guard saved else { return }
+            reset()
+            HapticManager.success()
+            flashAddButtonSuccess()
+            showTemporaryMessage("Item added successfully!")
+        }
     }
 
     private func flashAddButtonSuccess() {
@@ -418,9 +451,14 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "Save & Exit", style: .default) { [weak self] _ in
-                guard let self else { return }
-                _ = self.persistValidatedForm()
-                self.finishInspection()
+                guard let self, !self.isPersisting else { return }
+                self.setPersisting(true)
+                Task { @MainActor in
+                    let saved = await self.persistValidatedForm()
+                    self.setPersisting(false)
+                    guard saved else { return }
+                    self.finishInspection()
+                }
             })
             alert.addAction(UIAlertAction(title: "Exit Without Saving", style: .destructive) { [weak self] _ in
                 self?.finishInspection()
@@ -452,9 +490,15 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
     }
 
     @objc private func saveTapped() {
-        guard persistValidatedForm() else { return }
-        delegate?.didSaveInspectionItem()
-        dismiss(animated: true)
+        guard !isPersisting else { return }
+        setPersisting(true)
+        Task { @MainActor in
+            let saved = await persistValidatedForm()
+            setPersisting(false)
+            guard saved else { return }
+            delegate?.didSaveInspectionItem()
+            dismiss(animated: true)
+        }
     }
 
     private func applyFormToFields() {
@@ -630,7 +674,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
     }
 
     private func refreshPhotoStrip() {
-        photoStripView.setPhotos(form.photos)
+        photoStripView.setPhotos(form.photos.map(\.image))
         let atCap = form.atPhotoCap
         cameraContainerView.isHidden = atCap
         cameraLabel.text = form.photos.isEmpty ? "Take Photo" : "Add Photo"
@@ -799,7 +843,7 @@ final class InspectionItemFormViewController: UIViewController, UIImagePickerCon
                 showAlert(message: "Couldn't save that photo. Try taking it again.")
                 return
             }
-            if form.addPhoto(prepared.image) {
+            if form.addPhoto(image: prepared.image, jpeg: prepared.jpeg) {
                 refreshPhotoStrip()
             }
         }
@@ -869,7 +913,7 @@ extension InspectionItemFormViewController: InspectionPhotoStripViewDelegate {
 
     func photoStripDidSelectPhoto(at index: Int) {
         guard form.photos.indices.contains(index) else { return }
-        let preview = PhotoPreviewViewController(image: form.photos[index])
+        let preview = PhotoPreviewViewController(image: form.photos[index].image)
         present(UINavigationController(rootViewController: preview), animated: true)
     }
 }

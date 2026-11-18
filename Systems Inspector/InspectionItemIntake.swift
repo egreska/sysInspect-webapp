@@ -8,7 +8,11 @@ import UIKit
 
 enum InspectionItemIntake {
     @discardableResult
-    static func create(into inspection: Inspection, form: InspectionItemFormState, sequenceNumber: Int32? = nil) -> InspectionItem {
+    static func create(
+        into inspection: Inspection,
+        form: InspectionItemFormState,
+        sequenceNumber: Int32? = nil
+    ) -> InspectionItem {
         let context = inspection.managedObjectContext ?? CoreDataManager.shared.context
         let item = InspectionItem(context: context)
         item.id = UUID()
@@ -39,16 +43,30 @@ enum InspectionItemIntake {
         CoreDataManager.shared.saveContext()
     }
 
-    static func formState(from item: InspectionItem) -> InspectionItemFormState {
-        InspectionItemFormState(
+    static func formState(from item: InspectionItem, includingPhotos: Bool = true) -> InspectionItemFormState {
+        let stored = includingPhotos ? displayedPhotos(from: item.photoBytes()) : []
+        return InspectionItemFormState(
             location: item.location ?? "",
             bayNumber: item.bayNumber,
             importance: Importance(stored: item.importance),
             comments: item.comments,
             issues: item.recordedIssues(),
-            photos: item.photoBytes().compactMap { UIImage(data: $0) },
+            photos: stored.map { InspectionItemFormState.Photo(image: $0.image, jpeg: $0.jpeg) },
             photosChanged: false
         )
+    }
+
+    static func decodedPhotos(from bytes: [Data]) async -> [UIImage] {
+        let pairs = await storedPhotos(from: bytes)
+        return pairs.map(\.image)
+    }
+
+    static func storedPhotos(from bytes: [Data]) async -> [(image: UIImage, jpeg: Data)] {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: displayedPhotos(from: bytes))
+            }
+        }
     }
 
     private static func applyFields(_ item: InspectionItem, _ form: InspectionItemFormState) {
@@ -65,9 +83,13 @@ enum InspectionItemIntake {
 
     private static func applyPhotos(_ item: InspectionItem, _ form: InspectionItemFormState) {
         guard form.photosChanged else { return }
-        let bytes = Array(form.photos.prefix(InspectionItem.maxPhotoCount)).compactMap { image in
-            StoredPhoto.jpegData(from: image)
+        item.replacePhotos(form.photos.map(\.jpeg))
+    }
+
+    private static func displayedPhotos(from bytes: [Data]) -> [(image: UIImage, jpeg: Data)] {
+        bytes.compactMap { data in
+            guard let image = StoredPhoto.displayImage(from: data) else { return nil }
+            return (image, data)
         }
-        item.replacePhotos(bytes)
     }
 }

@@ -140,8 +140,19 @@ final class PDFTableLayoutTests: XCTestCase {
         XCTAssertEqual(threeRects[0].size, threeRects[1].size)
         XCTAssertEqual(threeRects[0].size, threeRects[2].size)
         XCTAssertLessThan(oneRects[0].width, bounds.width * 0.7)
+        XCTAssertEqual(PDFResolvedTableLayout.photoPixelSize(in: bounds), oneRects[0].width, accuracy: 0.5)
         XCTAssertGreaterThan(layout.rowHeight(for: threeInput), layout.rowHeight(for: oneInput))
         XCTAssertLessThan(layout.rowHeight(for: oneInput), imageWidth)
+
+        let standard = PDFResolvedTableLayout.resolve(items: [item(photos: 2)])
+        let standardBounds = CGRect(
+            x: 0,
+            y: 0,
+            width: width(standard, .image) - PDFResolvedTableLayout.cellInset,
+            height: 400
+        )
+        XCTAssertEqual(PDFResolvedTableLayout.photoPixelSize(in: standardBounds), 48, accuracy: 0.5)
+        XCTAssertEqual(PDFResolvedTableLayout.photoRects(count: 2, in: standardBounds)[0].width, 48, accuracy: 0.5)
     }
 
     func testColumnOrderPlacesFlexibleTextLast() {

@@ -44,6 +44,12 @@ final class ReportSnapshotMapperTests: XCTestCase {
         super.tearDown()
     }
 
+    private func entered(_ images: [UIImage]) -> [InspectionItemFormState.Photo] {
+        images.compactMap { image in
+            image.jpegData(compressionQuality: 0.8).map { InspectionItemFormState.Photo(image: image, jpeg: $0) }
+        }
+    }
+
     private func pixelImage() -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { ctx in
             UIColor.red.setFill()
@@ -70,7 +76,7 @@ final class ReportSnapshotMapperTests: XCTestCase {
                 importance: .monitor,
                 comments: nil,
                 issues: [damage],
-                photos: [pixelImage(), pixelImage()],
+                photos: entered([pixelImage(), pixelImage()]),
                 photosChanged: true
             ),
             sequenceNumber: 3
@@ -101,7 +107,7 @@ final class ReportSnapshotMapperTests: XCTestCase {
                 importance: .monitor,
                 comments: nil,
                 issues: [],
-                photos: [pixelImage()],
+                photos: entered([pixelImage()]),
                 photosChanged: true
             ),
             sequenceNumber: 1

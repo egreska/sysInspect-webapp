@@ -461,22 +461,22 @@ class SettingsViewController: UIViewController {
             }
             
             Task {
-                let isValid = await UserManager.shared.verifyCurrentUserPassword(password)
-                
+                let outcome = await SessionOpening.live.confirmDeletion(password: password)
+
                 await MainActor.run {
-                    if isValid {
+                    switch outcome {
+                    case .matched:
                         #if DEBUG
                         print("✅ Password verified for data deletion")
                         #endif
                         self?.confirmDeleteAccount()
-                    } else {
+                    case .waiting(let notice):
+                        self?.showAlert(title: notice.title, message: notice.message)
+                    case .refused(let notice):
                         #if DEBUG
                         print("❌ Invalid password for data deletion")
                         #endif
-                        self?.showAlert(
-                            title: "Authentication Failed",
-                            message: "Invalid password. Account deletion cancelled."
-                        )
+                        self?.showAlert(title: notice.title, message: notice.message)
                     }
                 }
             }

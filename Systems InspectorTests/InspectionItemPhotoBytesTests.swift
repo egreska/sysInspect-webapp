@@ -94,6 +94,17 @@ final class InspectionItemPhotoBytesTests: XCTestCase {
         XCTAssertEqual(item.photoIndexes(), [2])
     }
 
+    func testPhotoBytesDoesNotInventAJPEGFromTheCache() {
+        let item = makeItem()
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+        }
+        ImageCacheManager.shared.cacheImage(image, forKey: "photo_\(item.id!.uuidString)_0")
+        defer { ImageCacheManager.shared.removeImage(forKey: "photo_\(item.id!.uuidString)_0") }
+        XCTAssertTrue(item.photoBytes().isEmpty)
+    }
+
     func testPhotoBytesOmitsMissingFileWithNoBlob() {
         let item = makeItem()
         item.setValue("/tmp/systems-inspector-missing-photo-bytes.jpg", forKey: "photoURL")
@@ -133,22 +144,23 @@ final class InspectionItemPhotoBytesTests: XCTestCase {
 
     func testStoredBytesReleaseAnInAppFileAndLeaveAnUnreadableOne() throws {
         let jpeg = try jpegFile()
-        let junk = writeTempFile(Data([0x00, 0x01]))
+        let missing = "/tmp/systems-inspector-missing-\(UUID().uuidString).jpg"
         let item = makeItem()
         item.setValue(jpeg.path, forKey: "photoURL")
-        item.setValue(junk, forKey: "photoURL2")
+        item.setValue(missing, forKey: "photoURL2")
 
         let remove = item.migrateLocalPhotoToCloudKit()
+        let fileBytes = try Data(contentsOf: jpeg)
 
         XCTAssertEqual(remove, [jpeg.path])
-        XCTAssertNotNil(item.value(forKey: "photoData"))
+        XCTAssertEqual(item.value(forKey: "photoData") as? Data, fileBytes)
         XCTAssertNil(item.value(forKey: "photoURL"))
-        XCTAssertEqual(item.value(forKey: "photoURL2") as? String, junk)
+        XCTAssertEqual(item.value(forKey: "photoURL2") as? String, missing)
+        XCTAssertNil(item.value(forKey: "photoData2"))
         XCTAssertTrue(FileManager.default.fileExists(atPath: jpeg.path))
 
         InspectionItem.removeAppOwnedPhotoFiles(remove)
         XCTAssertFalse(FileManager.default.fileExists(atPath: jpeg.path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: junk))
     }
 
     func testStoredBytesDoNotReleaseAFileOutsideTheApp() throws {

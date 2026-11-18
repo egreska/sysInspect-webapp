@@ -25,11 +25,30 @@ final class StoredPhotoTests: XCTestCase {
         XCTAssertEqual(fitted.scale, image.scale)
     }
 
-    func testAddPhotoStoresTheFittedImage() {
+    func testFormKeepsTheJPEGFromEntry() async throws {
+        let fitted = await StoredPhoto.prepared(from: solidImage(size: CGSize(width: 2000, height: 1000)))
+        let prepared = try XCTUnwrap(fitted)
         var form = InspectionItemFormState()
-        XCTAssertTrue(form.addPhoto(solidImage(size: CGSize(width: 2000, height: 1000))))
-        let longEdge = longEdge(of: form.photos[0])
-        XCTAssertLessThanOrEqual(longEdge, StoredPhoto.maxLongEdge)
+        XCTAssertTrue(form.addPhoto(image: prepared.image, jpeg: prepared.jpeg))
+        XCTAssertEqual(form.photos[0].image.size, prepared.image.size)
+        XCTAssertEqual(form.photos.map(\.jpeg), [prepared.jpeg])
+        XCTAssertLessThanOrEqual(longEdge(of: form.photos[0].image), StoredPhoto.maxLongEdge)
+    }
+
+    func testAddPhotoDoesNotFitAgain() {
+        var form = InspectionItemFormState()
+        let image = solidImage(size: CGSize(width: 2000, height: 1000))
+        XCTAssertTrue(form.addPhoto(image: image, jpeg: Data([0x01])))
+        XCTAssertEqual(form.photos[0].image.size, image.size)
+        XCTAssertEqual(form.photos.map(\.jpeg), [Data([0x01])])
+    }
+
+    func testDisplayImageUsesTheCallerPixelSize() throws {
+        let data = try XCTUnwrap(solidImage(size: CGSize(width: 800, height: 400)).jpegData(compressionQuality: 0.8))
+        let thumb = try XCTUnwrap(StoredPhoto.displayImage(from: data, maxPixelSize: 40))
+        XCTAssertLessThanOrEqual(longEdge(of: thumb), 40)
+        let stored = try XCTUnwrap(StoredPhoto.displayImage(from: data))
+        XCTAssertGreaterThan(longEdge(of: stored), 40)
     }
 
     func testPDFSiteDocumentStaysAPDF() {
@@ -50,6 +69,34 @@ final class StoredPhotoTests: XCTestCase {
         XCTAssertEqual(stored?.contentType, "public.jpeg")
         XCTAssertEqual(stored?.filename, "nameplate.jpg")
         XCTAssertNotNil(stored.flatMap { UIImage(data: $0.data) })
+    }
+
+    func testSiteDocumentPhotoIsTheSameJPEGAsTheImageEntry() throws {
+        let image = solidImage(size: CGSize(width: 2000, height: 1000))
+        let stored = try XCTUnwrap(StoredPhoto.siteDocumentPhoto(image: image, filename: "site-photo.jpg"))
+        XCTAssertEqual(stored.data, StoredPhoto.jpegData(from: image))
+        XCTAssertEqual(stored.contentType, "public.jpeg")
+        XCTAssertEqual(stored.filename, "site-photo.jpg")
+        let decoded = try XCTUnwrap(UIImage(data: stored.data))
+        XCTAssertLessThanOrEqual(longEdge(of: decoded), StoredPhoto.maxLongEdge)
+    }
+
+    func testOtherImageDataUsesTheSameEntry() throws {
+        let png = try XCTUnwrap(solidImage(size: CGSize(width: 80, height: 40)).pngData())
+        let stored = try XCTUnwrap(StoredPhoto.siteDocumentPhoto(
+            data: png,
+            contentType: "public.heic",
+            filename: "site-photo.jpg"
+        ))
+        let image = try XCTUnwrap(UIImage(data: png))
+        let fromImage = try XCTUnwrap(StoredPhoto.siteDocumentPhoto(image: image, filename: "site-photo.jpg"))
+        XCTAssertEqual(stored.contentType, "public.jpeg")
+        XCTAssertEqual(stored.filename, "site-photo.jpg")
+        XCTAssertEqual(stored.data, fromImage.data)
+    }
+
+    func testBytesThatAreNotAnImageOrPDFAreRefused() {
+        XCTAssertNil(StoredPhoto.siteDocumentPhoto(data: Data([0x00, 0x01]), contentType: "public.heic", filename: "x"))
     }
 
     func testThumbnailStaysWithinThePixelCap() throws {

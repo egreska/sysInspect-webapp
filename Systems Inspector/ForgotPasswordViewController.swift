@@ -277,8 +277,8 @@ class ForgotPasswordViewController: UIViewController {
         }
         
         switch SessionOpening.live.recovery(for: email) {
-        case .locked(let message):
-            showAlert(title: "Account Locked", message: message)
+        case .locked(let notice):
+            showAlert(title: notice.title, message: notice.message)
         case .waiting(let notice):
             showAlert(title: notice.title, message: notice.message)
         case .question(let question):

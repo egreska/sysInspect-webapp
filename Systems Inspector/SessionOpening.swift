@@ -18,10 +18,23 @@ enum SessionStart: Equatable {
 }
 
 enum SessionRecovery: Equatable {
-    case locked(String)
+    case locked(SessionNotice)
     case waiting(SessionNotice)
     case question(String)
     case unavailable(SessionNotice)
+}
+
+enum SessionLogin: Equatable {
+    case started
+    case waiting(SessionNotice)
+    case locked(SessionNotice)
+    case refused(SessionNotice)
+}
+
+enum SessionDeletion: Equatable {
+    case matched
+    case waiting(SessionNotice)
+    case refused(SessionNotice)
 }
 
 struct SessionReset: Equatable {
@@ -30,7 +43,8 @@ struct SessionReset: Equatable {
     var message: String
 }
 
-/// Starts a Session, tells a reset screen what an email can do, and resets a password.
+/// Starts a Session, logs one in, resets a password, and confirms the Delete Account password.
+/// Callers show the notice and do not read the Email lock.
 @MainActor
 struct SessionOpening {
     var context: () -> NSManagedObjectContext?
@@ -97,16 +111,52 @@ struct SessionOpening {
         return .claimPending(SessionNotice(title: "Account Created", message: Self.claimPendingMessage))
     }
 
+    func login(email: String, password: String) async -> SessionLogin {
+        if let locked = Self.lockedNotice(for: email) {
+            return .locked(locked)
+        }
+        guard await storeReady(), let context = context() else {
+            return .refused(Self.loginRefused(for: email))
+        }
+        switch await UserManager.shared.checkPassword(password, forEmail: email, in: context) {
+        case .waiting:
+            return .waiting(Self.waitingNotice)
+        case .absent, .mismatch:
+            AccountLockoutManager.shared.recordFailedAttempt(email: email)
+            if let locked = Self.lockedNotice(for: email) {
+                return .locked(locked)
+            }
+            return .refused(Self.loginRefused(for: email))
+        case .match(let userID):
+            guard UserManager.shared.beginSession(userID: userID, in: context) else {
+                return .refused(Self.loginRefused(for: email))
+            }
+            AccountLockoutManager.shared.recordSuccessfulLogin(email: email)
+            return .started
+        }
+    }
+
+    func confirmDeletion(password: String) async -> SessionDeletion {
+        guard await storeReady(), let context = context() else {
+            return .refused(Self.deletionRefused)
+        }
+        switch await UserManager.shared.checkSessionPassword(password, in: context) {
+        case .waiting:
+            return .waiting(Self.waitingNotice)
+        case .match:
+            return .matched
+        case .absent, .mismatch:
+            return .refused(Self.deletionRefused)
+        }
+    }
+
     func recovery(for email: String) -> SessionRecovery {
-        if let locked = PasswordRecoveryManager.shared.lockMessage(for: email) {
+        if let locked = Self.lockedNotice(for: email) {
             return .locked(locked)
         }
         switch PasswordRecoveryManager.shared.recoveryState(for: email, in: context()) {
         case .waiting:
-            return .waiting(SessionNotice(
-                title: SessionSecretMessage.waitingTitle,
-                message: SessionSecretMessage.waiting
-            ))
+            return .waiting(Self.waitingNotice)
         case .question(let question):
             return .question(question)
         case .unavailable:
@@ -122,26 +172,80 @@ struct SessionOpening {
             return SessionReset(success: false, title: "Error", message: "Failed to reset password.")
         }
         let recovery = PasswordRecoveryManager.shared
-        if let locked = recovery.lockMessage(for: email) {
-            return SessionReset(success: false, title: "Error", message: locked)
+        if let locked = Self.lockedNotice(for: email) {
+            return SessionReset(success: false, title: locked.title, message: locked.message)
         }
         if case .waiting = recovery.recoveryState(for: email, in: context()) {
-            return SessionReset(success: false, title: "Error", message: SessionSecretMessage.waiting)
+            return SessionReset(
+                success: false,
+                title: Self.waitingNotice.title,
+                message: Self.waitingNotice.message
+            )
         }
         let strength = recovery.validatePasswordStrength(newPassword)
         if !strength.isValid {
             return SessionReset(success: false, title: "Weak Password", message: strength.message)
         }
-        let result = await recovery.resetPasswordOffMain(
+        switch await recovery.resetPasswordOffMain(
             for: email,
             newPassword: newPassword,
             securityAnswer: securityAnswer,
             in: context()
+        ) {
+        case .replaced:
+            return SessionReset(success: true, title: "Success", message: "Password has been reset successfully!")
+        case .writeFailed:
+            return SessionReset(success: false, title: "Error", message: "Failed to reset password.")
+        case .unknownEmail:
+            let notice = Self.answerRefused(for: email)
+            return SessionReset(success: false, title: notice.title, message: notice.message)
+        case .answerRefused:
+            AccountLockoutManager.shared.recordFailedAttempt(email: email)
+            if let locked = Self.lockedNotice(for: email) {
+                return SessionReset(success: false, title: locked.title, message: locked.message)
+            }
+            let notice = Self.answerRefused(for: email)
+            return SessionReset(success: false, title: notice.title, message: notice.message)
+        }
+    }
+
+    static let waitingNotice = SessionNotice(
+        title: SessionSecretMessage.waitingTitle,
+        message: SessionSecretMessage.waiting
+    )
+
+    static let deletionRefused = SessionNotice(
+        title: "Authentication Failed",
+        message: "Invalid password. Account deletion cancelled."
+    )
+
+    static func lockedNotice(for email: String) -> SessionNotice? {
+        let lockout = AccountLockoutManager.shared
+        guard lockout.isAccountLocked(email: email) else { return nil }
+        let remaining = lockout.formatRemainingTime(lockout.getRemainingLockoutTime(email: email))
+        return SessionNotice(
+            title: "Account Locked",
+            message: "Too many failed attempts. Try again in \(remaining)."
         )
-        return SessionReset(
-            success: result.success,
-            title: result.success ? "Success" : "Error",
-            message: result.message
+    }
+
+    static func loginRefused(for email: String) -> SessionNotice {
+        SessionNotice(
+            title: "Login Failed",
+            message: "Invalid email or password.\n\(attemptsLeft(for: email))"
         )
+    }
+
+    static func answerRefused(for email: String) -> SessionNotice {
+        SessionNotice(
+            title: "Error",
+            message: "Security answer is incorrect. \(attemptsLeft(for: email))"
+        )
+    }
+
+    private static func attemptsLeft(for email: String) -> String {
+        let remaining = AccountLockoutManager.shared.getRemainingAttempts(email: email)
+        let noun = remaining == 1 ? "attempt" : "attempts"
+        return "\(remaining) \(noun) remaining before account lockout."
     }
 }

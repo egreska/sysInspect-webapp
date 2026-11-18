@@ -4,6 +4,7 @@
 //
 
 import CoreData
+import UIKit
 import XCTest
 @testable import Systems_Inspector
 
@@ -125,6 +126,96 @@ final class CustomerSiteDocumentTests: XCTestCase {
         XCTAssertEqual(customer.documentFiles().map(\.filename), ["f0.pdf", "f1.pdf", "f2.pdf", "f3.pdf", "f4.pdf"])
     }
 
+    func testSiteDocumentEntry() async throws {
+        let image = solidImage(size: CGSize(width: 80, height: 40))
+        let photo = await Customer.siteDocumentEntry(
+            image: image,
+            filename: "site-photo.jpg",
+            existingCount: 0
+        )
+        guard case .document(let photoFile) = photo else {
+            return XCTFail("Expected a photo document, got \(photo)")
+        }
+        XCTAssertNil(photoFile.id)
+        XCTAssertEqual(photoFile.contentType, "public.jpeg")
+        XCTAssertEqual(photoFile.filename, "site-photo.jpg")
+        XCTAssertNotNil(UIImage(data: photoFile.data))
+
+        let fullPhoto = await Customer.siteDocumentEntry(
+            image: image,
+            filename: "site-photo.jpg",
+            existingCount: Customer.maxSiteDocumentCount
+        )
+        XCTAssertEqual(fullPhoto, .full)
+
+        let pdf = Data([0x25, 0x50, 0x44, 0x46])
+        let kept = await Customer.siteDocumentEntry(
+            data: pdf,
+            contentType: "public.pdf",
+            filename: "plan.pdf",
+            existingCount: 0
+        )
+        guard case .document(let pdfFile) = kept else {
+            return XCTFail("Expected a PDF document, got \(kept)")
+        }
+        XCTAssertNil(pdfFile.id)
+        XCTAssertEqual(pdfFile.data, pdf)
+        XCTAssertEqual(pdfFile.filename, "plan.pdf")
+        XCTAssertEqual(pdfFile.contentType, "public.pdf")
+
+        let png = try XCTUnwrap(image.pngData())
+        let converted = await Customer.siteDocumentEntry(
+            data: png,
+            contentType: "public.png",
+            filename: "nameplate.png",
+            existingCount: 0
+        )
+        guard case .document(let pngFile) = converted else {
+            return XCTFail("Expected a JPEG document, got \(converted)")
+        }
+        XCTAssertEqual(pngFile.contentType, "public.jpeg")
+        XCTAssertEqual(pngFile.filename, "nameplate.jpg")
+        XCTAssertNotNil(UIImage(data: pngFile.data))
+
+        let oversized = Data(count: Customer.maxSiteDocumentBytes + 1)
+        let tooLarge = await Customer.siteDocumentEntry(
+            data: oversized,
+            contentType: "public.pdf",
+            filename: "big.pdf",
+            existingCount: 0
+        )
+        guard case .refused(let acceptance) = tooLarge else {
+            return XCTFail("Expected too large, got \(tooLarge)")
+        }
+        XCTAssertEqual(acceptance, .tooLarge)
+        XCTAssertEqual(acceptance.message, "Each file must be 10 MB or smaller.")
+
+        let garbage = Data([0x00, 0x01])
+        let unreadable = await Customer.siteDocumentEntry(
+            data: garbage,
+            contentType: "public.jpeg",
+            filename: "x.jpg",
+            existingCount: 0
+        )
+        XCTAssertEqual(unreadable, .unreadable)
+
+        let fullGarbage = await Customer.siteDocumentEntry(
+            data: garbage,
+            contentType: "public.jpeg",
+            filename: "x.jpg",
+            existingCount: Customer.maxSiteDocumentCount
+        )
+        XCTAssertEqual(fullGarbage, .full)
+
+        let fullOversized = await Customer.siteDocumentEntry(
+            data: oversized,
+            contentType: "public.pdf",
+            filename: "big.pdf",
+            existingCount: Customer.maxSiteDocumentCount
+        )
+        XCTAssertEqual(fullOversized, .full)
+    }
+
     func testMissingIdDeletesDocument() {
         let customer = makeCustomer()
         customer.replaceDocuments([
@@ -134,5 +225,14 @@ final class CustomerSiteDocumentTests: XCTestCase {
         let keep = customer.documentFiles()[0]
         customer.replaceDocuments([keep], userId: UUID())
         XCTAssertEqual(customer.documentFiles().map(\.filename), [keep.filename])
+    }
+
+    private func solidImage(size: CGSize) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
     }
 }

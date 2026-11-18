@@ -141,6 +141,32 @@ func sessionInspectionItemCount(
     return try context.count(for: request)
 }
 
+func sessionInspectionCounts(
+    for customers: [Customer],
+    userId: UUID,
+    in context: NSManagedObjectContext
+) -> [NSManagedObjectID: Int] {
+    var counts: [NSManagedObjectID: Int] = [:]
+    counts.reserveCapacity(customers.count)
+    for customer in customers {
+        counts[customer.objectID] = (try? sessionInspectionCount(for: customer, userId: userId, in: context)) ?? 0
+    }
+    return counts
+}
+
+func sessionInspectionItemCounts(
+    for inspections: [Inspection],
+    userId: UUID,
+    in context: NSManagedObjectContext
+) -> [NSManagedObjectID: Int] {
+    var counts: [NSManagedObjectID: Int] = [:]
+    counts.reserveCapacity(inspections.count)
+    for inspection in inspections {
+        counts[inspection.objectID] = (try? sessionInspectionItemCount(for: inspection, userId: userId, in: context)) ?? 0
+    }
+    return counts
+}
+
 enum SessionReadHopError: Error, Equatable {
     case storeUnavailable
     case unresolved

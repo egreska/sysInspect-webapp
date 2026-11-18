@@ -79,24 +79,16 @@ class ImageCacheManager {
             completion(cached)
             return
         }
-        if let data {
-            decodeThumbnail(from: data, maxDimension: maxDimension) { [weak self] thumb in
-                if let thumb {
-                    self?.store(thumb, forKey: thumbKey)
-                }
-                completion(thumb)
-            }
+        guard let data else {
+            completion(nil)
             return
         }
-        if let full = memoryCache.object(forKey: key as NSString) {
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let thumb = Self.downscale(image: full, maxDimension: maxDimension)
+        decodeThumbnail(from: data, maxDimension: maxDimension) { [weak self] thumb in
+            if let thumb {
                 self?.store(thumb, forKey: thumbKey)
-                DispatchQueue.main.async { completion(thumb) }
             }
-            return
+            completion(thumb)
         }
-        completion(nil)
     }
 
     /// Decodes a thumbnail and does not store it. Used when the photo has no stable identity.
@@ -118,8 +110,7 @@ class ImageCacheManager {
         completion: @escaping (UIImage?) -> Void
     ) {
         DispatchQueue.global(qos: .userInitiated).async {
-            let thumb = StoredPhoto.thumbnail(from: data, maxPixelSize: maxDimension)
-                ?? Self.fallbackThumbnail(from: data, maxDimension: maxDimension)
+            let thumb = StoredPhoto.displayImage(from: data, maxPixelSize: maxDimension)
             DispatchQueue.main.async { completion(thumb) }
         }
     }
@@ -128,24 +119,6 @@ class ImageCacheManager {
         let scale = image.scale
         let size = image.size
         return Int(size.width * scale * size.height * scale * 4)
-    }
-
-    private static func fallbackThumbnail(from data: Data, maxDimension: CGFloat) -> UIImage? {
-        guard let image = UIImage(data: data) else { return nil }
-        return downscale(image: image, maxDimension: maxDimension)
-    }
-
-    private static func downscale(image: UIImage, maxDimension: CGFloat) -> UIImage {
-        let size = image.size
-        let scale = image.scale
-        let maxSize = max(size.width * scale, size.height * scale)
-        guard maxSize > maxDimension else { return image }
-        let ratio = maxDimension / maxSize
-        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        return renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-        }
     }
 
     deinit {

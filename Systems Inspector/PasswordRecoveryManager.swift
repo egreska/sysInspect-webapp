@@ -31,39 +31,6 @@ class PasswordRecoveryManager {
     private init() {}
     
     // MARK: - Security Question Management
-    
-    func setSecurityQuestion(
-        for email: String,
-        question: String,
-        answer: String
-    ) -> Bool {
-        setSecurityQuestion(for: email, question: question, answer: answer, in: loadedSharedContext())
-    }
-
-    func setSecurityQuestion(
-        for email: String,
-        question: String,
-        answer: String,
-        in context: NSManagedObjectContext?
-    ) -> Bool {
-        guard validateSecurityAnswer(answer).isValid else { return false }
-        let normalized = email.lowercased()
-        guard let context, let user = fetchUser(email: normalized, in: context), let userId = user.id else {
-            return false
-        }
-        let manager = UserManager.shared
-        manager.absorbSyncedSecrets(for: user, defaults: .standard, in: context)
-        guard let record = manager.hashPasswordSecure(normalizedAnswer(answer)) else { return false }
-        var secret = manager.secrets.load(userId: userId) ?? SessionSecret()
-        secret.securityQuestion = question
-        secret.securityAnswerHash = record.hash
-        secret.securityAnswerSalt = record.salt
-        secret.securityAnswerIterations = SessionSecretRules.iterations
-        guard manager.secrets.save(secret, userId: userId) else { return false }
-        clearSyncedAnswer(on: user, in: context)
-        clearDefaults(for: normalized)
-        return true
-    }
 
     func recoveryState(for email: String) -> RecoveryState {
         recoveryState(for: email, in: loadedSharedContext())
@@ -94,36 +61,6 @@ class PasswordRecoveryManager {
         return question
     }
     
-    /// Verify security answer. A locked email is refused before the answer is checked.
-    func verifySecurityAnswer(for email: String, answer: String) -> Bool {
-        verifySecurityAnswer(for: email, answer: answer, in: loadedSharedContext())
-    }
-
-    func verifySecurityAnswer(for email: String, answer: String, in context: NSManagedObjectContext?) -> Bool {
-        let normalized = email.lowercased()
-        if AccountLockoutManager.shared.isAccountLocked(email: normalized) {
-            return false
-        }
-        guard let context, let user = fetchUser(email: normalized, in: context), let userId = user.id else {
-            return false
-        }
-        let manager = UserManager.shared
-        manager.absorbSyncedSecrets(for: user, defaults: .standard, in: context)
-        guard let secret = manager.secrets.load(userId: userId) else { return false }
-        guard secret.securityAnswerHash != nil else {
-            AccountLockoutManager.shared.recordFailedAttempt(email: normalized)
-            return false
-        }
-        return checkAnswer(answer, secret: secret, email: normalized) {
-            guard let record = manager.hashPasswordSecure(normalizedAnswer(answer)) else { return }
-            var upgraded = secret
-            upgraded.securityAnswerHash = record.hash
-            upgraded.securityAnswerSalt = record.salt
-            upgraded.securityAnswerIterations = SessionSecretRules.iterations
-            _ = manager.secrets.save(upgraded, userId: userId)
-        }
-    }
-
     func lockMessage(for email: String) -> String? {
         let lockout = AccountLockoutManager.shared
         guard lockout.isAccountLocked(email: email) else { return nil }
@@ -194,20 +131,7 @@ class PasswordRecoveryManager {
             }
         }
         guard ready else { return (false, "Failed to reset password.") }
-        return await resetPasswordOffMain(
-            for: email,
-            newPassword: newPassword,
-            securityAnswer: securityAnswer,
-            in: loadedSharedContext()
-        )
-    }
-
-    func resetPasswordOffMain(
-        for email: String,
-        newPassword: String,
-        securityAnswer: String,
-        in context: NSManagedObjectContext?
-    ) async -> (success: Bool, message: String) {
+        let context = loadedSharedContext()
         if let locked = lockMessage(for: email) {
             return (false, locked)
         }
@@ -224,35 +148,72 @@ class PasswordRecoveryManager {
         guard strength.isValid else {
             return (false, strength.message)
         }
-        guard let context,
-              await verifySecurityAnswerOffMain(for: email, answer: securityAnswer, in: context) else {
-            AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
+        let outcome = await resetPasswordOffMain(
+            for: email,
+            newPassword: newPassword,
+            securityAnswer: securityAnswer,
+            in: context
+        )
+        switch outcome {
+        case .replaced:
+            return (true, "Password has been reset successfully!")
+        case .writeFailed:
+            return (false, "Failed to reset password.")
+        case .unknownEmail:
+            return (false, "Security answer is incorrect.")
+        case .answerRefused:
+            AccountLockoutManager.shared.recordFailedAttempt(email: email)
             if let locked = lockMessage(for: email) {
                 return (false, locked)
             }
             return (false, "Security answer is incorrect.")
+        }
+    }
+
+    func resetPasswordOffMain(
+        for email: String,
+        newPassword: String,
+        securityAnswer: String,
+        in context: NSManagedObjectContext?
+    ) async -> PasswordResetOutcome {
+        guard let context else {
+            AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
+            return .unknownEmail
+        }
+        switch await verifySecurityAnswerOffMain(for: email, answer: securityAnswer, in: context) {
+        case .unknown:
+            AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
+            return .unknownEmail
+        case .refused:
+            AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
+            return .answerRefused
+        case .matched:
+            break
         }
         guard await UserManager.shared.replacePasswordOffMain(
             email: email,
             newPassword: newPassword,
             in: context
         ) else {
-            return (false, "Failed to reset password.")
+            return .writeFailed
         }
         AccountLockoutManager.shared.manuallyUnlock(email: email)
         AnalyticsManager.shared.logPasswordReset(method: "security_question", success: true)
-        return (true, "Password has been reset successfully!")
+        return .replaced
+    }
+
+    private enum OffMainAnswer {
+        case matched
+        case refused
+        case unknown
     }
 
     private func verifySecurityAnswerOffMain(
         for email: String,
         answer: String,
         in context: NSManagedObjectContext
-    ) async -> Bool {
+    ) async -> OffMainAnswer {
         let normalized = email.lowercased()
-        if AccountLockoutManager.shared.isAccountLocked(email: normalized) {
-            return false
-        }
         let loaded: (userID: UUID, secret: SessionSecret)? = context.performAndWait {
             guard let user = self.fetchUser(email: normalized, in: context), let userId = user.id else { return nil }
             let manager = UserManager.shared
@@ -260,11 +221,8 @@ class PasswordRecoveryManager {
             guard let secret = manager.secrets.load(userId: userId) else { return nil }
             return (userId, secret)
         }
-        guard let loaded else { return false }
-        guard loaded.secret.securityAnswerHash != nil else {
-            AccountLockoutManager.shared.recordFailedAttempt(email: normalized)
-            return false
-        }
+        guard let loaded else { return .unknown }
+        guard loaded.secret.securityAnswerHash != nil else { return .refused }
         let valid = await answerMatches(answer, secret: loaded.secret)
         if valid {
             if loaded.secret.securityAnswerIterations == nil {
@@ -279,10 +237,9 @@ class PasswordRecoveryManager {
                     }
                 }
             }
-            return true
+            return .matched
         }
-        AccountLockoutManager.shared.recordFailedAttempt(email: normalized)
-        return false
+        return .refused
     }
 
     private func answerMatches(_ answer: String, secret: SessionSecret) async -> Bool {
@@ -299,44 +256,6 @@ class PasswordRecoveryManager {
         return UserManager.shared.hashesMatch(legacyAnswerHash(answer), storedHash)
     }
 
-    func resetPassword(
-        for email: String,
-        newPassword: String,
-        securityAnswer: String,
-        in context: NSManagedObjectContext?
-    ) -> (success: Bool, message: String) {
-        if let locked = lockMessage(for: email) {
-            return (false, locked)
-        }
-
-        if case .waiting = recoveryState(for: email, in: context) {
-            return (false, SessionSecretMessage.waiting)
-        }
-        let strength = validatePasswordStrength(newPassword)
-        guard strength.isValid else {
-            return (false, strength.message)
-        }
-        guard verifySecurityAnswer(for: email, answer: securityAnswer, in: context) else {
-            AnalyticsManager.shared.logPasswordReset(method: "security_question", success: false)
-            if let locked = lockMessage(for: email) {
-                return (false, locked)
-            }
-            return (false, "Security answer is incorrect.")
-        }
-
-        guard let context, UserManager.shared.replacePassword(
-            email: email,
-            newPassword: newPassword,
-            in: context
-        ) else {
-            return (false, "Failed to reset password.")
-        }
-
-        AccountLockoutManager.shared.manuallyUnlock(email: email)
-        AnalyticsManager.shared.logPasswordReset(method: "security_question", success: true)
-        return (true, "Password has been reset successfully!")
-    }
-    
     // MARK: - Helper Methods
     
     private func loadedSharedContext() -> NSManagedObjectContext? {
@@ -355,35 +274,6 @@ class PasswordRecoveryManager {
         UserDefaults.standard.removeObject(forKey: "securityQuestion_\(email)")
         UserDefaults.standard.removeObject(forKey: "securityAnswer_\(email)")
         UserDefaults.standard.removeObject(forKey: "securityAnswerSalt_\(email)")
-    }
-
-    private func checkAnswer(
-        _ answer: String,
-        secret stored: SessionSecret,
-        email: String,
-        upgrade: () -> Void
-    ) -> Bool {
-        guard let storedHash = stored.securityAnswerHash else { return false }
-        let candidate = normalizedAnswer(answer)
-        let isValid: Bool
-        if let salt = stored.securityAnswerSalt, let iterations = stored.securityAnswerIterations {
-            isValid = UserManager.shared.verifyPasswordSecure(
-                candidate,
-                hash: storedHash,
-                salt: salt,
-                iterations: iterations
-            )
-        } else {
-            isValid = UserManager.shared.hashesMatch(legacyAnswerHash(answer), storedHash)
-        }
-        if isValid {
-            if stored.securityAnswerIterations == nil {
-                upgrade()
-            }
-            return true
-        }
-        AccountLockoutManager.shared.recordFailedAttempt(email: email)
-        return false
     }
 
     private func clearSyncedAnswer(on user: User, in context: NSManagedObjectContext) {
@@ -446,4 +336,11 @@ enum RecoveryState: Equatable {
     case waiting
     case question(String)
     case unavailable
+}
+
+enum PasswordResetOutcome: Equatable {
+    case answerRefused
+    case unknownEmail
+    case replaced
+    case writeFailed
 }

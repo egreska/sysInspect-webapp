@@ -188,12 +188,16 @@ public struct PDFResolvedTableLayout: Equatable {
         return min(max(needed, Self.minRowHeight), Self.maxRowHeight)
     }
 
+    /// Thumb side in points. The report display read uses this number as pixels.
+    public static func photoPixelSize(in bounds: CGRect) -> CGFloat {
+        photoThumbSize(innerWidth: max(bounds.width, 16))
+    }
+
     public static func photoRects(count: Int, in bounds: CGRect) -> [CGRect] {
         let photoCount = max(count, 0)
         guard photoCount > 0 else { return [] }
         let cols = photoGridColumns
-        let innerWidth = max(bounds.width, 16)
-        let thumb = photoThumbSize(innerWidth: innerWidth)
+        let thumb = photoPixelSize(in: bounds)
         var rects: [CGRect] = []
         for index in 0..<photoCount {
             let col = index % cols

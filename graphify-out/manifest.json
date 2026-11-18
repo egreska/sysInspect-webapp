@@ -18,9 +18,9 @@
     "semantic_hash": ""
   },
   "Systems InspectorTests/PasswordRecoveryManagerTests.swift": {
-    "mtime": 1794371501.5152655,
-    "seen": 1794371940.3021178,
-    "ast_hash": "2e021b6af4a0bc07a2847caa12710379",
+    "mtime": 1795002959.03751,
+    "seen": 1795003054.6971688,
+    "ast_hash": "fb7239a788f0f9892e6c0698be951b8f",
     "semantic_hash": ""
   },
   "Systems InspectorTests/PerformanceOptimizerTests.swift": {
@@ -150,9 +150,9 @@
     "semantic_hash": ""
   },
   "webapp/frontend/src/services/pdfGenerator.ts": {
-    "mtime": 1793384338.184855,
-    "seen": 1793384392.4056,
-    "ast_hash": "096cc9f98241472c4762371cc155243c",
+    "mtime": 1794846061.6914637,
+    "seen": 1794846102.519447,
+    "ast_hash": "332331c6c9bd8f677bdd75a75194cdc1",
     "semantic_hash": ""
   },
   "webapp/frontend/src/store/authStore.ts": {
@@ -318,9 +318,9 @@
     "semantic_hash": "91aa28e7219e63f8bdd6b2856a5ec2d5"
   },
   "Systems InspectorTests/InspectionItemIntakeTests.swift": {
-    "mtime": 1792717408.5721333,
-    "seen": 1792717813.899159,
-    "ast_hash": "12105d1ac784c190aaec8e7513f12b62",
+    "mtime": 1795019756.1884735,
+    "seen": 1795019830.5957189,
+    "ast_hash": "f7b3d4f33f25c8d8c9edfcf6a126c43e",
     "semantic_hash": ""
   },
   "Systems InspectorTests/ReportExportTests.swift": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1794370899.4820182,
-    "seen": 1794371940.302156,
-    "ast_hash": "90dfa90272e32eefb47c436fdf131e64",
+    "mtime": 1794969023.2512572,
+    "seen": 1794970472.887483,
+    "ast_hash": "7dda4e2e875667a0a60b663e6daf6e78",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-08-27-multi-photo-inspection-item.md": {
@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "Systems InspectorTests/PDFTableLayoutTests.swift": {
-    "mtime": 1790606456.9614334,
-    "seen": 1790606600.32355,
-    "ast_hash": "42c73fceaf81578a6e85bd87221c5a45",
+    "mtime": 1795028806.6743498,
+    "seen": 1795028900.024263,
+    "ast_hash": "5509ad3fa5c933ef628c0219aacc1e8f",
     "semantic_hash": ""
   },
   "docs/adr/0001-delete-damagecomponent-with-issue-module.md": {
@@ -414,15 +414,15 @@
     "semantic_hash": ""
   },
   "Systems InspectorTests/InspectionItemFormStateTests.swift": {
-    "mtime": 1790606467.7973735,
-    "seen": 1790606600.3235478,
-    "ast_hash": "6f3b114ef2443a44603f2d507b6cfd35",
+    "mtime": 1795019737.5234768,
+    "seen": 1795019830.5957189,
+    "ast_hash": "3501c28b913d3cc07e4620713bae8e0b",
     "semantic_hash": ""
   },
   "Systems InspectorTests/ReportSnapshotMapperTests.swift": {
-    "mtime": 1793377050.1046422,
-    "seen": 1793377160.282229,
-    "ast_hash": "f42673d8e6a07e89c85f9e5da59eb18d",
+    "mtime": 1795019742.0683,
+    "seen": 1795019830.595724,
+    "ast_hash": "c8668680aeef8f28423f2e173445c341",
     "semantic_hash": ""
   },
   "docs/adr/0002-stored-method-zip-in-report.md": {
@@ -456,15 +456,15 @@
     "semantic_hash": ""
   },
   "Systems InspectorTests/CustomerSiteDocumentTests.swift": {
-    "mtime": 1794374212.5350842,
-    "seen": 1794374286.112349,
-    "ast_hash": "1e1624b20c7dda39d21749fe6dcba649",
+    "mtime": 1795016514.3176003,
+    "seen": 1795016642.155822,
+    "ast_hash": "3d7e561d51e016b86bf8625033b7bf65",
     "semantic_hash": ""
   },
   "Systems InspectorTests/InspectionItemPhotoBytesTests.swift": {
-    "mtime": 1794514053.6462612,
-    "seen": 1794514056.717983,
-    "ast_hash": "f00de60918f32a3a0091c4ee5d12c63c",
+    "mtime": 1794623353.4193895,
+    "seen": 1794623504.619158,
+    "ast_hash": "847f089de4be706d421ce021c01496de",
     "semantic_hash": ""
   },
   "Systems InspectorTests/InspectionItemRecordedIssuesTests.swift": {
@@ -492,9 +492,9 @@
     "semantic_hash": ""
   },
   "Systems InspectorTests/UserManagerPasswordTests.swift": {
-    "mtime": 1794327135.0682075,
-    "seen": 1794327205.4223459,
-    "ast_hash": "7c1e2a77cfb5a96393bb069fde0bd4b6",
+    "mtime": 1795002993.4638948,
+    "seen": 1795003054.697176,
+    "ast_hash": "22dda429aa23820479730604df02051b",
     "semantic_hash": ""
   },
   "Systems InspectorTests/UserManagerSessionTests.swift": {
@@ -696,27 +696,27 @@
     "semantic_hash": ""
   },
   "Systems Inspector/Customer+SiteDocuments.swift": {
-    "mtime": 1794374194.1556435,
-    "seen": 1794374286.112315,
-    "ast_hash": "dec5d47e13ddae97f71d37f75d0995dc",
+    "mtime": 1795016551.8363655,
+    "seen": 1795016642.155788,
+    "ast_hash": "e34ada2d5334fd3597ddcb64117bc18e",
     "semantic_hash": ""
   },
   "Systems Inspector/CustomerDetailsViewController.swift": {
-    "mtime": 1794514039.0242424,
-    "seen": 1794514056.717945,
-    "ast_hash": "2e9a84507a1255d33aadbc491edcc1fa",
+    "mtime": 1794548934.7672434,
+    "seen": 1794549144.731817,
+    "ast_hash": "e5ecd3c79aaa8576435d299bbf6d3a6f",
     "semantic_hash": ""
   },
   "Systems Inspector/CustomerDirectoryViewController.swift": {
-    "mtime": 1794497133.6059444,
-    "seen": 1794498933.4419708,
-    "ast_hash": "cfde1bd215d9a5a62f161de530bb02c4",
+    "mtime": 1794548925.2677643,
+    "seen": 1794549144.731818,
+    "ast_hash": "5c7d3ea17526618a274e3609fbc76769",
     "semantic_hash": ""
   },
   "Systems Inspector/CustomerDirectoryViewModel.swift": {
-    "mtime": 1794510203.596324,
-    "seen": 1794510276.1919549,
-    "ast_hash": "7849a7a158099642ca8bacfcfb7741e0",
+    "mtime": 1794549040.2515373,
+    "seen": 1794549144.731818,
+    "ast_hash": "689cd2ec6c28a4b3d224d35e68b870ec",
     "semantic_hash": ""
   },
   "Systems Inspector/CustomerFormState.swift": {
@@ -762,9 +762,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/ForgotPasswordViewController.swift": {
-    "mtime": 1794497133.5740726,
-    "seen": 1794498933.441977,
-    "ast_hash": "4f60b35b3f65142b6820132f0d65b801",
+    "mtime": 1794622565.7203736,
+    "seen": 1794622714.425036,
+    "ast_hash": "be078815ddb3611a24beb017c90dbd30",
     "semantic_hash": ""
   },
   "Systems Inspector/HapticManager.swift": {
@@ -786,9 +786,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/ImageCacheManager.swift": {
-    "mtime": 1794511702.6468015,
-    "seen": 1794512018.825359,
-    "ast_hash": "9fdf577450e3310cebfc01774d988aaf",
+    "mtime": 1794623282.668467,
+    "seen": 1794623504.619127,
+    "ast_hash": "2483e938972d76d7dd8613f7a15d05bf",
     "semantic_hash": ""
   },
   "Systems Inspector/InspectionFormViewModel.swift": {
@@ -804,27 +804,27 @@
     "semantic_hash": ""
   },
   "Systems Inspector/InspectionItem+PhotoExtension.swift": {
-    "mtime": 1794514040.9965975,
-    "seen": 1794514056.717956,
-    "ast_hash": "e2c20a234bdcb940b3c3da7b5813eb24",
+    "mtime": 1794623292.1656952,
+    "seen": 1794623504.6191301,
+    "ast_hash": "b8b0e525c59b31d316d96c515914aa67",
     "semantic_hash": ""
   },
   "Systems Inspector/InspectionItemFormState.swift": {
-    "mtime": 1794511691.062049,
-    "seen": 1794512018.825362,
-    "ast_hash": "7874a486e6731e0e5e43ee555e3ccdcd",
+    "mtime": 1795019706.9944787,
+    "seen": 1795019830.595693,
+    "ast_hash": "759dbc600f40f0c7d75506b562828fe3",
     "semantic_hash": ""
   },
   "Systems Inspector/InspectionItemFormViewController.swift": {
-    "mtime": 1794511749.8545113,
-    "seen": 1794512018.825363,
-    "ast_hash": "50b17ef53fb1f33248ae3cb0d8bd5ff9",
+    "mtime": 1795019715.4744418,
+    "seen": 1795019830.595694,
+    "ast_hash": "ef8591e65ddf2a7e5623c7106e47126e",
     "semantic_hash": ""
   },
   "Systems Inspector/InspectionItemIntake.swift": {
-    "mtime": 1794511691.3523686,
-    "seen": 1794512018.825363,
-    "ast_hash": "50925f555b34116c1c5ee4b3a4a2049a",
+    "mtime": 1795019711.4037151,
+    "seen": 1795019830.595694,
+    "ast_hash": "7ea8b3b8984ba5b6a4b0c8b81aa6c951",
     "semantic_hash": ""
   },
   "Systems Inspector/InspectionPhotoStripView.swift": {
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/LoginViewController.swift": {
-    "mtime": 1794514340.5488317,
-    "seen": 1794514366.530615,
-    "ast_hash": "3f19bf7e6c09edbefb92c00f72aec006",
+    "mtime": 1794622563.8533628,
+    "seen": 1794622714.425045,
+    "ast_hash": "93939c91da1501e0062e949e012199b6",
     "semantic_hash": ""
   },
   "Systems Inspector/MainTabBarController.swift": {
@@ -858,15 +858,15 @@
     "semantic_hash": ""
   },
   "Systems Inspector/PDFTableLayout.swift": {
-    "mtime": 1790606434.4665403,
-    "seen": 1790606600.323531,
-    "ast_hash": "141d01b679df1b799c376700c9717734",
+    "mtime": 1795028832.7416372,
+    "seen": 1795028900.024239,
+    "ast_hash": "aeb872c9ff0f36748acbd2d191e03bae",
     "semantic_hash": ""
   },
   "Systems Inspector/PasswordRecoveryManager.swift": {
-    "mtime": 1794511900.0047994,
-    "seen": 1794512018.8253682,
-    "ast_hash": "ba8b40723946ec816ad2185cee2849a5",
+    "mtime": 1795002850.1988676,
+    "seen": 1795003054.6971478,
+    "ast_hash": "8096370f4b88cf5d76522d3fa7d3e86d",
     "semantic_hash": ""
   },
   "Systems Inspector/PerformanceOptimizer.swift": {
@@ -876,9 +876,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/ReportCriteria.swift": {
-    "mtime": 1787875721.425725,
-    "seen": 1789702315.40017,
-    "ast_hash": "d3ba71f04bed761d80a4a26f7b1914cb",
+    "mtime": 1795021574.2843351,
+    "seen": 1795021844.61709,
+    "ast_hash": "af29b7b597bce481c134c84c0e3f0abf",
     "semantic_hash": ""
   },
   "Systems Inspector/ReportFromInspections.swift": {
@@ -888,9 +888,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/ReportGenerator.swift": {
-    "mtime": 1794511695.652599,
-    "seen": 1794512018.8253708,
-    "ast_hash": "b36cfddfd724c122eff883a6052eb587",
+    "mtime": 1795028834.3094494,
+    "seen": 1795028900.024242,
+    "ast_hash": "14d8efae5ad9ec59cd691cfd79691d1e",
     "semantic_hash": ""
   },
   "Systems Inspector/ReportPDFLayoutOptionsViewController.swift": {
@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/ReportViewController.swift": {
-    "mtime": 1794497133.6297483,
-    "seen": 1794498933.4419909,
-    "ast_hash": "93d433882baa2235b5c94902c4149e3b",
+    "mtime": 1795021587.4972425,
+    "seen": 1795021844.617095,
+    "ast_hash": "400715864c5c3b5dd41333c6d7802ad4",
     "semantic_hash": ""
   },
   "Systems Inspector/SceneDelegate.swift": {
@@ -936,9 +936,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SettingsViewController.swift": {
-    "mtime": 1794514349.0506356,
-    "seen": 1794514366.530626,
-    "ast_hash": "a769f6f153138741e1fe7db00ee7fa84",
+    "mtime": 1794622570.926645,
+    "seen": 1794622714.425055,
+    "ast_hash": "957b1414d7809adc63e470b9e0298a09",
     "semantic_hash": ""
   },
   "Systems Inspector/SiteDocumentFile.swift": {
@@ -954,9 +954,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SiteRackingViewController.swift": {
-    "mtime": 1794514324.6490922,
-    "seen": 1794514366.530627,
-    "ast_hash": "37abbe6acf24fe74a3307ef68d4cde1d",
+    "mtime": 1795016561.779636,
+    "seen": 1795016642.155814,
+    "ast_hash": "913b67f5dc133b13dcf17226a51aff46",
     "semantic_hash": ""
   },
   "Systems Inspector/SkeletonView.swift": {
@@ -990,9 +990,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/UserManager.swift": {
-    "mtime": 1794514335.592144,
-    "seen": 1794514366.5306308,
-    "ast_hash": "5f8708ac202c4d3cf1f868b2b6cae585",
+    "mtime": 1795002841.80482,
+    "seen": 1795003054.69716,
+    "ast_hash": "b1726df9ff71c30701c762ea4f4f48c0",
     "semantic_hash": ""
   },
   "Systems Inspector/ZipCodeLookup.swift": {
@@ -1212,9 +1212,9 @@
     "semantic_hash": ""
   },
   "Systems InspectorTests/SessionCustomerFetchTests.swift": {
-    "mtime": 1793376349.5499156,
-    "seen": 1793376546.533186,
-    "ast_hash": "cce2e0eb218045e373fc764f3c591fca",
+    "mtime": 1794548963.9207213,
+    "seen": 1794549144.731858,
+    "ast_hash": "58fae79e3eb3c879f08172e9ff052ab3",
     "semantic_hash": ""
   },
   "Systems Inspector/DeleteAccount.swift": {
@@ -1242,9 +1242,9 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SessionCustomerRead.swift": {
-    "mtime": 1794373045.1193123,
-    "seen": 1794373164.406671,
-    "ast_hash": "152a185e5b8d993e77e024fec80d5730",
+    "mtime": 1794548891.784244,
+    "seen": 1794549144.731839,
+    "ast_hash": "eccd415e8bde5fe704585d06c0e00366",
     "semantic_hash": ""
   },
   "docs/adr/0020-session-stamped-customer-reads.md": {
@@ -1308,15 +1308,15 @@
     "semantic_hash": ""
   },
   "Systems Inspector/SessionOpening.swift": {
-    "mtime": 1794511841.4546096,
-    "seen": 1794512018.825376,
-    "ast_hash": "893848ac64c6bb352a7bd755811f9a93",
+    "mtime": 1794970329.4555364,
+    "seen": 1794970472.887427,
+    "ast_hash": "226c7500f8507705f47fbb0d3d1484dc",
     "semantic_hash": ""
   },
   "Systems InspectorTests/SessionOpeningTests.swift": {
-    "mtime": 1794371877.271139,
-    "seen": 1794371940.3021219,
-    "ast_hash": "ddda5d2b76fea2f1bbb14402d5de83ed",
+    "mtime": 1795002902.8283489,
+    "seen": 1795003054.6971729,
+    "ast_hash": "281bf02a42bc927dce178862af644121",
     "semantic_hash": ""
   },
   "docs/adr/0022-session-starts-before-the-claim-says-so.md": {
@@ -1344,21 +1344,51 @@
     "semantic_hash": ""
   },
   "Systems Inspector/StoredPhoto.swift": {
-    "mtime": 1794511806.3736947,
-    "seen": 1794512018.82538,
-    "ast_hash": "c844e5ccc57a78fbff98debc504074b1",
+    "mtime": 1795016552.4486368,
+    "seen": 1795016642.155815,
+    "ast_hash": "bd5d20ed890666899027fc85ba6eddc9",
     "semantic_hash": ""
   },
   "Systems InspectorTests/StoredPhotoTests.swift": {
-    "mtime": 1794511946.5734959,
-    "seen": 1794512018.8254,
-    "ast_hash": "ec45f8c76f9a44cad982efe9982c8719",
+    "mtime": 1795019744.5097427,
+    "seen": 1795019830.595728,
+    "ast_hash": "e15c7717c84b733dadbeb08488eb1e41",
     "semantic_hash": ""
   },
   "docs/adr/0025-stored-photo-is-not-the-camera-original.md": {
     "mtime": 1794512547.2758527,
     "seen": 1794512550.129277,
     "ast_hash": "9915296ad34156caf10a1fc90de8ca4e",
+    "semantic_hash": ""
+  },
+  ".periphery.yml": {
+    "mtime": 1794548712.5269403,
+    "seen": 1794549144.731891,
+    "ast_hash": "2270e2405fdf54cae980aef074d34ea5",
+    "semantic_hash": ""
+  },
+  "docs/adr/0026-entry-jpeg-and-one-photo-read.md": {
+    "mtime": 1794623384.838879,
+    "seen": 1794623504.619216,
+    "ast_hash": "f259469d12bb5a726976b417cba211cf",
+    "semantic_hash": ""
+  },
+  "webapp/frontend/src/services/pdfTableLayout.test.ts": {
+    "mtime": 1794846034.2491608,
+    "seen": 1794846102.519448,
+    "ast_hash": "7c9f39c5170e84fd8aeb6a7c6942d1ce",
+    "semantic_hash": ""
+  },
+  "webapp/frontend/src/services/pdfTableLayout.ts": {
+    "mtime": 1794846027.5239854,
+    "seen": 1794846102.519449,
+    "ast_hash": "b41c31c25b053d971e3f25f6b297297b",
+    "semantic_hash": ""
+  },
+  "Systems InspectorTests/ReportOrderTests.swift": {
+    "mtime": 1795021781.3215308,
+    "seen": 1795021844.617116,
+    "ast_hash": "0b747a67f0953c3e56db59cca641e851",
     "semantic_hash": ""
   }
 }

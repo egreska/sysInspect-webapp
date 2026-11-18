@@ -387,55 +387,25 @@ class LoginViewController: UIViewController {
             return
         }
         
-        // Check if account is locked
-        if AccountLockoutManager.shared.isAccountLocked(email: email) {
-            let remainingTime = AccountLockoutManager.shared.getRemainingLockoutTime(email: email)
-            let formattedTime = AccountLockoutManager.shared.formatRemainingTime(remainingTime)
-            showAlert(
-                title: "Account Locked",
-                message: "Too many failed login attempts. Please try again in \(formattedTime)."
-            )
-            return
-        }
-
         isAuthenticating = true
         showActivityIndicator(true)
-        
+
         Task {
-            let authResult = await UserManager.shared.authenticateUser(email: email, password: password)
-            
+            let outcome = await SessionOpening.live.login(email: email, password: password)
+
             await MainActor.run {
                 self.isAuthenticating = false
-                
-                switch authResult {
-                case .success:
+
+                switch outcome {
+                case .started:
                     HapticManager.success()
                     Task {
                         await self.performSuccessfulLogin()
                     }
-                case .waiting:
+                case .waiting(let notice), .locked(let notice), .refused(let notice):
                     HapticManager.error()
                     self.showActivityIndicator(false)
-                    self.showAlert(
-                        title: SessionSecretMessage.waitingTitle,
-                        message: SessionSecretMessage.waiting
-                    )
-                case .failure:
-                    HapticManager.error()
-                    self.showActivityIndicator(false)
-                    
-                    let remainingAttempts = AccountLockoutManager.shared.getRemainingAttempts(email: email)
-                    if remainingAttempts > 0 {
-                        self.showAlert(
-                            title: "Login Failed",
-                            message: "Invalid email or password.\n\(remainingAttempts) attempt\(remainingAttempts == 1 ? "" : "s") remaining before account lockout."
-                        )
-                    } else {
-                        self.showAlert(
-                            title: "Account Locked",
-                            message: "Too many failed login attempts. Your account has been locked for 15 minutes for security."
-                        )
-                    }
+                    self.showAlert(title: notice.title, message: notice.message)
                 }
             }
         }

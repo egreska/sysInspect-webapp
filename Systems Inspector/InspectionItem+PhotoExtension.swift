@@ -72,10 +72,8 @@ extension InspectionItem {
         for index in 0..<Self.maxPhotoCount {
             let path = photoURLString(at: index)
             var data = photoData(at: index)
-            if data == nil,
-               let path,
-               let image = UIImage(contentsOfFile: path) {
-                data = image.jpegData(compressionQuality: 0.8)
+            if data == nil, let path {
+                data = try? Data(contentsOf: URL(fileURLWithPath: path))
             }
             guard let data else { continue }
             storedBytes = true
@@ -148,61 +146,47 @@ extension InspectionItem {
            let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
             return data
         }
-        if let image = getPhotoSync(at: index),
-           let data = image.jpegData(compressionQuality: 0.8) {
-            return data
-        }
         return nil
     }
 
     private func loadPhotoThumbnail(at index: Int, maxDimension: CGFloat = 300, completion: @escaping (UIImage?) -> Void) {
         let key = cacheKey(at: index)
         if let data = photoData(at: index) {
-            if let key {
-                ImageCacheManager.shared.getThumbnail(forKey: key, maxDimension: maxDimension, data: data, completion: completion)
-            } else {
-                ImageCacheManager.shared.uncachedThumbnail(from: data, maxDimension: maxDimension, completion: completion)
-            }
+            deliverThumbnail(data, key: key, maxDimension: maxDimension, completion: completion)
             return
         }
-        if let photoPath = photoURLString(at: index), FileManager.default.fileExists(atPath: photoPath) {
-            DispatchQueue.global(qos: .userInitiated).async {
-                guard let localImage = UIImage(contentsOfFile: photoPath) else {
-                    DispatchQueue.main.async { completion(nil) }
-                    return
-                }
-                guard let key else {
-                    DispatchQueue.main.async { completion(localImage) }
-                    return
-                }
-                ImageCacheManager.shared.cacheImage(localImage, forKey: key)
-                ImageCacheManager.shared.getThumbnail(forKey: key, maxDimension: maxDimension, data: nil, completion: completion)
-            }
-        } else {
+        guard let path = photoURLString(at: index), FileManager.default.fileExists(atPath: path) else {
             completion(nil)
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let data = try? Data(contentsOf: URL(fileURLWithPath: path))
+            DispatchQueue.main.async {
+                guard let data else {
+                    completion(nil)
+                    return
+                }
+                self.deliverThumbnail(data, key: key, maxDimension: maxDimension, completion: completion)
+            }
         }
     }
 
-    private func getPhotoSync(at index: Int) -> UIImage? {
-        let key = cacheKey(at: index)
-        if let key, let cachedImage = ImageCacheManager.shared.getImageFromMemory(forKey: key) {
-            return cachedImage
+    private func deliverThumbnail(
+        _ data: Data,
+        key: String?,
+        maxDimension: CGFloat,
+        completion: @escaping (UIImage?) -> Void
+    ) {
+        if let key {
+            ImageCacheManager.shared.getThumbnail(
+                forKey: key,
+                maxDimension: maxDimension,
+                data: data,
+                completion: completion
+            )
+        } else {
+            ImageCacheManager.shared.uncachedThumbnail(from: data, maxDimension: maxDimension, completion: completion)
         }
-        if let data = photoData(at: index), let image = UIImage(data: data) {
-            if let key {
-                ImageCacheManager.shared.cacheImage(image, forKey: key)
-            }
-            return image
-        }
-        if let photoPath = photoURLString(at: index),
-           FileManager.default.fileExists(atPath: photoPath),
-           let image = UIImage(contentsOfFile: photoPath) {
-            if let key {
-                ImageCacheManager.shared.cacheImage(image, forKey: key)
-            }
-            return image
-        }
-        return nil
     }
 
     /// Stable only when this item has an id, or a leftover file name. A missing identity is not cached.

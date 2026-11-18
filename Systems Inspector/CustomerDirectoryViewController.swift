@@ -17,6 +17,8 @@ class CustomerDirectoryViewController: UIViewController {
     private var deletingIndexPath: IndexPath?
     private var pendingDeletedCustomer: Customer?
     private var deleteUndoTimer: Timer?
+    private var pendingSearch: DispatchWorkItem?
+    private static let searchSettleInterval: TimeInterval = 0.3
     private lazy var emptyStateView: EmptyStateView = {
         let view = EmptyStateView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -39,6 +41,7 @@ class CustomerDirectoryViewController: UIViewController {
     }
     
     deinit {
+        pendingSearch?.cancel()
         NotificationCenter.default.removeObserver(self, name: .cloudKitSyncStatusChanged, object: nil)
     }
     
@@ -97,6 +100,7 @@ class CustomerDirectoryViewController: UIViewController {
             .sink { [weak self] _ in
                 self?.tableView.reloadData()
                 self?.refreshControl.endRefreshing()
+                self?.updateCustomerListChrome()
             }
             .store(in: &cancellables)
         
@@ -111,6 +115,7 @@ class CustomerDirectoryViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.tableView.reloadData()
+                self?.updateCustomerListChrome()
             }
             .store(in: &cancellables)
         
@@ -142,9 +147,7 @@ class CustomerDirectoryViewController: UIViewController {
     }
 
     private func inspectionCount(for customer: Customer) -> Int {
-        guard let userId = UserManager.shared.sessionUserId,
-              let context = customer.managedObjectContext else { return 0 }
-        return (try? sessionInspectionCount(for: customer, userId: userId, in: context)) ?? 0
+        viewModel.inspectionCount(for: customer)
     }
     
     @objc private func cloudKitSyncStatusChanged() {
@@ -196,52 +199,51 @@ class CustomerDirectoryViewController: UIViewController {
 extension CustomerDirectoryViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         let count = viewModel.customers.count
-        
-        if viewModel.isLoading && count == 0 {
-            tableView.backgroundView = nil
-            return Self.skeletonRowCount
-        }
-        
-        if count == 0 {
-            let isSearching = searchController.isActive && !(searchController.searchBar.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            let container = UIView(frame: CGRect(x: 0, y: 0, width: tableView.bounds.width, height: max(tableView.bounds.height, 320)))
-            container.backgroundColor = .systemGroupedBackground
-            container.addSubview(emptyStateView)
-            NSLayoutConstraint.activate([
-                emptyStateView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-                emptyStateView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
-                emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32)
-            ])
-            if isSearching {
-                let query = searchController.searchBar.text ?? ""
-                emptyStateView.configure(
-                    symbolNames: ["magnifyingglass"],
-                    title: "No matches",
-                    message: "No customers match \"\(query)\". Try a different search or add a new customer.",
-                    buttonTitle: "Add customer",
-                    buttonAction: { [weak self] in
-                        self?.searchController.isActive = false
-                        self?.addCustomerTapped()
-                    }
-                )
-            } else {
-                emptyStateView.configure(
-                    symbolNames: ["person.3", "plus.circle"],
-                    symbolPointSize: 48,
-                    title: "No customers yet",
-                    message: "Add your first customer to start tracking inspections.",
-                    buttonTitle: "Add customer",
-                    buttonAction: { [weak self] in self?.addCustomerTapped() }
-                )
-            }
-            tableView.backgroundView = container
-        } else {
-            tableView.backgroundView = nil
-        }
-        
+        if viewModel.isLoading && count == 0 { return Self.skeletonRowCount }
         if count == 0 { return count }
         return viewModel.hasMoreCustomers ? count + 1 : count
+    }
+
+    private func updateCustomerListChrome() {
+        let count = viewModel.customers.count
+        guard !(viewModel.isLoading && count == 0), count == 0 else {
+            tableView.backgroundView = nil
+            return
+        }
+        let isSearching = searchController.isActive && !(searchController.searchBar.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: tableView.bounds.width, height: max(tableView.bounds.height, 320)))
+        container.backgroundColor = .systemGroupedBackground
+        emptyStateView.removeFromSuperview()
+        container.addSubview(emptyStateView)
+        NSLayoutConstraint.activate([
+            emptyStateView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
+            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32)
+        ])
+        if isSearching {
+            let query = searchController.searchBar.text ?? ""
+            emptyStateView.configure(
+                symbolNames: ["magnifyingglass"],
+                title: "No matches",
+                message: "No customers match \"\(query)\". Try a different search or add a new customer.",
+                buttonTitle: "Add customer",
+                buttonAction: { [weak self] in
+                    self?.searchController.isActive = false
+                    self?.addCustomerTapped()
+                }
+            )
+        } else {
+            emptyStateView.configure(
+                symbolNames: ["person.3", "plus.circle"],
+                symbolPointSize: 48,
+                title: "No customers yet",
+                message: "Add your first customer to start tracking inspections.",
+                buttonTitle: "Add customer",
+                buttonAction: { [weak self] in self?.addCustomerTapped() }
+            )
+        }
+        tableView.backgroundView = container
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -448,7 +450,12 @@ extension CustomerDirectoryViewController: UITableViewDataSourcePrefetching {
 extension CustomerDirectoryViewController: UISearchResultsUpdating {
     func updateSearchResults(for searchController: UISearchController) {
         guard let searchText = searchController.searchBar.text else { return }
-        viewModel.filterCustomers(searchText: searchText)
+        pendingSearch?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.viewModel.filterCustomers(searchText: searchText)
+        }
+        pendingSearch = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.searchSettleInterval, execute: work)
     }
 }
 

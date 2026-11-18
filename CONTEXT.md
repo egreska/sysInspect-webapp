@@ -5,7 +5,7 @@ Field inspections of storage-rack systems: customers, inspections, and the issue
 ## Language
 
 **InspectionItem**:
-A single location on an Inspection (bay/position) where conditions are recorded. On an Inspection, items appear in the order they were recorded. Callers ask for photo bytes, not storage slots or file URLs. At most five photos. Callers ask for recorded Issues as Paths, not Flag maps or Core Data bools.
+A single location on an Inspection (bay/position) where conditions are recorded. On an Inspection, items appear in the order they were recorded. Callers ask for photo bytes, not storage slots or file URLs. At most five photos. Those bytes are the JPEG from when the photo entered the form. A leftover file is copied unchanged. Callers ask for recorded Issues as Paths, not Flag maps or Core Data bools.
 _Avoid_: line item, finding, row, location order, bay order, mapper photos, photoDataList, photoURL, packed photo tuples, issueFlagMap, applyIssueFlags
 
 **Issue**:
@@ -41,7 +41,7 @@ Optional installed-equipment profile on a Customer: Site Information, Load Infor
 _Avoid_: inventory, rack layout, Issue, Inspection snapshot, DamageComponent
 
 **SiteDocument**:
-An optional photo or PDF of at most 10 MB on a Customer. At most five. Callers ask for bytes and filename, not storage slots or file URLs.
+An optional photo or PDF on a Customer. At most five, each at most 10 MB. A photo is the JPEG from when it was added. A PDF is that file. Callers ask for bytes and filename, not storage slots or file URLs.
 _Avoid_: attachment, blueprint entity, Customer photo, packed document tuples
 
 **Manufacturer**:
@@ -65,8 +65,12 @@ The logged-in user's id on iOS, owned by UserManager. The Create Account button 
 _Avoid_: Account, CoreDataManager.currentUserID, PasswordRecoveryManager hashing, duplicate PBKDF2, UserDefaults Session keys outside UserManager, LastUser
 
 **Security Answer**:
-A secret that travels with the Session to the Inspector's other phones and resets its password. It is not an inspection record. The question text is only the prompt. A wrong guess counts toward that phone's email lock. A correct one ends that lock.
+A secret that travels with the Session to the Inspector's other phones and resets its password. It is not an inspection record. The question text is only the prompt. A wrong guess counts toward that phone's Email lock.
 _Avoid_: recovery code, backup password, Access Code, Session password
+
+**Email lock**:
+This phone's 15-minute refusal of one email after five wrong login passwords or wrong Security Answers, counted together. A login for an unknown email, and a reset when no Security Answer is stored, count as a miss. A reset for an unknown email does not count, and a password write that fails does not count. The lock ends when the time passes. A correct login, or a reset that has written the new password, clears the count only while the email is not locked. A quiet 30 minutes clears an unlocked count. A Delete Account password does not change the count, and a verifier that has not arrived is not a miss.
+_Avoid_: ban, Delete Account, waiting for the verifier
 
 **LastUser**:
 The user id of the last account that held a Session on this device, used for Face ID after logout. It is not the Session: logout keeps it, and Delete Account ends it.

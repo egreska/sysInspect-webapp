@@ -9,11 +9,116 @@ import Foundation
 enum SortCriteria {
     case date
     case customer
-    case inspectionStatus
     case importance
     case primaryLocation
     case issue
     case entryOrder
+}
+
+enum ReportOrder {
+    static func inspections<T>(
+        _ inspections: [T],
+        by choice: SortCriteria,
+        date: (T) -> Date?,
+        customerName: (T) -> String
+    ) -> [T] {
+        switch choice {
+        case .customer:
+            return inspections.sorted { lhs, rhs in
+                let name = customerName(lhs).localizedStandardCompare(customerName(rhs))
+                if name != .orderedSame { return name == .orderedAscending }
+                return dateComesFirst(date(lhs), date(rhs))
+            }
+        case .date, .importance, .primaryLocation, .issue, .entryOrder:
+            return inspections.sorted { dateComesFirst(date($0), date($1)) }
+        }
+    }
+
+    static func rows<Inspection, Item>(
+        _ inspections: [Inspection],
+        by choice: SortCriteria,
+        date: (Inspection) -> Date?,
+        customerName: (Inspection) -> String,
+        items: (Inspection) -> [Item],
+        sequence: (Item) -> Int32,
+        importance: (Item) -> Importance,
+        location: (Item) -> String,
+        bayNumber: (Item) -> String?,
+        issues: (Item) -> Set<Issue.Path>
+    ) -> [(inspection: Inspection, item: Item)] {
+        let ordered = self.inspections(
+            inspections,
+            by: choice == .customer ? .customer : .date,
+            date: date,
+            customerName: customerName
+        )
+        switch choice {
+        case .importance, .primaryLocation, .issue:
+            let flat = ordered.flatMap { inspection in
+                items(inspection).map { (inspection: inspection, item: $0) }
+            }
+            // Equal items keep this order, so the newer Inspection stays first.
+            return flat.sorted { lhs, rhs in
+                itemComesFirst(
+                    lhs.item,
+                    rhs.item,
+                    choice: choice,
+                    importance: importance,
+                    location: location,
+                    bayNumber: bayNumber,
+                    issues: issues
+                )
+            }
+        case .date, .customer, .entryOrder:
+            return ordered.flatMap { inspection in
+                RecordedOrder.sorted(items(inspection), sequence: sequence).map {
+                    (inspection: inspection, item: $0)
+                }
+            }
+        }
+    }
+
+    private static func dateComesFirst(_ lhs: Date?, _ rhs: Date?) -> Bool {
+        switch (lhs, rhs) {
+        case let (left?, right?):
+            return left > right
+        case (_?, nil):
+            return true
+        case (nil, _?), (nil, nil):
+            return false
+        }
+    }
+
+    private static func itemComesFirst<Item>(
+        _ lhs: Item,
+        _ rhs: Item,
+        choice: SortCriteria,
+        importance: (Item) -> Importance,
+        location: (Item) -> String,
+        bayNumber: (Item) -> String?,
+        issues: (Item) -> Set<Issue.Path>
+    ) -> Bool {
+        switch choice {
+        case .importance:
+            if importance(lhs) != importance(rhs) { return importance(lhs) < importance(rhs) }
+            return location(lhs) < location(rhs)
+        case .primaryLocation:
+            let result = location(lhs).compare(location(rhs), options: [.numeric, .caseInsensitive])
+            if result == .orderedSame {
+                let leftBay = bayNumber(lhs) ?? ""
+                let rightBay = bayNumber(rhs) ?? ""
+                return leftBay.compare(rightBay, options: [.numeric, .caseInsensitive]) == .orderedAscending
+            }
+            return result == .orderedAscending
+        case .issue:
+            let leftIssue = Issue.primaryParentLabel(from: issues(lhs))
+            let rightIssue = Issue.primaryParentLabel(from: issues(rhs))
+            if leftIssue == rightIssue { return location(lhs) < location(rhs) }
+            return leftIssue < rightIssue
+        case .date, .customer, .entryOrder:
+            return false
+        }
+    }
 }
 
 struct Filter: Codable, Equatable {

@@ -4,7 +4,7 @@
 //
 
 import CoreData
-import Foundation
+import UIKit
 
 extension Customer {
     enum SiteDocumentAcceptance: Equatable {
@@ -29,6 +29,55 @@ extension Customer {
         if data.count > maxSiteDocumentBytes { return .tooLarge }
         if !allowedContentTypes.contains(contentType) { return .wrongType }
         return .allowed
+    }
+
+    enum SiteDocumentEntry: Equatable {
+        case document(SiteDocumentFile)
+        case refused(SiteDocumentAcceptance)
+        case unreadable
+        case full
+    }
+
+    static func siteDocumentEntry(
+        image: UIImage,
+        filename: String,
+        existingCount: Int
+    ) async -> SiteDocumentEntry {
+        guard existingCount < maxSiteDocumentCount else { return .full }
+        guard let stored = await StoredPhoto.siteDocumentPhotoOffMain(image: image, filename: filename) else {
+            return .unreadable
+        }
+        return entered(stored)
+    }
+
+    static func siteDocumentEntry(
+        data: Data,
+        contentType: String,
+        filename: String,
+        existingCount: Int
+    ) async -> SiteDocumentEntry {
+        guard existingCount < maxSiteDocumentCount else { return .full }
+        guard let stored = await StoredPhoto.siteDocumentPhotoOffMain(
+            data: data,
+            contentType: contentType,
+            filename: filename
+        ) else {
+            return .unreadable
+        }
+        return entered(stored)
+    }
+
+    private static func entered(
+        _ stored: (data: Data, contentType: String, filename: String)
+    ) -> SiteDocumentEntry {
+        let decision = acceptance(data: stored.data, contentType: stored.contentType)
+        guard decision == .allowed else { return .refused(decision) }
+        return .document(SiteDocumentFile(
+            id: nil,
+            filename: stored.filename,
+            contentType: stored.contentType,
+            data: stored.data
+        ))
     }
 
     func documentFiles() -> [SiteDocumentFile] {

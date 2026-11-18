@@ -26,13 +26,28 @@ final class InspectionItemFormStateTests: XCTestCase {
     func testPhotosUnchangedUntilPhotosChange() {
         var form = InspectionItemFormState(location: "Aisle")
         XCTAssertFalse(form.photosChanged)
-        XCTAssertTrue(form.addPhoto(pixel()))
+        XCTAssertTrue(form.addPhoto(image: pixel(), jpeg: Data([0x01])))
         XCTAssertTrue(form.photosChanged)
         XCTAssertEqual(form.photos.count, 1)
     }
 
+    func testShowStoredPhotosLeavesTheChangedFlagAlone() {
+        var form = InspectionItemFormState(location: "Aisle")
+        form.showStoredPhotos([(image: pixel(), jpeg: Data([0x01]))])
+        XCTAssertEqual(form.photos.count, 1)
+        XCTAssertFalse(form.photosChanged)
+        XCTAssertTrue(form.addPhoto(image: pixel(), jpeg: Data([0x01])))
+        form.showStoredPhotos([])
+        XCTAssertEqual(form.photos.count, 2)
+        XCTAssertTrue(form.photosChanged)
+    }
+
     func testRemovePhotoMarksChanged() {
-        var form = InspectionItemFormState(location: "Aisle", photos: [pixel()], photosChanged: false)
+        var form = InspectionItemFormState(
+            location: "Aisle",
+            photos: [InspectionItemFormState.Photo(image: pixel(), jpeg: Data([0x01]))],
+            photosChanged: false
+        )
         XCTAssertFalse(form.photosChanged)
         form.removePhoto(at: 0)
         XCTAssertTrue(form.photosChanged)
@@ -42,10 +57,10 @@ final class InspectionItemFormStateTests: XCTestCase {
     func testPhotoCap() {
         var form = InspectionItemFormState()
         for _ in 0..<InspectionItem.maxPhotoCount {
-            XCTAssertTrue(form.addPhoto(pixel()))
+            XCTAssertTrue(form.addPhoto(image: pixel(), jpeg: Data([0x01])))
         }
         XCTAssertTrue(form.atPhotoCap)
-        XCTAssertFalse(form.addPhoto(pixel()))
+        XCTAssertFalse(form.addPhoto(image: pixel(), jpeg: Data([0x01])))
         XCTAssertEqual(form.photos.count, InspectionItem.maxPhotoCount)
     }
 
@@ -56,7 +71,7 @@ final class InspectionItemFormStateTests: XCTestCase {
             importance: .needsImmediateAttention,
             comments: "Note",
             issues: [Issue.Path(segments: ["Upright"])],
-            photos: [pixel()],
+            photos: [InspectionItemFormState.Photo(image: pixel(), jpeg: Data([0x01]))],
             photosChanged: true
         )
         form.reset()

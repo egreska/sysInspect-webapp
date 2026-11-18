@@ -15,7 +15,10 @@ class ReportViewController: UIViewController {
     private var inspections: [Inspection] = []
     private var selectedInspection: Inspection?
     /// Checkmarked inspections used for PDF and CSV export.
-    private var selectedInspections: [Inspection] = []
+    private var selectedInspections: [Inspection] = [] {
+        didSet { selectedInspectionIDs = Set(selectedInspections.map(\.objectID)) }
+    }
+    private var selectedInspectionIDs: Set<NSManagedObjectID> = []
     private var selectedSortCriteria: SortCriteria = .entryOrder
     private var activeFilters: [Filter] = []
     private var isLoadingInspections = false
@@ -305,17 +308,6 @@ class ReportViewController: UIViewController {
                 fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
             }
         }
-        switch selectedSortCriteria {
-        case .date:
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-        case .customer:
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "customer.name", ascending: true)]
-        case .inspectionStatus:
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-        case .importance, .primaryLocation, .issue, .entryOrder:
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-        }
-        
         CoreDataManager.shared.performBackgroundTask { [weak self] context in
             guard let self = self else { return }
             do {
@@ -325,7 +317,12 @@ class ReportViewController: UIViewController {
                     let mainContext = CoreDataManager.shared.context
                     let mainResult = objectIDs.compactMap { try? mainContext.existingObject(with: $0) as? Inspection }
                     self.isLoadingInspections = false
-                    self.inspections = mainResult
+                    self.inspections = ReportOrder.inspections(
+                        mainResult,
+                        by: self.selectedSortCriteria,
+                        date: { $0.date },
+                        customerName: { $0.customer?.name ?? "" }
+                    )
                     let resultIDs = Set(objectIDs)
                     if let selected = self.selectedInspection, !resultIDs.contains(selected.objectID) {
                         self.selectedInspection = nil
@@ -347,13 +344,6 @@ class ReportViewController: UIViewController {
         }
     }
     
-    /// Returns inspections without mutating Core Data. Item-level sort order is applied
-    /// at report generation time via ReportGenerator.getSortedInspectionItems.
-    private func sortInspectionItems(for inspections: [Inspection]) -> [Inspection] {
-        // Do not mutate inspection.items - ReportGenerator sorts in memory for display
-        return inspections
-    }
-
     // MARK: - Button Actions
     @objc private func showFilterOptions() {
         let alertController = UIAlertController(title: "Filter Reports", message: "Select filter criteria", preferredStyle: .actionSheet)
@@ -460,14 +450,6 @@ class ReportViewController: UIViewController {
                 self?.updateSortCriteria(.customer, title: "Customer")
             }
             alertController.addAction(customerAction)
-            
-            let statusAction = UIAlertAction(
-                title: createSortTitle("By Status", isItemLevel: false, isSelected: selectedSortCriteria == .inspectionStatus),
-                style: .default
-            ) { [weak self] _ in
-                self?.updateSortCriteria(.inspectionStatus, title: "Status")
-            }
-            alertController.addAction(statusAction)
             
             // CANCEL ACTION
             alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -888,7 +870,7 @@ extension ReportViewController: UITableViewDataSource {
         let customerName = inspection.customer?.name ?? "Unknown Customer"
                 cell.detailTextLabel?.text = "Customer: \(customerName)"
         
-        cell.accessoryType = selectedInspections.contains(where: { $0.objectID == inspection.objectID }) ? .checkmark : .none
+        cell.accessoryType = selectedInspectionIDs.contains(inspection.objectID) ? .checkmark : .none
         
         return cell
     }
@@ -907,24 +889,17 @@ extension ReportViewController: UITableViewDelegate {
         }
         let inspection = inspections[indexPath.row]
         selectedInspection = inspection
-        if let idx = selectedInspections.firstIndex(where: { $0.objectID == inspection.objectID }) {
-            selectedInspections.remove(at: idx)
-        } else {
+        if !selectedInspectionIDs.contains(inspection.objectID) {
             selectedInspections.append(inspection)
         }
-        reloadAndRestoreSelection()
+        tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
     }
     
     func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
         guard !isLoadingInspections, indexPath.row < inspections.count else { return }
         let inspection = inspections[indexPath.row]
         selectedInspections.removeAll { $0.objectID == inspection.objectID }
-        reloadAndRestoreSelection()
-    }
-    
-    private func reloadAndRestoreSelection() {
-        tableView.reloadData()
-        restoreTableSelection()
+        tableView.cellForRow(at: indexPath)?.accessoryType = .none
     }
     
     private func restoreTableSelection() {

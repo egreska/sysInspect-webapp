@@ -99,6 +99,33 @@ final class SessionCustomerFetchTests: XCTestCase {
         XCTAssertEqual(try sessionInspectionItemCount(for: inspection, userId: session, in: context), 1)
     }
 
+    func testRowCountsAreReadOncePerArrivedListOnTheCallerContext() throws {
+        let session = UUID()
+        let withVisits = Customer(context: context)
+        withVisits.userId = session
+        withVisits.name = "With visits"
+        let withoutVisits = Customer(context: context)
+        withoutVisits.userId = session
+        withoutVisits.name = "Without visits"
+        let inspection = Inspection(context: context)
+        inspection.userId = session
+        inspection.customer = withVisits
+        let item = InspectionItem(context: context)
+        item.userId = session
+        item.inspection = inspection
+        let outsider = Inspection(context: context)
+        outsider.userId = UUID()
+        outsider.customer = withVisits
+        try context.save()
+
+        let customerCounts = sessionInspectionCounts(for: [withVisits, withoutVisits], userId: session, in: context)
+        XCTAssertEqual(customerCounts[withVisits.objectID], 1)
+        XCTAssertEqual(customerCounts[withoutVisits.objectID], 0)
+        let itemCounts = sessionInspectionItemCounts(for: [inspection], userId: session, in: context)
+        XCTAssertEqual(itemCounts[inspection.objectID], 1)
+        XCTAssertTrue(withVisits.managedObjectContext === context)
+    }
+
     func testCustomerIdResolvesOnlyForThisStamp() throws {
         let session = UUID()
         let mineId = UUID()

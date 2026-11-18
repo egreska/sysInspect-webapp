@@ -1,0 +1,3 @@
+project: "Systems Inspector.xcodeproj"
+schemes:
+  - "Systems Inspector" # test plan covers Systems InspectorTests and Systems InspectorUITests
